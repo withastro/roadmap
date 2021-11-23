@@ -4,17 +4,17 @@
 
 # Summary
 
-Brief explanation of the feature.
+A brief, one or two sentence explanation of the proposal.
 
-# Basic example
+# Example
 
 If the proposal involves a new or changed API, include a basic code example.
+
 Omit this section if it's not applicable.
 
 # Motivation
 
-Why are we doing this? What use cases does it support? What is the expected
-outcome?
+In this section, step back and ask yourself: 'why are we doing this?', 'why does it matter?', 'what use cases does it support?', and 'what is the expected outcome?'.
 
 Please focus on explaining the motivation so that if this RFC is not accepted,
 the motivation could be used to develop alternative solutions. In other words,
