@@ -1,7 +1,5 @@
 # Astro RFC
 
-> ***NOTE: This repo is under development, and not yet ready for use.***
-
 ## What is an RFC?
 
 The "RFC" (request for comments) process is intended to provide a
