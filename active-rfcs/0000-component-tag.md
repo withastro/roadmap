@@ -72,7 +72,7 @@ This document describes a new API: `@component` . Pronounced as the "Component T
 - more or less raw, untouched by Astro. ex: Sass not supported.
 
 ## `<style @component>`
-- no other HTML attributes supported on the element, since the element is virtual.
+- no HTML attributes supported on the element, since the element is virtual.
 - only works top-level in the template, or nested directly inside of `<head>`.
   - otherwise, compiler error
 - always bundled with the rest of the website CSS
@@ -105,7 +105,7 @@ Even if `@component` is the only Component Tag that we plan to support, it may f
 
 For example. A valid new user question would be: "are there other component tags that I need to learn about?"
 
-See "Alternatives 1." for an alternative approach that uses a directive instead of an `@` tag.
+See "Alternatives - Naming" for some alternative approaches to naming instead of using a new `@` tag.
 
 
 ## 2. More verbose than just defaulting to component behavior.
@@ -114,7 +114,7 @@ See "Alternatives 1." for an alternative approach that uses a directive instead 
 
 # Alternatives
 
-## Alternative Behaviors
+## Alternatives - Behaviors
 
 ### 1. Combine multiple directives
 
@@ -129,7 +129,7 @@ In this case, the rest of this proposal would apply to `<style>` only.
 
 I think we can reuse enough logic from how `client:only` works that this may not cost us much in terms of implemention. In which case, I think it makes sense to keep. Still TBD if this is true though, will need a prototype to confirm.
 
-## Alternative Naming
+## Alternatives - Naming
 
 Note: While naming is important, please make sure that you also give feedback on the **behavior** that is being proposed. The behavior of this proposal is more complex and by far the most important piece to finalize.
 
