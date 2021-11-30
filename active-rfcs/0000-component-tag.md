@@ -116,12 +116,16 @@ See "Alternatives 1." for an alternative approach that uses a directive instead 
 ## 1. Skip the new syntax, just use a directive
 
 ```
-<script astro:component>
 <style astro:component>
+// or:
+<style is:component>
+<style is:bundled>
+<style astro:build>
 ```
 
 - Pro: Already supported by the compiler
 - Pro: No new rules need to be added to our language
+- Pro: Would not conflict with [Alpine.js event handlers](https://alpinejs.dev/essentials/events#listening-for-simple-events) (see "Unresolved questions" below)
 - Con: This behavior is much more complex than our other directives, so is directive really a good fit? For example, this would be the first directive to state that no other attributes can exist on a `script/style` tag because it is effectively virtual and must run as expected in the final bundle.
 
 ## 2. Use multiple directives
@@ -158,4 +162,4 @@ I think we can reuse enough logic from how `client:only` works that this may not
 
 # Unresolved questions
 
-- Unknown
+- Is `@component` okay to use for Alpine.js? `@click` is short for `x-on:click`, which means these will only ever be used with events. I don't think a `component` event would ever reasonably be supported, so I think this is okay to support. However, it does add a bit of overlap for Alpine.js users, which could be an argument in favor of using a directive instead.
