@@ -64,8 +64,9 @@ This document describes a new API: `@component` . Pronounced as the "Component T
   - Compiler error if dynamic in any way (ex: uses `define:vars`).
 
 ## `<style>` (no tag)
-- only works inside of `<head>`. Cannot be top-level or used outside of `<head>`.
-- A part of the template output. Always inlined into HTML in order with other `<head>` elements.
+- only works inside of `<head>`. Cannot be top-level in the template or used outside of `<head>`.
+  - Always inlined in order into the `<head>`.
+  - Supports hoisting a global style when combined with ["Collapsing `<head>` Behavior?"](https://github.com/withastro/rfcs/discussions/15)
 - Contents are always unscoped/global.
 - smart `@import` does not work. Will use raw URL specifier in the browser.
 - more or less raw, untouched by Astro. ex: Sass not supported.
