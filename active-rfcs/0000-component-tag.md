@@ -64,6 +64,18 @@ This document describes a new API: `@component` . Pronounced as the "Component T
   - Compiler error if dynamic in any way (ex: uses `define:vars`).
 
 ## `<style>` (no tag)
+
+```astro
+<!-- Error: can not exist top-level in a component. Can only exist inside of a <head> element -->
+<style>h1 { color: red; }</style>
+```
+```astro
+<!-- Success: hoisted up into the head, global (unscoped) and inlined into the HTML. -->
+<head>
+  <style>h1 { color: red; }</style>
+</head>
+```
+
 - only works inside of `<head>`. Cannot be top-level in the template or used outside of `<head>`.
   - Always inlined in order into the `<head>`.
   - Supports hoisting a global style when combined with ["Collapsing `<head>` Behavior?"](https://github.com/withastro/rfcs/discussions/15)
@@ -72,6 +84,12 @@ This document describes a new API: `@component` . Pronounced as the "Component T
 - more or less raw, untouched by Astro. ex: Sass not supported.
 
 ## `<style @component>`
+
+```astro
+<!-- Success: can exist top-level in a template, or nested inside of a <head> element -->
+<style @component>h1 { color: red; }</style>
+```
+
 - no HTML attributes supported on the element, since the element is virtual.
 - only works top-level in the template, or nested directly inside of `<head>`.
   - otherwise, compiler error
@@ -81,6 +99,7 @@ This document describes a new API: `@component` . Pronounced as the "Component T
   - opt-out with `is:global`
 
 ## `<script>` (no tag)
+
 - works anywhere
 - more or less raw, untouched by Astro
 - printed directly to the page, inlined with the rest of template HTML  
@@ -108,9 +127,9 @@ For example. A valid new user question would be: "are there other component tag
 See "Alternatives - Naming" for some alternative approaches to naming instead of using a new `@` tag.
 
 
-## 2. More verbose than just defaulting to component behavior.
+## 2. More verbose than just defaulting to this component behavior.
 
-`<script @component>` and `<style @component>` are more verbose than just defaulting to this behavior. This is an intentional design design to avoid default behavior that would be confusing to a new user of Astro.
+`<script @component>` and `<style @component>` are more verbose than just defaulting to this behavior. This is an intentional design design to avoid default behavior that would be confusing. While some component frameworks (Svelte) can get away with this, our intention to support full HTML templating (including the `<html>` and `<head>` elements) means that we still need to grant access to the raw `<style>` and `<script>` components in an intuitive way.
 
 # Alternatives
 
