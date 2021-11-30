@@ -114,7 +114,38 @@ See "Alternatives 1." for an alternative approach that uses a directive instead 
 
 # Alternatives
 
-## 1. Skip the new syntax, just use a directive
+## Alternative Behaviors
+
+### 1. Combine multiple directives
+
+**Update:** This has effectively been merged into the current proposal, with the addition of an `is:global` opt-out for CSS scoping and the call-out of future support for uniqueness in `@component` scripts.
+
+### 2. Remove component script support entirely
+
+- Remove `<script hoist>` support and do not replace it with anything.
+- If you want bundled script behavior, create a client-side component (React, Vue, etc).
+
+In this case, the rest of this proposal would apply to `<style>` only.
+
+I think we can reuse enough logic from how `client:only` works that this may not cost us much in terms of implemention. In which case, I think it makes sense to keep. Still TBD if this is true though, will need a prototype to confirm.
+
+## Alternative Naming
+
+Note: While naming is important, please make sure that you also give feedback on the **behavior** that is being proposed. The behavior of this proposal is more complex and by far the most important piece to finalize.
+
+### 1. Alternative tag name
+
+```
+<style @component>
+// or:
+<style @page>
+<style @astro>
+<style @bundled>
+```
+
+- Main reason for this is that `@component` may be confusing to use on a page. I believe that this is not a big issue, but a different name could reduce this confusion.
+
+### 2. Skip the new syntax, just use a directive
 
 ```
 <style astro:component>
@@ -129,11 +160,7 @@ See "Alternatives 1." for an alternative approach that uses a directive instead 
 - Pro: Would not conflict with [Alpine.js event handlers](https://alpinejs.dev/essentials/events#listening-for-simple-events) (see "Unresolved questions" below)
 - Con: This behavior is much more complex than our other directives, so is directive really a good fit? For example, this would be the first directive to state that no other attributes can exist on a `script/style` tag because it is effectively virtual and must run as expected in the final bundle.
 
-## 2. Use multiple directives
-
-**Update:** This has effectively been merged into the current proposal, with the addition of an `is:global` opt-out for CSS scoping and the call-out of future support for uniqueness in `@component` scripts.
-
-## 3. Use a special "virtual" component syntax
+### 3. Use a special "virtual" component syntax
 
 ```
 <astro:style>    // or <component:style>
@@ -147,7 +174,7 @@ See "Alternatives 1." for an alternative approach that uses a directive instead 
 - Con: Looks like a directive, which is syntactically confusing for directive attributes
 - Con: Both start and end tags would need to be updated `<astro:style></astro:style>`
 
-## 4. Use a special Astro component
+### 4. Use a special Astro component
 
 ```astro
 ---
@@ -159,15 +186,6 @@ import {Style, Script} from 'astro/components';
 
 - Pro: No user has an expectation about how this would work. That means less conflict with how `<style>` and `<script>` are expected to work.
 - Con: Requires extra import boilerplate in every component. We could make these globally available to mitigate, but we've never done that before.
-
-## 5. Remove component script support entirely
-
-- Remove `<script hoist>` support and do not replace it with anything.
-- If you want bundled script behavior, create a client-side component (React, Vue, etc).
-
-In this case, the rest of this proposal would apply to `<style>` only.
-
-I think we can reuse enough logic from how `client:only` works that this may not cost us much in terms of implemention. In which case, I think it makes sense to keep. Still TBD if this is true though, will need a prototype to confirm.
 
 # Adoption strategy
 
