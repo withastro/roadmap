@@ -147,7 +147,20 @@ See "Alternatives 1." for an alternative approach that uses a directive instead 
 - Con: Looks like a directive, which is syntactically confusing for directive attributes
 - Con: Both start and end tags would need to be updated `<astro:style></astro:style>`
 
-## 4. Remove component script support entirely
+## 4. Use a special Astro component
+
+```astro
+---
+import {Style, Script} from 'astro/components';
+---
+<Style>...</Style>
+<Script>...</Script>
+```
+
+- Pro: No user has an expectation about how this would work. That means less conflict with how `<style>` and `<script>` are expected to work.
+- Con: Requires extra import boilerplate in every component. We could make these globally available to mitigate, but we've never done that before.
+
+## 5. Remove component script support entirely
 
 - Remove `<script hoist>` support and do not replace it with anything.
 - If you want bundled script behavior, create a client-side component (React, Vue, etc).
