@@ -58,7 +58,7 @@ In this design it is more "on you" to write valid HTML. This comes from the real
 
 # Alternatives
 
-- Forcing that a user includes `<html>`, `<body>` and `<head>` elements in the final page output. This could be explored as an optional lint rule, however there is not currently consensus around this idea and also there is no known objective value in this from a compiler or runtime standpoint. If this is desired, it should be considered a seperate feature request and out of scope from this RFC.
+- Forcing that a user includes `<html>`, `<body>` and `<head>` elements in the final page output. This could be explored more, however there is not currently consensus around this idea and also there is no known reason to tackle this as a part of this RFC. If this is desired, it should be considered a seperate feature request and out of scope from this RFC.
 
 # Adoption strategy
 
