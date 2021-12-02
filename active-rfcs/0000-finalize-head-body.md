@@ -15,7 +15,7 @@ in Astro v0.21, we have had user reports around `<head>` not acting as expected,
 Some of these issues stem from undocumented or undefined behaviors in v0.20: was it allowed for `<head>` be conditionally added in a nested expression? 
 
 Other issues stem from our attempt to provide implicit `<head>` and `<body>` support in pages and layouts. There was a quick workaround added for v0.21 where `src/pages` and `src/layouts` folder locations must be defined in config so that our parser knows how to parse them as full HTML documents and not smaller HTML fragments. This unblocked users but at the expense of breaking two larger design goals of the project:
-  - Added `src/layouts` as a new special folder location, when only `src/pages` was intented to be "special".
+  - Added `src/layouts` as a new special folder location, when only `src/pages` was intended to be "special".
   - Caused Astro to create different output for a component based on the file path of that component.
 
 ## Goals
