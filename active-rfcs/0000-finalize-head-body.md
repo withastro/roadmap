@@ -27,17 +27,16 @@ import CommonLayout from '../layouts/CommonLayout.astro';
 
 ## Goals
 
-- Agree on and document the rules and behaviors of the `<head>`, `<body>`, and `<html>` tags.
-- Support any component in the tree adding to the page `<head>`, similar to `<svelte:head>` or head manager libraries in React/Vue. 
-  - (Note: see "Alternatives" for an alternative design if this is decided to be a non-goal).
+1. Agree on and document the rules and behaviors of the `<head>`, `<body>`, and `<html>` tags.
+2. Support any component in the tree adding to the page `<head>`, similar to `<svelte:head>` or head manager libraries in React/Vue. (Note: see "Alternatives" for an alternative design if this is decided to be a non-goal).
 
 ## Non-Goals
 
-- **Intentionally not implemented:** The ability or option to omit `<body>`, `<head>`, or `<html>` in the final output. This is intentionally not supported here in an effort to reduce complexity around when these tags might or might not be output in your final page HTML. As an Astro user, we assume that you are are comfortable with Astro controlling/optimizing your final HTML output.
-  - If this is sticking point, we can reword this from "intentionally not supported" to "out of scope / possible to implement in the future", but I think it's useful to commit to this behavior as a team if there is no objection.
-- **Out of scope / future:** The ability to author without `<body>`, `<head>`, or `<html>`, and relying on the compiler to handle them like the browser would.  This makes some sense because this is valid in HTML and we try to match HTML semantics whenever possible.  This is currently treated as out-of-scope, but there is nothing here that blocks our ability to do this in the future.
-  - For example, our compiler could automatically detect some elements in the component template (for example, a `<title>`) and auto-hoist it out of the component body and into the `<head>` of the final compiler result to support this.
-- **Out of scope / future:** Intelligent merging of repeated head elements. This is common when a top-level layout `<head>` might define a title, and then a more specific component might overwrite with a more specific `<title>` of its own. This is considered out of scope but not blocked to be implemented in the future.
+1. **Intentionally not implemented:** The ability or option to omit `<body>`, `<head>`, or `<html>` in the final output. This is intentionally not supported here in an effort to reduce complexity around when these tags might or might not be output in your final page HTML. As an Astro user, we assume that you are are comfortable with Astro controlling/optimizing your final HTML output.  
+  • If this is sticking point, we can reword this from "intentionally not supported" to "out of scope / possible to implement in the future", but I think it's useful to commit to this behavior as a team if there is no objection.
+1. **Out of scope / future:** The ability to author without `<body>`, `<head>`, or `<html>`, and relying on the compiler to handle them like the browser would.  This makes some sense because this is valid in HTML and we try to match HTML semantics whenever possible.  This is currently treated as out-of-scope, but there is nothing here that blocks our ability to do this in the future.  
+  • For example, our compiler could automatically detect some elements in the component template (for example, a `<title>`) and auto-hoist it out of the component body and into the `<head>` of the final compiler result to support this.
+1. **Out of scope / future:** Intelligent merging of repeated head elements. This is common when a top-level layout `<head>` might define a title, and then a more specific component might overwrite with a more specific `<title>` of its own. This is considered out of scope but not blocked to be implemented in the future.
 
 # Detailed design
 
@@ -67,12 +66,12 @@ The runtime would collect these across all rendered components on the page, and 
 
 # Drawbacks
 
-- `<head>` ordering - I'm not sure if this is easy to implement. Could use a prototype or expert set of eyes :)
-- Does not support Streaming HTML for SSR. See "No `<head>` Collapsing" for an alternative approach that addresses this drawback. 
+1. `<head>` ordering - I'm not sure if this is easy to implement. Could use a prototype or expert set of eyes :)
+2. Does not support Streaming HTML for SSR. See "No `<head>` Collapsing" for an alternative approach that addresses this drawback. 
 
 # Alternatives
 
-## No `<head>` Collapsing
+## 1. No `<head>` Collapsing
 
 It is a goal to allow all components to add elements directly to `<head>`. If we remove this goal, then then we could consider a design that only allows one component to act as "page layout" and set the `<html>`, `<head>` and `<body>` tags and then all other components are just fragments, always assumed to be a part of the body. There seems to be interest in this goal from the community (see linked discussion for more) but this could still be up for debate if there is interest.
 
@@ -87,7 +86,5 @@ This may be much easier to implement in the current compiler, which would be a f
 
 # Unresolved questions
 
-
-- Do we warn if `<body>` _NEVER_ appears in the page's rendered component tree? appears twice?
-  - @jonathantneal made the good point that `<body>` isn't actually required for valid HTML
-- Do we warn if `<html>` _NEVER_ appears in the page's rendered component tree? appears twice?
+1. Do we warn if `<body>` _NEVER_ appears in the page's rendered component tree? appears twice? @jonathantneal made the good point that `<body>` isn't actually required for valid HTML.
+2. Do we warn if `<html>` _NEVER_ appears in the page's rendered component tree? appears twice?
