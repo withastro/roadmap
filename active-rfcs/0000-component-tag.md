@@ -66,52 +66,78 @@ This document describes a new API: `@component` . Pronounced as the "Component T
 ## `<style>` (no tag)
 
 ```astro
-<!-- Error: can not exist top-level in a component. Can only exist inside of a <head> element -->
+<!-- INPUT: -->
+<style>h1 { color: red; }</style>
+
+<!-- OUTPUT: -->
 <style>h1 { color: red; }</style>
 ```
-```astro
-<!-- Success: hoisted up into the head, global (unscoped) and inlined into the HTML. -->
-<head>
-  <style>h1 { color: red; }</style>
-</head>
-```
 
-- only works inside of `<head>`. Cannot be top-level in the template or used outside of `<head>`.
-  - Always inlined in order into the `<head>`.
-  - Supports hoisting a global style when combined with ["Collapsing `<head>` Behavior?"](https://github.com/withastro/rfcs/discussions/15)
-- Contents are always unscoped/global.
-- smart `@import` does not work. Will use raw URL specifier in the browser.
-- more or less raw, untouched by Astro. ex: Sass not supported.
+- Style content is always unscoped/global.
+- Style content is escaped as CSS but otherwise untouched by Astro. ex: Sass not supported.
+- `@import` will not be resolved or bundled, sent untouched/raw to the browser.
+- Will be output in the final component render(), useful for adding global CSS in `<head>`.
+
 
 ## `<style @component>`
 
 ```astro
-<!-- Success: can exist top-level in a template, or nested inside of a <head> element -->
+<!-- INPUT: -->
 <style @component>h1 { color: red; }</style>
+
+<!-- OUTPUT: -->
+<!-- none! Content CSS is scoped and then bundled with the rest of your page CSS. -->
 ```
 
-- no HTML attributes supported on the element, since the element is virtual.
-- only works top-level in the template, or nested directly inside of `<head>`.
-  - otherwise, compiler error
-- always bundled with the rest of the website CSS
-  - can't support inlining into page, because then `@imports` would fail
-- scoped by default
+
+- Style content is scoped to the component.
   - opt-out with `is:global`
+- Style content is processed, ex: Sass is supported.
+- Style content is added to the module graph and bundled with the rest of the page CSS.
+- `@import` will be resolved using Vite's `@import` resolve logic.
+- No HTML output in the component template.
+- No HTML attributes supported on the element, since the element is virtual and never output.
+- only works top-level in the template, or nested directly inside of `<head>` or `<html>`.
+  - otherwise, compiler error
+
 
 ## `<script>` (no tag)
 
-- works anywhere
-- more or less raw, untouched by Astro
-- printed directly to the page, inlined with the rest of template HTML  
-- smart ESM `import` does not work, will use raw URL specifier in the browser
-- In the future, we could add some kind of of `is:unique` support to prevent duplicate scripts.
+```astro
+<!-- INPUT: -->
+<script>console.log('fired!');</style>
+
+<!-- OUTPUT: -->
+<script>console.log('fired!');</style>
+```
+
+- Style content is escaped as JS but otherwise untouched by Astro. ex: TypeScript not supported.
+- ESM import will not be resolved or bundled, sent untouched/raw to the browser.
+- Will be output in the final component render(), useful for adding global JS.
+- May be duplicated if this component appears on the page multiple times.
+  - In the future, we could add some kind of of `is:unique` support to prevent duplicate scripts.
 
 ## `<script @component>`
+
+
+```astro
+<!-- INPUT: -->
+<script @component>console.log('fired!');</style>
+
+<!-- OUTPUT: -->
+<!-- none! Content JS is bundled with the rest of your page JavaScript. -->
+```
+
+
+
 - Similar to `<script hoist>` today
-- no HTML attributes supported (`type=`, `async`, `defer`, etc) because the element is virtual
-- always bundled with the rest of the website JS
-  - handled as if you had used a React/UI component on the page with `client:load` or `client:only`.
-  - can't inline, because ESM `imports` would fail.
+- Style content is processed, ex: TypeScript could be supported.
+- Style content is added to the module graph and bundled with the rest of the page JS.
+- ESM imports will be resolved using Vite's ESM import resolve logic.
+- No HTML output in the component template.
+- no HTML attributes supported (`type=`, `async`, `defer`, etc) because the element is virtual.
+- only works top-level in the template, or nested directly inside of `<head>`, `<html>`, or `<body>`.
+  - otherwise, compiler error
 
 
 
@@ -159,7 +185,7 @@ Note: While naming is important, please make sure that you also give feedback on
 // or:
 <style @page>
 <style @astro>
-<style @bundled>
+<style @bundle>
 ```
 
 - Main reason for this is that `@component` may be confusing to use on a page. I believe that this is not a big issue, but a different name could reduce this confusion.
