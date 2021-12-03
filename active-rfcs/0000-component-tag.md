@@ -75,6 +75,7 @@ This document describes a new API: `@component` . Pronounced as the "Component T
 
 - Style content is always unscoped/global.
 - Style content is escaped as CSS but otherwise untouched by Astro. ex: Sass not supported.
+- Style content is unbudled, rendered as-is into the final component template.
 - `@import` will not be resolved or bundled, sent untouched/raw to the browser.
 - Will be output in the final component render(), useful for adding global CSS in `<head>`.
 
