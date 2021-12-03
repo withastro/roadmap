@@ -54,7 +54,7 @@ In this design it is more "on you" to write valid HTML. This comes from the real
 # Drawbacks
 
 - This RFC will allow you to author a page of HTML that does not actually output `<html>`, `<body>` or `<head>` elements. This can be considered an advantage in that it is more flexible than something like Svelte or Vue. However, it means we need to be more diligent with testing this kind of output across our codebase and dependencies. For example, we would need to confirm that Vite does not have trouble injecting things into an HTML document without a head or body.
-  - If we are blocked by this limitation in some way and can't reasonably unblock (for example, a non-trivial Vite limitaiton) this RFC states that it would be acceptable for Astro to add `<head>` or `<body>` elements in a way that keeps the output HTML valid but unblocks Astro.
+  - If we are blocked by this limitation in some way and can't reasonably unblock (for example, a non-trivial Vite limitaiton) this RFC states that it would be acceptable for Astro to add or require a `<head>` or `<body>` element in the final output HTML in a way that keeps the output HTML valid but unblocks Astro/tooling. Reminder that it is not an explicit goal to support authoring with `<head>` or `<body>`, but it is something that we would like to support if we reasonably can.
 
 # Alternatives
 
