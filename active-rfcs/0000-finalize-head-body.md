@@ -36,11 +36,13 @@ Other issues stem from our attempt to provide implicit `<head>` and `<body>` sup
 - `<!DOCTYPE html>`
   - compiler: completely ignored by the compiler, stripped out from render output.
   - runtime: a `<!DOCTYPE html>` tag is always included in final page HTML output.
-- `<html>`, `<body>`, `<head>`
+- `<html>`, `<body>`
   - compiler: will be left as-is in the component template.
   - runtime: will be left as-is in final page HTML output.
-  - runtime: will warn if no `head` tag is rendered by an Astro component for an entire page.
-  - runtime: may warn if duplicate `html`, `body`, and `head` tags are rendered inside of Astro components for an entire page.
+- `<head>`
+  - runtime: element is always required in final page output for style/script injection.
+  - runtime: will warn if `head` tag is not rendered exactly once for an entire page.
+  - `<head>` not supported inside of a non-Astro components. Non-Astro components could generate `<head>` contents, like `<link>` or `<meta>`, but not the `<head>` element itself.
 
 ## Compiler Changes
 
@@ -53,7 +55,6 @@ Losing `"as": "document"` parse mode will remove some special parser handling, l
 In this design it is more "on you" to write valid HTML. This comes from the reality that an imported component can contain unknown HTML, so the compiler can't implicitly assume anything about what is or is not included included the final parent component template.  See https://github.com/withastro/astro/issues/2022 for examples of when this breaks down today. We can help with some static linting, and runtime warnings if the final HTML output is invalid. However, this RFC acknowledges the reality that already exists in v0.21 that imported components break any assumptions and help that we previously attempted to provide.
 
 ## Head Injection Changes
-
 - runtime: will remove current post-build head injection, which involves a fragile `'</head>'` string find-and-replace.
 - compiler: will add a new `head: string` (or: `injectHead(): string`) property to the compiler transform options, which will inject the given HTML string into the bottom of a `<head>` element, if one is return by the compiler.
 - runtime: will provide this value head injection value to the compiler, and throw an exception if not used/called exactly once during a page render. 
