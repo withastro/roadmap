@@ -56,9 +56,30 @@ In this design it is more "on you" to write valid HTML. This comes from the real
 
 - runtime: will remove current post-build head injection, which involves a fragile `'</head>'` string find-and-replace.
 - compiler: will add a new `head: string` (or: `injectHead(): string`) property to the compiler transform options, which will inject the given HTML string into the bottom of a `<head>` element, if one is return by the compiler.
-- runtime: will provide this value head injection value to the compiler, and throw an exception if not used/called exactly once during a page render.
+- runtime: will provide this value head injection value to the compiler, and throw an exception if not used/called exactly once during a page render. 
 
 The Astro runtime will use this new property to inject all CSS styles used by components on the page into the final HTML document. These may be individual file `<link>` or `<style>` tags during development, or a few bundled CSS files in your final production build.
+
+Note: This must handle a `<slot>` containing a `<head>` and/or `<head slot="head">`. If this is too difficult to handle during implementation, we could also consider disallowing `<head slot="head">` in favor of the slot living inside of the head:
+
+```astro
+<!-- If needed for head injection, error on  `<head slot="head">` -->
+<slot name="head">
+  <head>
+    <!-- ... -->
+  </head>
+</slot>
+<head slot="head">
+
+<!-- In favor of this: -->
+<head>
+  <slot name="head">
+    <!-- ... -->
+  </slot>
+</head>
+<link slot="head" ... />
+```
+
 
 
 # Drawbacks
