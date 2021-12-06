@@ -95,7 +95,7 @@ This document describes a new API: `@component` . Pronounced as the "Component T
   - opt-out with `is:global`
 - Style content is processed, ex: Sass is supported.
 - Style content is added to the module graph and bundled with the rest of the page CSS.
-- `@import` will be resolved using Vite's `@import` resolve logic.
+- `@import` will be resolved using Vite's current `@import` resolve logic.
 - No HTML output in the component template.
 - No HTML attributes supported on the element, since the element is virtual and never output.
 - only works top-level in the template, or nested directly inside of `<head>` or `<html>`.
