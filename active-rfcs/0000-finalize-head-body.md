@@ -26,7 +26,7 @@ Other issues stem from our attempt to provide implicit `<head>` and `<body>` sup
 
 ## Non-Goals
 
-1. **Out of scope:** Support `<head>` Injection inside of individual components. This is a commonly requested user feature, but can be tackled as an additional feature, leaving this RFC focused on clarifying our existing API. This RFC does not impact that feature request.
+1. **Out of scope:** Support `<head>` injection, defined inside of individual components. Something like [`<svelte:head>`](https://svelte.dev/docs#svelte_head) for Astro is a commonly requested user feature, but can be tackled as an additional feature, leaving this RFC focused on clarifying our existing API. This RFC does not impact that feature request.
 
 
 # Detailed design
@@ -39,7 +39,8 @@ Other issues stem from our attempt to provide implicit `<head>` and `<body>` sup
 - `<html>`, `<body>`, `<head>`
   - compiler: will be left as-is in the component template.
   - runtime: will be left as-is in final page HTML output.
-  - runtime: may warn if duplicate `html`, `body`, and `head` tags are included in final page HTML output.
+  - runtime: will warn if no `head` tag is rendered by an Astro component for an entire page.
+  - runtime: may warn if duplicate `html`, `body`, and `head` tags are rendered inside of Astro components for an entire page.
 
 ## Compiler Changes
 
@@ -51,29 +52,43 @@ Losing `"as": "document"` parse mode will remove some special parser handling, l
 
 In this design it is more "on you" to write valid HTML. This comes from the reality that an imported component can contain unknown HTML, so the compiler can't implicitly assume anything about what is or is not included included the final parent component template.  See https://github.com/withastro/astro/issues/2022 for examples of when this breaks down today. We can help with some static linting, and runtime warnings if the final HTML output is invalid. However, this RFC acknowledges the reality that already exists in v0.21 that imported components break any assumptions and help that we previously attempted to provide.
 
+## Head Injection Changes
+
+- runtime: will remove current post-build head injection, which involves a fragile `'</head>'` string find-and-replace.
+- compiler: will add a new `head: string` (or: `injectHead(): string`) property to the compiler transform options, which will inject the given HTML string into the bottom of a `<head>` element, if one is return by the compiler.
+- runtime: will provide this value head injection value to the compiler, and throw an exception if not used/called exactly once during a page render.
+
+The Astro runtime will use this new property to inject all CSS styles used by components on the page into the final HTML document. These may be individual file `<link>` or `<style>` tags during development, or a few bundled CSS files in your final production build.
+
+
 # Drawbacks
 
-- This RFC will allow you to author a page of HTML that does not actually output `<html>`, `<body>` or `<head>` elements. This can be considered an advantage in that it is more flexible than something like Svelte or Vue. However, it means we need to be more diligent with testing this kind of output across our codebase and dependencies. For example, we would need to confirm that Vite does not have trouble injecting things into an HTML document without a head or body.
-  - If we are blocked by this limitation in some way and can't reasonably unblock (for example, a non-trivial Vite limitaiton) this RFC states that it would be acceptable for Astro to add or require a `<head>` or `<body>` element in the final output HTML in a way that keeps the output HTML valid but unblocks Astro/tooling. Reminder that it is not an explicit goal to support authoring with `<head>` or `<body>`, but it is something that we would like to support if we reasonably can.
+- A `<head>` element is always required in your final output. This is because Astro must perform `<head>` injection and parsing the HTML document after generation is considered too expensive for production use (ex: building 10,000+ page websites). 
+- The `<head>` component itself must be defined inside of an Astro component. You could not, for example, define your `<head>` _inside_ of a React component. This is because Astro cannot inject HTML safely into unknown 3rd-party components.
+- `<html>` and `<body>` elements are optional in the HTML spec, and therefor optional inside of Astro as well. This ability to output HTML without these two tags may be considered an advantage for spec compliance. However, it means we need to be more diligent with testing this kind of output across our codebase and dependencies. For example, we would need to confirm that Vite does not have trouble with HTML documents that do not include a `<body>`.
 
 # Alternatives
 
-- Forcing that a user includes `<html>`, `<body>` and `<head>` elements in the final page output. This could be explored more, however there is not currently consensus around this idea and also there is no known reason to tackle this as a part of this RFC. If this is desired, it should be considered a seperate feature request and out of scope from this RFC.
+- Force the user to include `<html>` and `<body>` elements in their authored components, similar to how we require a `<head>` element for style injection. This could be considered more consistent to treat all 3 as required, however it is not required for any technical reason and would be additional work to implement such a requirement check.
 
 # Adoption strategy
 
-This proposal is not too far off from current behavior, so direct impact on the user is expected to be minimal. However, removing `document` mode may break some users relying on certain side-effects and indirect Astro compiler behavior. 
+This proposal is not too far off from current behavior, so direct impact on the user is expected to be minimal. Upgrading style/head injection to use the compiler instead of a naive string find-and-replace should be considered an implementation improvement, and could go out in a patch release if needed.
 
-To mitigate this, this RFC proposes the following release plan:
+Removing `document` mode may break some users relying on certain side-effects and indirect Astro compiler behavior. For example, document mode meant that a `<head>` element was not required, and an empty element would be added automatically by the compiler.
 
-1. In a well-tested PR to astro core, remove any usage of `as: 'document'` when calling the compiler.
-2. Release this in a new minor release. This would be the only thing to go out in this release.
-3. Explicitly mention the breakage potential in the release notes, and on Discord.
+To mitigate this, this RFC proposes the following release plan to remove `as: document` mode from the compiler:
 
-If any users report breakage, who cannot easily update their project to fix: 
-1. Those users can stay on the previous version while we work to add a config fallback to continue to use `document` for pages and layouts
+1. In a well-tested PR to Astro core, remove any usage of `as: 'document'` when calling the compiler. 
+2. Add some checks and warnings to help users migrate. For example, warn in `renderPage()` if anything other than a single `</head>` were found.
+3. Release this in a new minor release. This would be the only thing to go out in this release.
+4. Explicitly mention the breakage potential in the release notes, and on Discord.
+5. If any users report breakage, work to add a config fallback to continue to use `document` for pages and layouts.
 
-Once settled, we would remove the now-unnecesary `layouts` config and remove `as: "document"` support from the compiler in followup minor releases.
+Once settled, we would remove the now-unnecessary `layouts` config and remove `as: "document"` support from the compiler in followup minor releases.
+
+
+
 
 # Unresolved questions
 
