@@ -9,8 +9,11 @@ Finalize behavior around `<head>`, `<body>`, `<html>`, and `<!DOCTYPE html>` ele
 # Motivation
 
 in Astro v0.21, we have had user reports around `<head>` not acting as expected, breaking some projects from v0.20:
+- **Summary:** https://github.com/withastro/astro/issues/2128
 - https://github.com/withastro/astro/issues/2046
 - https://github.com/withastro/astro/issues/2022
+- https://github.com/withastro/astro/issues/2132
+- https://github.com/withastro/astro/issues/2151
 
 Some of these issues stem from undocumented or undefined behaviors in v0.20: was it allowed for `<head>` be conditionally added in a nested expression? 
 
