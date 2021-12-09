@@ -11,7 +11,7 @@ Finalize the component styling & scripting behavior for v1.0.
 
 This RFC proposes very little new behavior, and mainly exists to document current behavior and make sure we have a clear, shared understanding about how Astro should work as we head into a v1.0 release. 
 
-When reviewing, feel free to ask questions and give feedback on current behavior as well as new behavior. However, be aware that changes to current behavior may be out of scope of this RFC and may require thier own RFC seperate from this one.
+When reviewing, feel free to ask questions and give feedback on current behavior as well as new behavior. However, be aware that changes to current behavior may be out of scope of this RFC and may require their own RFC seperate from this one.
 
 
 
