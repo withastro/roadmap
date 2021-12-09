@@ -105,7 +105,7 @@ Note that this will continue to have issues with some use-cases. For example, if
 
 ```astro
 <!-- INPUT: -->
-<style>h1 { color: red; }</style>
+<style global>h1 { color: red; }</style>
 
 <!-- OUTPUT: -->
 <style>h1 { color: red; }</style>
