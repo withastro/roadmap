@@ -78,7 +78,7 @@ Note: See the [local directive RFC](https://github.com/withastro/rfcs/blob/build
 
 # Alternatives
 
-- We can disable #5 entirely, if we would like.
+- We can disable #4 entirely, if we would like (see reasoning in item 4 above).
 
 # Adoption strategy
 
