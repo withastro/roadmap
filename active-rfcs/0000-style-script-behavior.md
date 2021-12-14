@@ -119,19 +119,23 @@ Note that this will continue to have issues with some use-cases. For example, if
 
 ```astro
 <!-- INPUT: -->
-<script>console.log('fired!');</style>
+<script>console.log('fired!');</script>
 
 <!-- OUTPUT: -->
-<script>console.log('fired!');</style>
+<script>console.log('fired!');</script>
 ```
 
-### Current Behavior
+### Current Expected Behavior
 
-- Style content is escaped as JS but otherwise untouched by Astro. ex: TypeScript not supported.
-- ESM import will not be resolved or bundled, sent untouched/raw to the browser.
+- Script content is escaped safely, but otherwise untouched by Astro. ex: TypeScript not supported.
+- ESM import will not be resolved or bundled, sent untouched/raw to the browser. This is required because imports to `src/` files and `npm` packages would not exist in production, and need to be known and bundled ahead-of-time.
 - Will be output in the final component render(), useful for adding global JS.
 - May be duplicated if this component appears on the page multiple times.
   - In the future, we could add some kind of of `is:unique` support to prevent duplicate scripts.
+
+### New Behavior
+
+- Note that v0.21 may have accidentally added support for npm package imports in un-hoisted scripts as a side-effect of running all rendered scripts through Vite's build pipeline. However, this is impossible to support in a world of static builds, where our compiler may not be able to detect script contents and could not bundle the script with the rest of the page JavaScript. Therefore we need to remove this side-effect for now. If this is possible, we could revisit adding back in a future RFC.
 
 ## `<script hoist>`
 
@@ -141,7 +145,7 @@ Note that this will continue to have issues with some use-cases. For example, if
 <script hoist>
   import cowsay from 'cowsay';
   console.log(cowsay('I am bundled with the rest of the page JS!'));
-</style>
+</script>
 
 <!-- OUTPUT: -->
 <!-- JS is bundled with the rest of your page JavaScript. -->
@@ -150,8 +154,7 @@ Note that this will continue to have issues with some use-cases. For example, if
 
 ### Current Behavior
 
-- Similar to `<script hoist>` today
-- Script content is processed, ex: TypeScript could be supported.
+- Script content is processed, ex: TypeScript could potentially be supported.
 - Script content is added to the module graph and bundled with the rest of the page JS.
 - ESM imports will be resolved using Vite's ESM import resolve logic.
 - No HTML output in the component template.
