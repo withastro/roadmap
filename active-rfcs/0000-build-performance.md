@@ -64,19 +64,14 @@ const { animal } = Astro.props;
 <img src={Astro.resolve(`../images/${animal}.png`)} />
 ```
 
-Instead, you can use `import.meta.glob` to dynamically add a URL:
+Instead, you can use a dynamic import to dynamically add a URL:
 
 ```astro
 ---
 const images = import.meta.glob('../images/*.png');
 
 const { animal } = Astro.props;
-
-const animalUrl = Object.entries(images)
-.filter(([path]) => (
-  path.includes(animal)
-))
-.map(([, mod]) => mod.default)[0];
+const { default: animalUrl } = await import(`../images/${animal}.png`);
 ---
 
 <img src={animalUrl} />
