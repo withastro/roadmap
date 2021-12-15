@@ -192,5 +192,5 @@ However, the Astro documentation should push this as _the blessed approach_ for 
 
 # Unresolved questions
 
-None
+See [**Scenario H**](https://github.com/withastro/rfcs/blob/set-innerhtml/active-rfcs/0000-set-innerhtml.md#scenario-h-element-setinnerhtmlcontent---element) in **Detailed Design**.
 
