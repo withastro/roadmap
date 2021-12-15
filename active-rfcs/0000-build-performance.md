@@ -160,19 +160,9 @@ To deprecate `Astro.resolve` we should:
 - Having `client:` and `local:` directives both be static might be unintuitive to some, since regular attributes can be added dynamically.
   - In a future RFC it might make sense to have a blanket requirement that *all* directives be statically added to the template. This would teach developers to expect that requirement.
 
-Why should we *not* do this? Please consider:
-
-- implementation cost, both in term of code size and complexity
-- whether the proposed feature can be implemented in user space
-- the impact on teaching people Astro
-- integration of this feature with other existing and planned features
-- cost of migrating existing Astro applications (is it a breaking change?)
-
-There are tradeoffs to choosing any path. Attempt to identify them here.
-
 # Alternatives
 
-What other designs have been considered? What is the impact of not doing this?
+No other alternatives have been designed at this time. I do not believe it will be possible to improve build performance that makes it a parity of other SSG tools without static restrictions like those outlined in this RFC.
 
 # Adoption strategy
 
@@ -183,5 +173,4 @@ What other designs have been considered? What is the impact of not doing this?
 
 # Unresolved questions
 
-- Conceptually we expect these changes to have a dramatic effect on build performance, particularly on very large sites. The slowness of Astro's current build can be felt on sites such as docs.astro.build already.
-- We have not tested the performance of this new build to get a better indication of the difference. When it is available behind a flag we should confirm that it has the effect we desire by updating our implementation in the [ssg-build-performance-tests](https://github.com/seancdavis/ssg-build-performance-tests) project.
+- We don't have data on the performance difference this change will make. Conceptually we believe it will make a big difference, and will get a better indication once the flagged version has been merged in.
