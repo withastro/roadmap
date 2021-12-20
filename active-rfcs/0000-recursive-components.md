@@ -4,21 +4,7 @@
 
 # Summary
 
-Allow a way for astro components to render themselves recursively.
-
-Nested data structures are everywhere. Common examples include nested blog comments,
-file explorer trees, extensive navigation menu trees, or using a headless CMS and nested content blocks to render an entire website.
-
-Even when the entire tree structure is KNOWN, for anything more than a few levels deep,
-using a recursive Component/function for rendering is the most efficient and elegant approach.
-
-When the tree structure is UNKNOWN, and you want to support N levels deep, using a recursive
-Component/function is the ONLY approach that will work. This is often the case
-when fetching data from an API.
-
-Svelte, which also uses the same "single component per file" pattern has already
-encountered and solved for this issue by exposing the [svelte:self](https://svelte.dev/docs#svelte_self)
-attribute as part of their API.
+Allow a way for astro components to render themselves recursively by exposing a new Astro.self property.
 
 # Example
 
@@ -87,8 +73,32 @@ reference itself.
 
 # Motivation
 
-Handling this use case lets .astro components do things that other component
+Nested data structures are everywhere. Common examples include nested blog comments,
+file explorer trees, extensive navigation menu trees, or using a headless CMS and nested content blocks to render an entire website.
+
+Even when the entire tree structure is KNOWN, for anything more than a few levels deep,
+using a recursive Component/function for rendering is the most efficient and elegant approach.
+
+When the tree structure is UNKNOWN, and you want to support N levels deep, using a recursive
+Component/function is the ONLY approach that will work. This is often the case
+when fetching data from an API.
+
+Handling this use case lets .astro components do things that other component 
 frameworks can do, making it a 1st class component framework in its own right.
+
+The Single File per Component (SFC) pattern that Astro uses is simple, but inflexible. 
+In other frameworks like React (and presumable Vue and SolidJs) you can create multiple 
+components within a single file. 
+This allows you to can create both a function/component to render an `<Item />` and another 
+function/component to render `<ItemChildren />` have them reference each other, and then expose 
+either/both as exports. You can't do this with SFC. And, if you try to create these as 
+2 separate files, you get circular dependencies. The only way for SFC to allow for recursion 
+is by allowing a component access to reference it's own render function.
+
+Svelte, which also uses SFC, has already
+encountered and solved for this issue by exposing the [svelte:self](https://svelte.dev/docs#svelte_self)
+attribute as part of their API.
+
 
 # Detailed design
 
