@@ -15,7 +15,6 @@ The following features are bundled as part of this RFC:
 
 - Enforced static use of `client:` directives.
 - Deprecation of `Astro.resolve`.
-- Introduction of `local:` directive to act as a static replacement for Astro.resolve.
 
 ## Static client hydration directives
 
@@ -33,26 +32,6 @@ const { shouldHydrate } = Astro.props;
 
 Astro will be able to build the above correctly, but only JavaScript will be added to the page if the `shouldHydrate` condition is truthy.
 
-## Local directive
-
-In order to replace `Astro.resolve`, which can't be used to build things like styles and images, this RFC proposes a new sugar syntax:
-
-```astro
-<img local:src="../images/penguin.png" />
-```
-
-Note that this can already be achieved without sugar syntax by using an import statement:
-
-```astro
----
-const imgUrl = '../images/penguin.png';
----
-
-<img src={imgUrl} />
-```
-
-The sugar syntax is being introduced because we feel the above is harder to learn and less obvious of a solution.
-
 ## Deprecation of Astro.resolve
 
 The `Astro.resolve` method was added to enable adding relative links to assets in the `src/` folder. However, since this is a function it can take dynamic values that are not compatible with a static build. For example:
@@ -68,13 +47,10 @@ Instead, you can use a dynamic import to dynamically add a URL:
 
 ```astro
 ---
-const images = import.meta.glob('../images/*.png');
-
 const { animal } = Astro.props;
-const { default: animalUrl } = await import(`../images/${animal}.png`);
 ---
 
-<img src={animalUrl} />
+<img src={await import(`../images/${animal}.png`)} />
 ```
 
 The above will result in *all* of the images in `../images/` getting built, but only the one you select will be used.
@@ -113,38 +89,11 @@ The implementation will be:
 3. When rendering, if a component contains a client directive, make sure the directive is matched by the marking in __(2)__.
 4. If the marking is not there, we know that the directive must have been added statically. Throw an `Error` message for this, letting the user know that the directive must be added statically.
 
-## The `local:` directive
-
-A new `local:` directive will be introduced that can be used to set relative links on any element. The syntax looks like this:
-
-```astro
-<img local:src="../images/penguin.png" />
-```
-
-The implementation is:
-
-1. The compiler will see the `local:` directives. They must be used *statically* and not added dynamically (they will be ignored if added dynamically).
-1. The compiler will convert the value of the directive into an import statement. For example the above becomes:
-
-    ```astro
-    ---
-    import imgUrl from "../images/penguin.png";
-    ---
-    <img local:src={imgUrl} />
-    ```
-1. If the value of the directive is *not* a static string, the compiler should ignore that usage and not add an import statement.
-1. The compiler include a warning about the non-static usage of the `local:` directive.
-
-There are a couple of special cases that need to be accounted for:
-
-- `<img srcset>` value is more complex than just a single URL. We need to parse the value and add multiple import statements.
-- A `<link rel=stylesheet>` tag will resolve in an import statement that is side-effectual. As such, we should *remove* the actual link tag in the compiler to prevent it from being rendered.
-
 ## Deprecate Astro.resolve
 
 To deprecate `Astro.resolve` we should:
 
-- Add a warning to the `Astro.resolve` method that says that it is deprecated and links to documentation on alternatives such as the `local:` directive and `import.meta.glob`.
+- Add a warning to the `Astro.resolve` method that says that it is deprecated and links to documentation on alternatives such as the [local: proposal](https://github.com/withastro/rfcs/pull/59) and `import.meta.glob`.
 - While the feature is deprecated but not removed update the build process to *directly* copy anything that's resolved by `Astro.resolve`, by overloading the usage of the method during the build.
   - This will allow users who have build sites dependant on the feature to migrate slowly.
 - After one major version of Astro, replace the warning with an error, preventing its usage in dev or the build.
@@ -152,8 +101,6 @@ To deprecate `Astro.resolve` we should:
 # Drawbacks
 
 - We have heavily promoted the usage of `Astro.resolve` since its inception, as a way to build assets contained in `src/`. This will be a big departure.
-- Having `client:` and `local:` directives both be static might be unintuitive to some, since regular attributes can be added dynamically.
-  - In a future RFC it might make sense to have a blanket requirement that *all* directives be statically added to the template. This would teach developers to expect that requirement.
 
 # Alternatives
 
@@ -162,7 +109,7 @@ No other alternatives have been designed at this time. I do not believe it will 
 # Adoption strategy
 
 - Add the behaviors described in this PR behind a flag, `--experimental-static-build`.  A PR that brings partial support for this [already exists](https://github.com/withastro/astro/pull/2168).
-- Promote the usage of `local:` over `Astro.resolve` in documentation and on Discord.
+- Promote the usage of the [local: directive](https://github.com/withastro/rfcs/pull/59), if that RFC passes, over `Astro.resolve` in documentation and on Discord.
 - Add a deprecation warning to `Astro.resolve` that exists for at least 1 major version.
 - Remove `Astro.resolve` and fully enforce static directives when this feature becomes unflagged.
 
