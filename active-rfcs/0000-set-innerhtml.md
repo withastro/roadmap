@@ -171,9 +171,11 @@ Usage with start/end tag pairs containing only whitespace _should_ or _should no
 
 Compiler will not know to compile this element using the dynamic format. We should warn if these directives are detected at runtime.
 
+### Scenario J: `<script>` or `<style>` usage
+
 **🤔 Open Question!**
 
-Per Motivation #3 above, this behavior could allow a user to bypass Astro's `script` and `style` restrictions. The caveat is that the injected contents of `script` and `style` could no longer be scoped, transformed, optimized, or bundled by Astro—the content values would not exist until runtime. Should we support this?
+Per **Motivation #3** above, this behavior could allow a user to bypass Astro's `script` and `style` restrictions. The caveat is that the injected contents of `script` and `style` could no longer be scoped, transformed, optimized, or bundled by Astro—the content values would not exist until runtime. Should we support this?
 
 **Input**
 ```astro
@@ -246,5 +248,5 @@ However, the Astro documentation should push this as _the blessed approach_ for 
 
 # Unresolved questions
 
-See [**Scenario H**](https://github.com/withastro/rfcs/blob/set-innerhtml/active-rfcs/0000-set-innerhtml.md#scenario-h-element-setinnerhtmlcontent---element) in **Detailed Design**.
+See [**Scenario H**](https://github.com/withastro/rfcs/blob/set-innerhtml/active-rfcs/0000-set-innerhtml.md#scenario-h-element-setinnerhtmlcontent---element) and [**Scenario J**](https://github.com/withastro/rfcs/blob/set-innerhtml/active-rfcs/0000-set-innerhtml.md#scenario-j-script-or-style-usage) in **Detailed Design**.
 
