@@ -53,7 +53,6 @@ and an itemId like this:
 ---
 const {itemId, items} = Astro.props;
 const {childIds} = items[itemId];
-const Self = Astro.self;
 ---
 <li>
     Item: {itemId}
@@ -67,7 +66,7 @@ const Self = Astro.self;
 </>
 ```
 
-Note that in the above example, the `<Self />` component provides
+Note that in the above example, the `<Astro.self />` component provides
 access to this component's render function, allowing it to
 reference itself.
 
@@ -134,7 +133,7 @@ This follows an already established precedent (for those familiar with Svelte),
 but there's nothing else in Astro yet that leverages `astro:` prefixes as
 components.
 
-By contrast, using `const Self = Astro.self` is more explicit,
+By contrast, using `Astro.self` is more explicit,
 requiring a bit more work to tap into an advanced feature, which was marginally
 preferred by some in the discussion group. Also providing incremental value is
 the ability for developers to name the component how they wish (although
