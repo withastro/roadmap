@@ -10,7 +10,7 @@ Astro should support source-relative URL resolution in the HTML block of Astro f
 
 To resolve the source-relative URL of an image, use a `local:` prefixed URL.
 
-```html
+```astro
 <img src="local:kitten.avif" alt="Kitten" />
 ```
 
@@ -39,7 +39,7 @@ A `local` scheme instructs Astro to resolve the URL relative to the source file.
 <img srcset="local:kitten.avif 1x, local:kitten@2x.avif" alt="Kitten" />
 ```
 
-That example could be transformed into or handled as tho it were written like this:
+That example would be handled as tho it were written like this:
 
 ```astro
 <img srcset=`${import('./kitten.avif?url')} 1x, ${import('./kitten@2x.avif?url')}` alt="Kitten" />
@@ -53,6 +53,8 @@ That example could be transformed into or handled as tho it were written like th
   <img src="local:media/kitten.jpg" alt="" />
 </picture>
 ```
+
+Similarly, that example would be handled as tho it were written like this:
 
 ```astro
 <picture>
@@ -82,7 +84,7 @@ The provided examples are intuitive and convenient for authors, but it may not b
 # Alternatives
 
 1. Limit support to `local:` prefixed attributes
-  ```html
+  ```astro
   <img local:src="kitten.avif" alt="Kitten" />
   ```
   - A namespaced attribute would be more complex for both the author and the implementer than a [scheme](https://developer.mozilla.org/en-US/docs/Learn/Common_questions/What_is_a_URL#scheme) when assets are referenced in `style`, `srcset`, or `data-` attributes with `url()`. Those are all common techniques used on the web. A namespaced attribute would also necessitate a more careful parsing of `srcset` and `url()`, or otherwise the loss of that functionality entirely if it were deemed too complex. By limiting `local:` to URLs, we reduce this complexity and give this functionality the freedom to be applied to other usecases in the future.
@@ -98,18 +100,30 @@ The provided examples are intuitive and convenient for authors, but it may not b
   - It is likely actual usage would be far less simple or visually co-located as in this example.
   - This would force authors to name imports, which would fatigue authors. <sup>[1](https://hilton.org.uk/blog/why-naming-things-is-hard)</sup>
 
+
+
 # Adoption strategy
 
-This proposal seeks to improve and replace `Astro.resolve`, but it is not necessary to drop `Astro.resolve` upon accepting this proposal.
+The `local` scheme is intended to improve and replace `Astro.resolve`, but its addition does not require the removal of `Astro.resolve`.
+
+This feature can be initially limited to attributes, as we consider whether or how the `local` scheme could be used in other areas.
 
 # Unresolved questions
 
-Will authors reasonably expect `local:` to work in other environments than HTML attribute values?
+Would authors reasonably expect `local:` to work in other environments than HTML attribute values? If so, should this proposal additionally unlock that ability?
 
-```html
+```astro
 <style>
 :host {
   background-image: url(local:kitten.avif);
 }
 </style>
+```
+
+That example would be handled as tho it were written like this:
+
+```astro
+<style set:html=`:host {
+  background-image: url(${import('./kitten.avif')});
+}` />
 ```
