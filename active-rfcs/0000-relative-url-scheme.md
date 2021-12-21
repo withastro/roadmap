@@ -33,9 +33,19 @@ This ambiguity raises a need for:
 
 A `local` scheme instructs Astro to resolve the URL relative to the source file.
 
+### Example with `img[srcset]`
+
 ```astro
 <img srcset="local:kitten.avif 1x, local:kitten@2x.avif" alt="Kitten" />
 ```
+
+That example could be transformed into or handled as tho it were written like this:
+
+```astro
+<img srcset=`${import('./kitten.avif?url')} 1x, ${import('./kitten@2x.avif?url')}` alt="Kitten" />
+```
+
+### Example with mixed `source[srcset]` and `img[src]`
 
 ```astro
 <picture>
@@ -45,28 +55,38 @@ A `local` scheme instructs Astro to resolve the URL relative to the source file.
 ```
 
 ```astro
+<picture>
+  <source srcset={import('local:media/kitten@2x.avif')} media="(min-width: 800px)" />
+  <img src={import('local:media/kitten.jpg')} alt="Kitten" />
+</picture>
+```
+
+### Example with `[style]`
+
+```astro
 <div style="background-image: url(local:kitten-background.avif);"></div>
 ```
+
+### Example with a data attribute
 
 ```astro
 <div data-my-framework-attr-for-image="local:kitten-background.avif"></div>
 ```
 
+
+
 # Drawbacks
 
-All attribute values need to be checked for `local:`. See alternatives below
-
-The provided examples are intuitive and convenient for authors, but not immediately obvious to an implementer.
+The provided examples are intuitive and convenient for authors, but it may not be immediately obvious to the implementer, as this would be the first schema.
 
 # Alternatives
 
-- Limit support to `local:` prefixed attributes
+1. Limit support to `local:` prefixed attributes
   ```html
   <img local:src="kitten.avif" alt="Kitten" />
   ```
-  - It’s not obvious if this would be more performant than checking every attribute for a `local:` prefix.
-  - It’s even less obvious if this would be more performant when the attribute value may include multiple URLs (the `srcset`, `style`, or `data-` attributes), or wraps the URL in `url()`, `url("")`, `url('')`, etc.
-- Limit support to `import` statements and do not support source-relative URLs in the HTML of `.astro` files.
+  - A namespaced attribute would be more complex for both the author and the implementer than a [scheme](https://developer.mozilla.org/en-US/docs/Learn/Common_questions/What_is_a_URL#scheme) when assets are referenced in `style`, `srcset`, or `data-` attributes with `url()`. Those are all common techniques used on the web. A namespaced attribute would also necessitate a more careful parsing of `srcset` and `url()`, or otherwise the loss of that functionality entirely if it were deemed too complex. By limiting `local:` to URLs, we reduce this complexity and give this functionality the freedom to be applied to other usecases in the future.
+2. Limit support to `import` statements and do not support source-relative URLs in the HTML of `.astro` files.
   ```astro
   ---
   import kittenImage from './kitten.avif?url'
