@@ -62,7 +62,7 @@ Note: See the [local directive RFC](https://github.com/withastro/rfcs/blob/build
 
 #### 5. ✅ `import './X.css'; // in React component`
 
-- **Usecase:** Supported as the only way to reference a CSS file inside of a React component.
+- **Usecase:** Supported as the only way to reference a CSS file inside of many framework components (React, Preact, Lit, etc).
 
 <!-- 
 - Disabled in Astro components in favor of **3. `<style @component>@import './X.css';</style>`**
