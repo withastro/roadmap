@@ -4,7 +4,7 @@
 
 # Summary
 
-Clean up and finalize how CSS is used in an Astro project.
+Clean up and finalize how CSS is used in an Astro project, keeping simplified support for raw `<link>` usage and optimized CSS usage via JS/CSS imports.
 
 # Motivation
 
