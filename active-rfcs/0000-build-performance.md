@@ -94,8 +94,6 @@ The implementation will be:
 To deprecate `Astro.resolve` we should:
 
 - Add a warning to the `Astro.resolve` method that says that it is deprecated and links to documentation on alternatives such as the [local: proposal](https://github.com/withastro/rfcs/pull/59) and `import.meta.glob`.
-- While the feature is deprecated but not removed update the build process to *directly* copy anything that's resolved by `Astro.resolve`, by overloading the usage of the method during the build.
-  - This will allow users who have build sites dependant on the feature to migrate slowly.
 - After one major version of Astro, replace the warning with an error, preventing its usage in dev or the build.
 
 # Drawbacks
@@ -111,6 +109,7 @@ No other alternatives have been designed at this time. I do not believe it will 
 - Add the behaviors described in this PR behind a flag, `--experimental-static-build`.  A PR that brings partial support for this [already exists](https://github.com/withastro/astro/pull/2168).
 - Promote the usage of the [local: directive](https://github.com/withastro/rfcs/pull/59), if that RFC passes, over `Astro.resolve` in documentation and on Discord.
 - Add a deprecation warning to `Astro.resolve` that exists for at least 1 major version.
+- Once the static build becomes the default, leave in the legacy flag behind a flag (such as `--legacy-build`) for 1 major version.
 - Remove `Astro.resolve` and fully enforce static directives when this feature becomes unflagged.
 
 # Unresolved questions
