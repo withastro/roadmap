@@ -59,8 +59,8 @@ The above will result in *all* of the images in `../images/` getting built, but 
 
 - Astro is currently only able to build sites with a few hundred pages. Since the introduction of `getStaticPaths` we have known that developers would want to build site into the thousands or tens of thousands of pages.
 - Astro's build process relies on scanning the rendered HTML and then *update* the HTML as well, to replace assets with the hashed paths in the build.
-- Because of the above, performance has actually regressed in __0.21__, even though it was never the best even before.
-- In order to support SSR in the future we have to move away from page-scanning as the way to find and build assets, since SSR apps by their nature *cannot* be rendered ahead of time.
+  - Because of the above, performance has actually regressed in __0.21__, even though it was never the best even before.
+- In order to support __SSR__ in the future we have to move away from page-scanning as the way to find and build assets, since SSR apps by their nature *cannot* be rendered ahead of time.
 
 # Detailed design
 
