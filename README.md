@@ -73,7 +73,7 @@ RFC merged into the RFC repo as a markdown file. At that point the RFC
 is 'active' and may be implemented with the goal of eventual inclusion
 into Astro.
 
-1.  Work on your proposal in a Markdown file based on the template (`0000-template.md`) found in this repo.
+1.  Work on your proposal in a Markdown file based on the template (`template.md`) found in this repo.
 
     - Put care into the details: **RFCs that do not present convincing motivation, demonstrate understanding of the impact of the design, or are disingenuous about the drawbacks or alternatives tend to be poorly-received**.
 
@@ -85,7 +85,7 @@ into Astro.
 
     - Fork this repo.
 
-    - Create your proposal as `active-rfcs/0000-my-feature.md` (where "my-feature" is descriptive. don't assign an RFC number yet).
+    - Create your proposal as `active/my-feature.md` (where "my-feature" is descriptive).
 
     - Submit a pull request. Make sure to link to the discussion thread.
 
@@ -96,7 +96,9 @@ into Astro.
 
     - An RFC may be rejected after public discussion has settled and comments have been made summarizing the rationale for rejection. A member of the [core team] should then close the RFC's associated pull request.
 
-    - An RFC may be accepted at the close of its final comment period. A [core team] member will merge the RFC's associated pull request, at which point the RFC will become 'active'.
+    - An RFC may be accepted at the close of its final comment period. A [core team] member will merge the RFC's associated pull request, at which point the RFC will become 'active', existing in the [active](https://github.com/withastro/rfcs/tree/main/active) directory.
+
+    - Once the RFC is implemented, it will become 'complete', remaining in the [complete](https://github.com/withastro/rfcs/tree/main/complete) directory.
 
 ## Details on Active RFCs
 
