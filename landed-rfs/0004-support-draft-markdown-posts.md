@@ -10,7 +10,7 @@
 
 - Start Date: 2021-06-14
 - Reference Issues: N/A
-- Implementation PR: N/A
+- Implementation PR: astro/#2392
 
 # Summary
 
