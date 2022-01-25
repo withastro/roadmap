@@ -132,7 +132,7 @@ Furthermore, the fact that a given RFC has been accepted and is 'active' implies
 nothing about what priority is assigned to its implementation, nor whether
 anybody is currently working on it.
 
-Modifications to active RFC’s can be done in followup PR’s. We strive to write
+Modifications to active RFC’s can be done in followup PRs. We strive to write
 each RFC in a manner that it will reflect the final design of the feature; but
 the nature of the process means that we cannot expect every merged RFC to
 actually reflect what the end result will be at the time of the next major
