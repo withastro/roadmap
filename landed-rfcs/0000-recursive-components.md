@@ -1,6 +1,8 @@
 -   Start Date: Date: 2021-12-15
 -   Reference Issues: https://github.com/withastro/rfcs/discussions/45
--   Implementation PR: https://github.com/sgruenholz2/rfcs/blob/recursive-components-patch-1/active-rfcs/0000-recursive-components.md
+-   Implementation PR:
+    -   https://github.com/sgruenholz2/rfcs/blob/recursive-components-patch-1/active-rfcs/0000-recursive-components.md
+    -   https://github.com/withastro/compiler/pull/270
 
 # Summary
 
