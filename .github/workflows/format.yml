@@ -1,0 +1,26 @@
+name: 'Format RFCs'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code using Git
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Set Node version to 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - name: Format RFCs
+        run: node .github/format-rfcs.mjs
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: '[ci] rfc format'
+          branch: ${{ github.head_ref }}
