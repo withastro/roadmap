@@ -114,6 +114,7 @@ import robotoFont400 from '../assets/fonts/roboto-slab-v22-latin-regular.woff2';
 - Astro will define two custom `Asset` types: `ImageAsset` and `SvgAsset`
 - All other assets will just return a URL path string to the asset, and include that asset in the final build.
 - Works in `.astro` and all component files (`.jsx`, `.svelte`, `.vue`, etc)
+- Builds on top of the accepted [`local:src`](https://github.com/withastro/rfcs/blob/assets-rfc/proposals/0011-relative-url-scheme.md) RFC.
 
 ## The Asset Components
 
