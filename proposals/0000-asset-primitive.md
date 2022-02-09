@@ -19,7 +19,7 @@ import {Image, Icon, Font} from 'astro/components';
 ---
 <html>
   <head>
-	  <Font use={robotoFont400} family="Roboto Slab" />
+    <Font use={robotoFont400} family="Roboto Slab" />
     <style>
       body { font-family: 'Roboto Slab'; }
     </style>
@@ -49,7 +49,7 @@ Astro.asset = function(name: string) {
 ---
 <html>
   <head>
-	  <Font use={Astro.asset('roboto-slab-v22-latin-regular')} family="Roboto Slab" />
+    <Font use={Astro.asset('roboto-slab-v22-latin-regular')} family="Roboto Slab" />
     <style>
       body { font-family: 'Roboto Slab'; }
     </style>
