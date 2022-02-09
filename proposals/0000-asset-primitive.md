@@ -78,7 +78,7 @@ Why is this is a problem? To be clear, it's not a problem *today* because run-ti
 
 However, with SSR support coming this will no longer always be true. If `<Icon name={fetchedAPIUserData.avatarIcon}>` renders for the first time on the server (ex: on Netlify, on Vercel) then Astro has no idea which icon you need to include in your build at build-time, which is when the decision of "what to include in your build" is made.
 
-Even though SSR isn't available yet, we don't want our community building components and integrations that we know for a fact won't work in the future. There have been different ideas thrown around to solve for this, some of which I will touch on in the "Alternatives" section of this RFC.
+This RFC is a priority to support our community members who are building components and integrations that use assets, and who need an asset strategy that we can commit to working in the future.  There have been different ideas thrown around to solve for this, some of which I will touch on in the "Alternatives" section of this RFC.
 
 ### Goals
 
