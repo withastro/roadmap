@@ -153,13 +153,13 @@ import {Image, Icon, Font} from 'astro/components';
 
 In the first discussion on this proposal, there was a lot of push-back at the extra boilerplate and "JavaScript-iness" that this introduced (or even "Webpack-iness"). Astro is trying to be less JavaScript-required than other frameworks, so it is a concern to lean too much into JavaScript to solve our problems. Asset ESM imports rely on a special understanding of what an "svg" or "png" import to JavaScript looks like, which may not feel familiar to non-JS experts.
 
-This proposal takes the following stance in response to these valid drawbacks: **Higher-level, more-friendly APIs can be built on top of this primitive.** For example, you can use `const assets = import.meta.glob('/assets/**')` to create your own runtime `assets` lookup (ex: `assets['font.png']`). Or, Astro could build this concept of a magic assets folder into core (ex: `import {getAsset} from 'astro/runtime';`). 
-
-This proposal welcomes more high-level features to be built on top of it, both in Astro core and also across our ecosystem of 3rd-party plugins and integrations.
+This proposal takes the following stance in response to these valid drawbacks: **Higher-level, more-friendly APIs can be built on top of this primitive.** This proposal welcomes more high-level features to be built on top of it, both in Astro core and also across our ecosystem of 3rd-party plugins and integrations. Continue to the next section to see how all viable, proposed alternatives can be built on top of this primitive.
 
 *TODO: More drawbacks? Please contribute!*
 
 # Alternatives
+
+All viable, proposed alternatives can be built on top of this primitive as high-level features. This section outlines the alternatives, and then illustrates how this RFC could power them. The goal is to show that this RFC is not at odds with future, high-level features that make this primitive easier to work with.
 
 ## The Assets Folder
 
@@ -168,12 +168,47 @@ An alternative approach that has been considered is to have a special `assets/` 
 This RFC is not at odds with this alternative. If this alternative were proposed, it would make sense to take advantage of the Asset primitive outlined here and build that high-level feature on top of this low-level primitive, vs. re-implementing Vite features that already exist in Vite (`import.meta.glob`, resolving and loading hooks, etc).
 
 ```js
-/* Possible Asset Folder Lookup Implementation (for illustration only) */
+/* Example: A core assets/ folder lookup implementation (for illustration only) */
 Astro.asset = function(name: string) {
   const allAssets = import.meta.globEager('/assets/**');
   const path = getPathFromName(name);
   return allAssets[path];
 }
+```
+
+```js
+/* Example: A user-land assets/ folder lookup implementation
+// src/assets/index.js
+export const assets = transformPathToName(import.meta.globEager('./**'));
+export function asset(name) { return assets[name] };
+
+// anywhere else in your project:
+import {assets} from '../assets/index.js';
+<Icon use={assets['book']} />
+
+// or, an alternative API
+import {asset} from '../assets/index.js';
+<Icon use={asset('book')} />
+```
+
+## A sugar `local:use` directive
+
+We already have an accepted RFC for the `local:src` and `local:href` directives, which is sugar for the following:
+
+```
+// Sugar:
+<img local:src="../assets/book.png" />
+// Equivilent to this:
+<img src={await import('../assets/book.png?url')} />
+```
+
+That RFC and this RFC both build on the same core idea: We need to pass assets through Vite for them to be included in the final build. You could imagine that we could extend this `local:src` syntax to handle other assets, building on this same primitive:
+
+```
+// Sugar:
+<Image local:use="../assets/book.png" />
+// Equivilent to this:
+<Image use={await import('../assets/book.png')} />
 ```
 
 
