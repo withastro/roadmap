@@ -193,7 +193,7 @@ Astro.asset = function(name: string) {
 
 We could even make the magic assets folder an official concept in Astro, and allow for a completely, zero-JS asset syntax for the user:
 
-```
+```astro
 ---
 /* Example: An icon component that knows about the assets folder */
 /*          <Icon name="book" /> */
