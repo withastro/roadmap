@@ -168,15 +168,6 @@ An alternative approach that has been considered is to have a special `assets/` 
 This RFC is not at odds with this alternative. If this alternative were proposed, it would make sense to take advantage of the Asset primitive outlined here and build that high-level feature on top of this low-level primitive, vs. re-implementing Vite features that already exist in Vite (`import.meta.glob`, resolving and loading hooks, etc).
 
 ```js
-/* Example: A core assets/ folder lookup implementation (for illustration only) */
-Astro.asset = function(name: string) {
-  const allAssets = import.meta.globEager('/assets/**');
-  const path = getPathFromName(name);
-  return allAssets[path];
-}
-```
-
-```js
 /* Example: A user-land assets/ folder lookup implementation
 // src/assets/index.js
 export const assets = transformPathToName(import.meta.globEager('./**'));
@@ -190,6 +181,27 @@ import {assets} from '../assets/index.js';
 import {asset} from '../assets/index.js';
 <Icon use={asset('book')} />
 ```
+
+```js
+/* Example: A core assets/ folder lookup implementation (for illustration only) */
+Astro.asset = function(name: string) {
+  const allAssets = import.meta.globEager('/assets/**');
+  const path = getPathFromName(name);
+  return allAssets[path];
+}
+```
+
+We could even make the magic assets folder an official concept in Astro, and allow for a completely, zero-JS asset syntax for the user:
+
+```
+---
+/* Example: An icon component that knows about the assets folder */
+/*          <Icon name="book" /> */
+const iconSvg = (await import(`~assets/${Astro.props.name}.svg`)).default;
+--- 
+<Fragment set:html={iconSvg} />
+```
+
 
 ## A sugar `local:use` directive
 
