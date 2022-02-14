@@ -1,6 +1,6 @@
 - Start Date: 2022-02-08
 - Reference Issues: https://github.com/withastro/rfcs/discussions/90
-- Implementation PR: TODO (proof of concept exists, still need to clean it up and get it into a PR)
+- Implementation PR: 
 
 # Summary
 
@@ -70,13 +70,25 @@ This proposal outlines an **asset primitive** that accomplishes the following go
 
 ## The Asset Primitive
 
+```ts
+interface ImageAsset {
+  url: string;
+  width: number;
+  height: number;
+  blurHashUrl: string;
+}
+
+interface SvgAsset {
+  width: number;
+  height: number;
+  content: string;
+}
+```
 ```js
 import imageBook from '../assets/book.png';
   // imageBook is type: ImageAsset (.png|.jpg|.jpeg|.webp)
-  // {url, width, height, blurHashUrl}
 import iconCookie from '../assets/cookie.svg';
-  // iconCookieis type: SvgAsset (.svg)
-  // {width, height, content}
+  // iconCookie is type: SvgAsset (.svg)
 import robotoFont400 from '../assets/fonts/roboto-slab-v22-latin-regular.woff2';
   // robotoFont400 is type: string
   // [If no custom asset is defined, Astro will default to including the asset
@@ -116,7 +128,7 @@ In the future, these can be extended to add new features. For example, the Image
 
 ## Other Notes
 
-- This is trivial to implement in Astro today. Vite provides hooks for these sorts of imports, so we would just need to create two Vite plugins inside of Astro: one for SVGs and one for images.
+- This is trivial to implement in Astro today. Vite provides hooks for these sorts of imports, so we would just need to create two Vite plugins inside of Astro: one for SVGs and one for images. See `ImageAsset` and `SvgAsset` types above for data interface.
 - This is possible to do in userland today by providing those two Vite plugins yourself. This proposal exists to bless this as the "Astro" way and integrate this into Astro itself so that our community can build on top of it.
 
 
