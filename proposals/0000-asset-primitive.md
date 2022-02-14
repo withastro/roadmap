@@ -15,7 +15,7 @@ A consistent strategy and low-level primitive to handle assets (Icons, Fonts, Im
 import imageBook from '../assets/book.png';
 import iconCookie from '../assets/cookie.svg';
 import robotoFont400 from '../assets/fonts/roboto-slab-v22-latin-regular.woff2';
-import {Image, Icon, Font} from 'astro/components';
+import {Image, Icon, Font} from '../src/my-asset-components/index.js';
 ---
 <html>
   <head>
@@ -32,36 +32,7 @@ import {Image, Icon, Font} from 'astro/components';
 </html>
 ```
 
-## High-Level Example (Future)
-
-**NOTE: This RFC is not proposing this API!** This is just an example to highlight one kind of high-level API that could be built on top of this primitive in the future.
-
-```astro
----
-import {Image, Icon, Font} from 'astro/components';
-
-/* Possible Astro.asset() Implementation (for illustration only)
-Astro.asset = function(name: string) {
-  const allAssets = import.meta.globEager('/assets/**');
-  const path = getPathFromName(name);
-  return allAssets[path];
-} */
----
-<html>
-  <head>
-    <Font use={Astro.asset('roboto-slab-v22-latin-regular')} family="Roboto Slab" />
-    <style>
-      body { font-family: 'Roboto Slab'; }
-    </style>
-  </head>
-  <body>
-    <p>Hello, <strong>world!</strong></p>
-    <Icon use={Astro.asset('book')} />
-    <Image use={Astro.asset('cookie')} />
-  </body>
-</html>
-```
-
+Several high-level APIs could be built on top of this primitive in the future. See **Alternatives** section below.
 
 
 # Motivation
@@ -110,38 +81,36 @@ import robotoFont400 from '../assets/fonts/roboto-slab-v22-latin-regular.woff2';
   // in your build and returning a single URL as the result. This is Vite default behavior.]
 ```
 
-- The asset primitive is imported via ESM.
-- Astro will define two custom `Asset` types: `ImageAsset` and `SvgAsset`
+- An **asset** is generally defined as any file type other than JS, compile-to-JS (TS, React, etc), JSON, CSS, or compile-to-CSS.
+- The **asset primitive** is the representation of an asset inside of JS.
+- The asset primitive is created by importing the asset inside JS or the Astro component frontmatter. 
+    - This allows our build process to detect all assets at build-time, achiving SSR-readiness.
+- Astro will define two custom `Asset` types: `ImageAsset` and `SvgAsset` (see example above for type definition)
 - All other assets will just return a URL path string to the asset, and include that asset in the final build.
 - Works in `.astro` and all component files (`.jsx`, `.svelte`, `.vue`, etc)
 - Builds on top of the accepted [`local:src`](https://github.com/withastro/rfcs/blob/assets-rfc/proposals/0011-relative-url-scheme.md) RFC.
 
-## The Asset Components
+## Asset Components (Out of Scope)
+
+This RFC is not currently proposing any official asset components. However, it would be a natural fit to pair this RFC with some official Astro components that could handle assets directly. This will be left for user-land components and integrations to build on top of, until an RFC for official Astro components is proposed.
+
+In the future, these can be extended to add new features. For example, the Image component can be extended to support image optimizations and automatic [blurhash](https://blurha.sh/) support.
 
 ```astro
----
-import imageBook from '../assets/book.png';
-import iconCookie from '../assets/cookie.svg';
-import robotoFont400 from '../assets/fonts/roboto-slab-v22-latin-regular.woff2';
-import {Image, Icon, Font} from 'astro/components';
----
+<!-- NOTE: Out of scope for this RFC! Just an illustrative example -->
 <html>
 <head>
+  <!-- <Font>: Creates a `<style>` tag with a single `@font-family` definition -->
   <Font use={robotoFont400} family="Roboto Slab" weight={400} style="normal" />
 </head>
 <body>
+  <!-- <Icon>: renders the given `svg` to HTML. -->
   <Icon use={IconCookie} />
+  <!-- <Image>: Creates a `<img>` tag with `src=` the asset URL. In the future, could handle blurs, etc. -->
   <Image use={imageBook} />
 </body>
 </html>
 ```
-
-- Astro will ship `Font`, `Icon`, and `Image` components that can take these asset types, and properly use them on the page:
-  - `Font`: Creates a `<style>` tag with a single `@font-family` definition
-  - `Image`: Creates a `<img>` tag with `src=` the asset URL
-  - `Icon`: renders the given `svg` content to HTML.
-- In the future, these can be extended to add new features. For example, the Image component can be extended to support image optimizations and automatic [blurhash](https://blurha.sh/) support.
-- Renders could also provide `Font`, `Icon` and `Image` components that are specific to each framework. This can be fleshed out in more detail if it is a concern, but it is strongly believed that this is possible and fairly trivial.
 
 ## Other Notes
 
@@ -155,7 +124,16 @@ In the first discussion on this proposal, there was a lot of push-back at the ex
 
 This proposal takes the following stance in response to these valid drawbacks: **Higher-level, more-friendly APIs can be built on top of this primitive.** This proposal welcomes more high-level features to be built on top of it, both in Astro core and also across our ecosystem of 3rd-party plugins and integrations. Continue to the next section to see how all viable, proposed alternatives can be built on top of this primitive.
 
-*TODO: More drawbacks? Please contribute!*
+## non-Icon SVGs
+
+By saying that all imported SVGs will be inlined into the HTML, this comes at the expense of deprioritizing the `<img src="SOME-SVG" />` use-case. Note that solution for this use-case is not a regression: nothing changes from how this works today. 
+
+If you need to do `<img src="SOME-SVG">`, you can:
+1. Use an `./some.svg?url` import - This will return the URL and include it in your final build
+2. Use `local:src` sugar - this uses the `?url` import automatically
+3. Use `<img src="/some.svg">` - Avoid the asset primitive. Instead, put the svg in `public/`, and then import it by URL/path string. 
+
+
 
 # Alternatives
 
