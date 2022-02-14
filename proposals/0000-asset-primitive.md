@@ -49,7 +49,9 @@ Why is this is a problem? To be clear, it's not a problem *today* because run-ti
 
 However, with SSR support coming this will no longer always be true. If `<Icon name={fetchedAPIUserData.avatarIcon}>` renders for the first time on the server (ex: on Netlify, on Vercel) then Astro has no idea which icon you need to include in your build at build-time, which is when the decision of "what to include in your build" is made.
 
-This RFC is a priority to support our community members who are building components and integrations that use assets, and who need an asset strategy that we can commit to working in the future.  There have been different ideas thrown around to solve for this, some of which I will touch on in the "Alternatives" section of this RFC.
+Today, to get around this problem users can reach for Vite plugins which leverage build-time analysis for ESM imports. This solves our problem, but introduces a new one: no two Astro users have the same idea of what gets returned when an image is imported. For example, https://github.com/ElMassimo/vite-plugin-image-presets provides great features but defines its own API. This makes it impossible for 3rd-party component authors to assume a standard API and write consistent documentation if an asset reference or import is required.
+
+This RFC is a priority to support our community members who are building components and integrations that use assets, and who need an asset strategy that we can commit to working in the future.  There have been different ideas thrown around to solve for this, some of which I will touch on in the "Alternatives" section of this RFC. 
 
 ### Goals
 
@@ -61,7 +63,7 @@ This proposal outlines an **asset primitive** that accomplishes the following go
 - Works with SSR, where all assets must be known at build-time, with 100% accuracy.
 - Works across frameworks (`.jsx`, `.svelte`, `.vue`). Not an `.astro`-only solution.
 - Introduces an acceptable amount of boilerplate (as little as possible, or none).
-- Can power custom 3rd-party integrations and components.
+- Provide a consistent API for dealing with assets that 3rd-party components can safely build on top of.
 - Can power future, higher-level Astro core features.
 
 # Detailed design
