@@ -192,7 +192,7 @@ We already have an accepted RFC for the `local:src` and `local:href` directives,
 <img src={await import('../assets/book.png?url')} />
 ```
 
-That RFC and this RFC both build on the same core idea: We need to pass assets through Vite for them to be included in the final build. You could imagine that we could extend this `local:src` syntax to handle other assets, building on this same primitive:
+That RFC and this RFC both build on the same core idea: We need to pass assets through Vite for them to be included in the final build. We could add a second `local:` attribute that didn't force `?url`, or we could revisit `local:` to handle this use case. The end result would be something like:
 
 ```
 // Sugar:
