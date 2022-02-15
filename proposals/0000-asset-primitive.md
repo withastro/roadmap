@@ -219,7 +219,7 @@ That RFC and this RFC both build on the same core idea: We need to pass assets t
 
 ## A smart HTML scanner
 
-@jonneal has proposed scanning Astro templates for assets directly as a way to avoid ESM import syntax. This is a much less known/certain path (very difficult to scan dynamic templates with 100% accuracy, how to handle `<img src="">` vs. `<Image src="">`, etc) that would also be non-trivial to implement. 
+@jonneal has proposed scanning Astro templates for assets directly as a way to avoid ESM import syntax. This is a much less known/certain path (very difficult to scan dynamic templates with 100% accuracy, how to handle `<img src="">` vs. `<Image src="">`, etc) that would also be non-trivial to implement (unlikely to achieve without delaying v1.0). 
 
 However, if we did want to explore this path there is a good chance that an internal Asset representation could still help to power this feature. For example, the compiler could compile the following to tell Vite that the asset must exist in the final build:
 
@@ -229,6 +229,8 @@ However, if we did want to explore this path there is a good chance that an inte
 // Equivilent to this:
 <img src={await import('../assets/book.png')} />
 ```
+
+This could be tackled as a followup to this RFC.
 
 # Adoption strategy
 
