@@ -196,7 +196,7 @@ const iconSvg = (await import(`~assets/${Astro.props.name}.svg`)).default;
 ```
 
 
-## A sugar `local:use` directive
+## A sugar directive
 
 We already have an accepted RFC for the `local:src` and `local:href` directives, which is sugar for the following:
 
@@ -207,7 +207,7 @@ We already have an accepted RFC for the `local:src` and `local:href` directives,
 <img src={await import('../assets/book.png?url')} />
 ```
 
-That RFC and this RFC both build on the same core idea: We need to pass assets through Vite for them to be included in the final build. We could add a second `local:` attribute that didn't force `?url`, or we could revisit `local:` to handle this use case. The end result would be something like:
+That RFC and this RFC both build on the same core idea: We need to pass assets through Vite for them to be included in the final build. We could add a second directive similar to `local:` that didn't force `?url`, or we could revisit `local:` to handle this use case. The end result would be something like:
 
 ```
 // Sugar:
@@ -216,6 +216,19 @@ That RFC and this RFC both build on the same core idea: We need to pass assets t
 <Image use={await import('../assets/book.png')} />
 ```
 
+
+## A smart HTML scanner
+
+@jonneal has proposed scanning Astro templates for assets directly as a way to avoid ESM import syntax. This is a much less known/certain path (very difficult to scan dynamic templates with 100% accuracy, how to handle `<img src="">` vs. `<Image src="">`, etc) that would also be non-trivial to implement. 
+
+However, if we did want to explore this path there is a good chance that an internal Asset representation could still help to power this feature. For example, the compiler could compile the following to tell Vite that the asset must exist in the final build:
+
+```
+// Smarter compiler:
+<img src="../assets/book.png" />
+// Equivilent to this:
+<img src={await import('../assets/book.png')} />
+```
 
 # Adoption strategy
 
