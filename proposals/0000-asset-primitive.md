@@ -47,11 +47,12 @@ All of these approaches work today (Astro v0.21), but suffer from an important p
 
 Why is this is a problem? To be clear, it's not a problem *today* because run-time and build-time are the same. In Astro today, **run-time** and **build-time** both happen during your build, ahead-of-time, before the site is deployed to the server. Runtime has full access to your machine, and every source file in your repo.
 
-However, with SSR support coming this will no longer always be true. If `<Icon name={fetchedAPIUserData.avatarIcon}>` renders for the first time on the server (ex: on Netlify, on Vercel) then Astro has no idea which icon you need to include in your build at build-time, which is when the decision of "what to include in your build" is made.
+However, with SSR support coming this will no longer always be true. If `<Icon name={fetchedAPIUserData.avatarIcon}>` renders for the first time on the server (ex: on Netlify, on Vercel) then Astro has no idea which icon you need to include in your build at build-time, which is when the decision of "what to include in your build" is made. Astro-icons has a PR out to resolve this issue (https://github.com/natemoo-re/astro-icon/pull/26) and this RFC exists to standardize on this approach for others.
 
 Today, to get around this problem users can reach for Vite plugins which leverage build-time analysis for ESM imports. This solves our problem, but introduces a new one: no two Astro users have the same idea of what gets returned when an image is imported. For example, https://github.com/ElMassimo/vite-plugin-image-presets provides great features but defines its own API. This makes it impossible for 3rd-party component authors to assume a standard API and write consistent documentation if an asset reference or import is required.
 
 This RFC is a priority to support our community members who are building components and integrations that use assets, and who need an asset strategy that we can commit to working in the future.  There have been different ideas thrown around to solve for this, some of which I will touch on in the "Alternatives" section of this RFC. 
+
 
 ### Goals
 
