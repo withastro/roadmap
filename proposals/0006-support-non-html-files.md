@@ -10,7 +10,7 @@
 
 - Start Date: 2021-09-03
 - Reference Issues: N/A
-- Implementation PR: N/A
+- Implementation PR: [astro #2586](https://github.com/withastro/astro/pull/2586)
 
 # Summary
 
