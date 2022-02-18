@@ -44,23 +44,12 @@ Saves ~30MB.
 Remove renderers from core, need to install them separately, the starter should let developers choose which renderer they use. Check documentation and templates to make sure renderers are placed where needed.
 
 ## Remove components
-Saves ~TODO (shiki 8MB)
-Remove components from core.
+Saves 12MB. (shiki: 8.5MB, prismjs: 3.5MB)
+Remove components from core. Code in `packages/astro/components` would need to be moved to a separate package. Internal usage of Astro `privateRenderMarkdownDoNotUse` would need to be changed or depended on via dependency on Astro.
 
 # Drawbacks
 
-Developer convenience is lost by removing features by default. These can be eased by adding them by choice automatically with the starter `npm init astro`.
-
-TODO:
-Why should we *not* do this? Please consider:
-
-- Implementation cost, both in term of code size and complexity.
-- Whether the proposed feature can be implemented in user space.
-- Impact on teaching people Astro.
-- Integration of this feature with other existing and planned features
-- Cost of migrating existing Astro applications (_is it a breaking change?_)
-
-There are tradeoffs to choosing any path. Attempt to identify them here.
+Developer convenience is lost by removing features by default, adding more documentation. Changes can be eased by adding them by choice automatically with the starter `npm init astro`. Keeping the core `astro` package lean should help with maintaining the codebase at the possible cost of more interfaces/glue code between packages.
 
 # Alternatives
 
@@ -69,13 +58,8 @@ https://github.com/withastro/astro/issues/1728#issuecomment-959535287
 
 # Adoption strategy
 
-Install renderers used in existing Astro config.
-
-TODO:
-- If we implement this proposal, how will existing Astro developers adopt it?
-- Is this a breaking change? Can we write a codemod?
-- Can we provide a runtime adapter library for the original API it replaces?
-- How will this affect other projects in the Astro ecosystem?
+- Document the need to install renderers used in existing Astro configs, codemod possible.
+- TODO
 
 # Unresolved questions
 Amount of packages > package depth also influences install speed significantly?
