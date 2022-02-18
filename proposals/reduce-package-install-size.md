@@ -42,7 +42,7 @@ Saves ~30MB.
 Remove renderers from core, need to install them separately, the starter should let developers choose which renderer they use. Check documentation and templates to make sure renderers are placed where needed.
 
 ## Remove components
-Saves 12MB. (shiki: 8.5MB, prismjs: 3.5MB)
+Saves ~12MB. (shiki: 8.5MB, prismjs: 3.5MB)
 
 Remove components from core. Code in `packages/astro/components` would need to be moved to a separate package. Internal usage of Astro `privateRenderMarkdownDoNotUse` would need to be changed or depended on via dependency on Astro.
 
