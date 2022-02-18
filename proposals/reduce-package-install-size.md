@@ -1,6 +1,6 @@
 - Start Date: 2022-02-11
 - Reference Issues: https://github.com/withastro/rfcs/discussions/100
-- Implementation PR:
+- Implementation PR: https://github.com/withastro/astro/pull/2614
 
 # Summary
 
