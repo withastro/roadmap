@@ -40,8 +40,8 @@ $ npm ls typescript
 Remove the check command from the core and make available as an add-on package `astro-check`. When ran `astro check` could prompt to install `astro-check` as a separate development dependency if it's missing.
 
 ## Remove renderers
-Saves ~TODO
-Remove renderers from core, need to install them separately, the starter should let developers choose which renderer they use.
+Saves ~30MB.
+Remove renderers from core, need to install them separately, the starter should let developers choose which renderer they use. Check documentation and templates to make sure renderers are placed where needed.
 
 ## Remove components
 Saves ~TODO (shiki 8MB)
