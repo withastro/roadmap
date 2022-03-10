@@ -1,5 +1,5 @@
 - Start Date: 03-10-2022
-- Reference Issues: <!-- related issues, otherwise leave empty -->
+- Reference Issues: https://github.com/withastro/rfcs/discussions/5, https://github.com/withastro/rfcs/discussions/118
 - Implementation PR: <!-- leave empty -->
 
 # Summary
@@ -36,7 +36,7 @@ const firstPost = markdownFilesFiltered[0] || await import('../posts/first-post.
 # Motivation
 
 - **Performance:** Markdown rendering continues to be an expensive part of Astro's runtime. While we can look into faster renderers (ex: Goldmark) there is still a big inefficincy on our end with how we hold the tool. Astro currently renders markdown on import, which means that multi-file markdown imports (via both `import.meta.glob` and `Astro.fetchContent()`) block the response until all imported files are rendered, even if only a subset of these files are ever used on the page after filtering.
-- **Performance (Memory):** For large projects, this also forces Astro to store all rendered Markdown output in memory at the same time, making it difficult to manage memory efficiently. Chris Bonger reached max memory limits in a project of only 800 markdown pages, and another user reported builds requiring 50+ GB of memory.
+- **Performance (Memory):** For large projects, this also forces Astro to store all rendered Markdown output in memory at the same time, making it difficult to manage memory efficiently. Our community has reported builds maxing out memory limits in a project of only 800 markdown pages, and builds requiring 50+ GB of memory.
 - **Infinite Loops:** By rendering during import, we also introduce a risk for infinite loops when we call `fetchContent()` in a Markdown layout used by a fetched page, bouncing between render and `fetchContent()` infinitely.
 
 
