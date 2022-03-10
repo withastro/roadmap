@@ -52,11 +52,11 @@ Tailwind suffers from a similar difficult setup story in Astro.
 
 # Detailed design
 
-**Background:** This API was reached through weeks of experimentation of different designs (see alternatives below). To test the work, I created the following integrations: 
+**Background:** This API was reached through weeks of experimentation of different designs (see alternatives below). To test the work, I designed and build the following integrations, which are useful for illustrating this RFC: 
 
-- **Renderers:** `lit`, `svelte`, `react`, `preact`, `vue`, `solid`
-- **Libraries:** `tailwind`, `partytown`, `turbolinks`
-- **Features:** `sitemap`
+- **Renderers:** [`lit`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/lit/index.js), [`svelte`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/svelte/index.js), [`react`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/react/index.js), [`preact`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/preact/index.js), [`vue`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/vue/index.js), [`solid`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/solid/index.js)
+- **Libraries:** [`tailwind`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/tailwind/index.js), [`partytown`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/partytown/index.js), [`turbolinks`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/turbolinks/index.js)
+- **Features:** [`sitemap`](https://github.com/withastro/astro/blob/wip-integrations-4/packages/integrations/sitemap/index.js)
 
 ## Integration Usage API
 
