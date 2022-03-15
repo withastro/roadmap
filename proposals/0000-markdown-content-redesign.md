@@ -11,19 +11,25 @@ A v2.0 API for working with local Markdown files in Astro.
 ```astro
 ---
 // BASIC USAGE:
+// Astro.fetchContent() replaced with a generalized `Astro.glob()` helper.
+// This now works for non-MD files as well!
+const markdownFilesArr = await Astro.glob('../posts/*.md');
+const markdownFilesFiltered = markdownFilesArr.filter(post => post.frontmatter.category === 'blog');
 
-// Note: Astro.fetchContent() removed in favor of direct `import.meta.globEager` usage
-// Note: This works in non-Astro framework components!
+// BASIC USAGE:
+// Individual markdown imports are now supported as well!
+const firstPost = await import('../posts/first-post.md');
+
+// ADVANCED USAGE:
+// You can also use the bare-metal `import.meta.glob/globEager` API
+// This is useful in non-Astro files, like JSX and Vue.
 const markdownFilesObj = import.meta.globEager('../posts/*.md');
 const markdownFilesArr = Object.values(markdownFilesObj);
 const markdownFilesFiltered = markdownFilesArr.filter(post => post.data.category === 'blog');
-
-// Note: Individual markdown imports are now supported as well.
-const firstPost = await import('../posts/first-post.md');
 ---
 <!-- Data is parsed from frontmatter without requiring a render -->
-<h1>{firstPost.data.title}</h1>
-<p>Author: {firstPost.data.author}</p>
+<h1>{firstPost.frontmatter.title}</h1>
+<p>Author: {firstPost.frontmatter.author}</p>
 <p><a href={firstPost.url}>Permalink</a></p>
 <!-- Defer rendering as late as possible for performance -->
 <article>{firstPost.getContent()}</article>
@@ -39,6 +45,12 @@ const firstPost = await import('../posts/first-post.md');
 
 # Detailed design
 
+## `Astro.glob()`
+
+TODO
+
+## Deferred Implementation
+
 - This is implemented in a v2.0 of the internal `'astro:markdown'` Vite plugin
 - All Markdown files (ex: `src/posts/foo.md`) are resolved and loaded by this plugin.
 
@@ -49,7 +61,7 @@ const firstPost = await import('../posts/first-post.md');
     ```js
     `
     // Static:
-    export const data = ${JSON.stringify(frontmatter)};
+    export const frontmatter = ${JSON.stringify(frontmatter)};
     export const file = ${JSON.stringify(id)};
     export const url = ${JSON.stringify(url || undefined)};
 
@@ -87,39 +99,21 @@ The `import.meta.glob` and `import.meta.globEager` API is more complex to unders
 
 # Alternatives
 
-`Astro.fetchContent()` is deprecated here, in favor of the Vite `import.meta.glob` and `import.meta.globEager` APIs. 
+A previous version of this RFC removed all helpers, and asked the user to use `import.meta.glob` directly themselves. This meant less maintainance/overhead for Astro, but that API suffers from a few problems:
 
-Currently, we maintain a `Astro.fetchContent()` helper function to avoid users having to write `import.meta.glob` themselves. However, this is more complex than it looks and actually triggers a full Babel parse & traverse to work. In addition, it causes the following drawbacks:
+1. Not well documented outside of being an advanced Vite API
+2. unneccesarily complex (ex: when do I use `import.meta.glob` vs. `import.meta.globEager()`. Also, what is `import.meta`?)
 
-- Only `.astro` files can use `Astro.fetchContent()`
-- `@babel/traverse` used internally to rewrite `Astro.fetchContent()` to `import.meta.glob()`. Doing an AST traversal like this is expensive for such a small change to the AST.
-- `Astro.fetchContent()` ended up being too limiting for many users, and today we often suggest users use `import.meta.glob` directly.
+However, based on feedback from the community I realized that we could keep the idea of a helper while fixing some of the problems of `Astro.fetchContent()`. This new `Astro.glob()` has the following benefits over `Astro.fetchContent()`:
 
-This RFC aims to remove `Astro.fetchContent()` entirely, and that users are better served by using the more polished/battle-tested `import.meta.glob` Vite API directly. Even if it feels more advanced than the current `Astro.fetchContent()`, it's better than maintaining two different APIs to do the same thing.
+1. Not just for Markdown, this is a generalized wrapper around `import.meta.globEager()`
+2. Easy to understand the connection to `import.meta.glob()`, if your use-case needs that more flexible API
 
-However, there are two alternatives that we can also consider:
-
-1. Continue to support it as-is: `Astro.fetchContent()`
-2. Support it as a more flexible helper function: `import {$content} from 'astro/util'`;
-
-```js
-// 1. Today
-const markdownFilesArr = Astro.fetchContent('../posts/*.md');
-
-// 2. Proposed API
-const markdownFilesObj = import.meta.globEager('../posts/*.md');
-const markdownFilesArr = Object.values(markdownFilesObj);
-
-// 3. Alternative API
-import {$content} from 'astro/util';
-const markdownFilesArr = $content(import.meta.globEager('../posts/*.md'));
-```
 
 # Adoption strategy
 
-1. `Astro.fetchContent()` will become deprecated, but not throw an error. It can continue to be a wrapper around `import.meta.globEager` for an easier migration.
-2. We update our docs to document `import.meta.globEager` instead of `Astro.fetchContent()`
-3. In Astro v1.0, we remove `Astro.fetchContent()`.
+1. We update documentation to document `Astro.glob()` over `Astro.fetchContent()`, with helpful migration docs.
+1. `Astro.fetchContent()` will be removed and throw an error, telling you to replace with `Astro.glob()`. 
 
 # Unresolved questions
 
