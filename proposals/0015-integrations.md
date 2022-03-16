@@ -9,18 +9,6 @@ An integration system for extending Astro.
 # Example
 
 ```js
-// astro.config.js
-export default ({
-	integrations: [
-		import('@astrojs/vue'),
-		import('@astrojs/tailwind'),
-		[import('@astrojs/partytown'), {/* options */}],
-	],
-});
-```
-
-```js
-// Static imports are also supported, for type checking.
 import vuePlugin from '@astrojs/vue';
 import tailwindPlugin from '@astrojs/tailwind';
 import partytownPlugin from '@astrojs/partytown';
@@ -61,14 +49,15 @@ Tailwind suffers from a similar difficult setup story in Astro.
 ## Integration Usage API
 
 ```js
-// astro.config.js
+import vuePlugin from '@astrojs/vue';
+import tailwindPlugin from '@astrojs/tailwind';
+import partytownPlugin from '@astrojs/partytown';
+
 export default ({
 	integrations: [
-		import('@astrojs/vue'),
-        // or, with options
-		[import('@astrojs/vue'), {/* options */}],
-        // or, as a static ESM import at the top of the file
-		vuePlugin({/* options */})
+		vuePlugin(),
+		tailwindPlugin(),
+		partytownPlugin({/* options */})
 	],
 });
 ```
@@ -161,11 +150,10 @@ Astro renderers are no longer supported!
 Update your config to use Astros new integration system:
 
 - renderers: ["@astrojs/vue"]
-+ integrations: [import("@astrojs/vue")]
++ integrations: [(await import("@astrojs/vue")).default()]
 ```
 
 # Unresolved questions
 
-- Bikeshedding all the things
 - Can we pair this with an `astro add NAME` CLI command?
 - Do we use this as a chance to remove the built-in renderers, and force users to install all framework integrations themselves as npm packages? I would like to save that for a later breaking change, since it would make this breaking change more complex (see the adoption strategy defined above).
