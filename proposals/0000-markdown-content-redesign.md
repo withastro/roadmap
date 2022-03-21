@@ -32,7 +32,7 @@ const markdownFilesFiltered = markdownFilesArr.filter(post => post.data.category
 <p>Author: {firstPost.frontmatter.author}</p>
 <p><a href={firstPost.url}>Permalink</a></p>
 <!-- Defer rendering as late as possible for performance -->
-<article>{firstPost.getContent()}</article>
+<firstPost.Content />
 ```
 
 
