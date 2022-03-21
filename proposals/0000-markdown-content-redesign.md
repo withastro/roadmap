@@ -38,9 +38,27 @@ const markdownFilesFiltered = markdownFilesArr.filter(post => post.data.category
 
 # Motivation
 
+## Background: Performance Issues
+
 - **Performance (Speed):** Markdown rendering continues to be an expensive part of Astro's runtime. While we can look into faster renderers (ex: Goldmark) there is still a big inefficincy on our end with how we hold the tool. Astro currently renders markdown on import, which means that multi-file markdown imports (via both `import.meta.glob` and `Astro.fetchContent()`) block the response until all imported files are rendered, even if only a subset of these files are ever used on the page after filtering.
 - **Performance (Memory):** For large projects, this also forces Astro to store all rendered Markdown output in memory at the same time, making it difficult to manage memory efficiently. Our community has reported builds maxing out memory limits in a project of only 800 markdown pages, and builds requiring 50+ GB of memory.
 - **Infinite Loops:** By rendering during import, we also introduce a risk for infinite loops when we call `fetchContent()` in a Markdown layout used by a fetched page, bouncing between render and `fetchContent()` infinitely.
+
+## Background: Usability Issues
+
+- `Astro.fetchContent()` currently only supports Markdown files, which is confusing to some users.
+- ESM `import` currently supports most file types *except* Markdown, which can work with `import` but you'll get back a different, undocumented  object API than if you'd used `fetchContent()`.
+- `import.meta.glob()` is another API available to users, but its unclear how `Astro.fetchContent()` and `import.meta.glob` are related.
+- Users still have difficulty using Markdown files in their projects due to legacy API decisions that we've been trying to move away from (ex: `.content -> `.Content`)
+
+## RFC Goals
+
+- Consolidate all of the existing markdown features into a single API
+- Align with Vite and how other file formats are built & imported
+- Keep a user-friendly API so that users don't need to use `import.meta.glob/globEager` themselves
+- If possible, open up this "user-friendly API" to more file types, not just Markdown
+- Solve the mentioned performance issues.
+
 
 
 # Detailed design
@@ -80,13 +98,15 @@ Astro.glob = function<T=any>(importMetaGlobResult: Record<string, any>): Promise
 
 ## Deferred Import Implementation
 
-- All Markdown files (ex: `src/posts/foo.md`) are resolved and loaded by an internal `'astro:markdown'` plugin.
-- This logic is implemented as v2.0 of that same internal plugin.
+- This RFC seeks to refactor how Markdown is loaded internally AND update the Markdown API that users interact with. 
+- The API updates are captured in `1.` below, while the refactoring is captured in `2.` and `3.`
+- The logic that manages all of this lives in the internal `'astro:markdown'` Vite plugin.
+- All Markdown files (ex: `src/posts/foo.md`) are resolved and loaded by this plugin.
 
 1. `src/posts/foo.md?import`
-    1. loaded from file system
-    2. frontmatter is parsed from the file
-    3. a JS module is returned with the following JS:
+    1. loads from file system
+    2. parses frontmatter from the file into a JS object
+    3. returns a JS module with the following JS:
     ```js
     `
     // Static:
@@ -98,19 +118,21 @@ Astro.glob = function<T=any>(importMetaGlobResult: Record<string, any>): Promise
     export default async function load(...args) {
         return (await import(${JSON.stringify(fileId + '?content')}));
     };
-    export function getContent() {
-        return load().then((m: any) => m.default)
+    export function Content(...args: any) {
+        return load().then((m: any) => m.default(...args))
     }
     export function getHeaders() {
         return load().then((m: any) => m.metadata.headers)
     }
-    `
+
+    // Minor Implementation Detail: Needed so that you can do `<Content />` in a template.
+    Content.isAstroComponentFactory = true; 
     ```
 
 2. `src/posts/foo.md?content`
-    1. loaded from file system
-    2. render using `config.markdownOptions.render(source)`
-    3. return an Astro component representing the markdown content
+    1. loads from file system
+    2. renders Markdown using `config.markdownOptions.render(source)`
+    3. returns an Astro component representing the markdown content
 
 3. `src/posts/foo.md`
     1. If we resolve an ID without a query param, we have to decide which to serve
@@ -121,7 +143,9 @@ Astro.glob = function<T=any>(importMetaGlobResult: Record<string, any>): Promise
 
 # Drawbacks
 
-There is a complexity drawback in the implementation details outlined above where the resolved content of `src/posts/foo.md` is dynamic and changes based on the call to `resolveId`. This is a valid use of `resolveId()` (it supports the `importer` argument for this exact reason) BUT Vite's support here is rough and we'd appear to be the first to rely on this less-touched code path (ex: https://github.com/vitejs/vite/issues/5981). On initial investigation, I don't think an alternate implementation is possible since both `vite.build()`  and `import.meta.globEager` need to use the unmodified import without query params.  Vite's automated CI running on Astro should mitigate this somewhat. 
+There is a complexity drawback in the implementation details outlined above where the resolved content of `src/posts/foo.md` is dynamic and changes based on the call to `resolveId`. This is a valid use of `resolveId()` (it supports the `importer` argument for this exact reason) BUT Vite's support here is rough and we'd appear to be the first to rely on this less-touched code path (ex: https://github.com/vitejs/vite/issues/5981). 
+
+On initial investigation, I don't think an alternate implementation is possible since both `vite.build()`  and `import.meta.globEager` need to use the unmodified import without query params.  Vite's automated CI running on Astro should mitigate this somewhat. 
 
 
 # Alternatives
@@ -131,7 +155,7 @@ A previous version of this RFC removed all helpers, and asked the user to use `i
 1. Not well documented outside of being an advanced Vite API
 2. unneccesarily complex (ex: when do I use `import.meta.glob` vs. `import.meta.globEager()`. Also, what is `import.meta` anyhow?)
 
-Based on feedback from the community in this RFC, I realized that we could keep the idea of a helper while still fixing some of the problems that plagued the current `Astro.fetchContent()` API. This new `Astro.glob()` has the following benefits over `Astro.fetchContent()`:
+Based on feedback from the community, I revised this RFC and realized that we could keep the idea of a helper while still fixing some of the problems that plagued the current `Astro.fetchContent()` API. This new `Astro.glob()` has the following benefits over `Astro.fetchContent()`:
 
 1. Not just for Markdown, this is a generalized wrapper around `import.meta.globEager()` for basic usage
 2. Easy to understand the connection to `import.meta.glob()`, if your use-case needs that more flexible API
