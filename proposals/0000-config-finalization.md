@@ -32,9 +32,9 @@ export default defineConfig({
         format: 'file',
     },
 
-	server: {
-		port: 3000
-	},
+    server: {
+        port: 3000
+    },
 
     dev: {
         host: '0.0.0.0',
