@@ -4,7 +4,9 @@
 
 # Summary
 
-Astro is inconsist between `<style>` and `<script>` default behavior. Currently, `<style>` has opt-out processing, but `<script>` does not. This RFC aims to settle on a good, consistent default for both `<style>` and `<script>`.
+Astro is inconsist between `<style>` and `<script>` default behavior. Currently, `<style>` has opt-out processing, but `<script>` does not. This RFC aims to settle on a good, consistent default for both `<style>` and `<script>`. 
+
+**This RFC is intended to supercede [RFC0008](https://github.com/withastro/rfcs/tree/main/proposals/0008-style-script-behavior.md).**
 
 - New `is:inline` directive to avoid bundling `style` or `script`
 - `<style>` => remains scoped, bundled by default. `is:scoped` directive supported for consistency
@@ -48,17 +50,28 @@ There have been [a few](https://github.com/withastro/rfcs/pull/12) [attempts](ht
 
 ### `is:inline`
 
-A new directive, `is:inline`, will be introduced. This will opt both `<style>` and `<script>` tags out of bundling behavior.
+A new directive, `is:inline`, will be introduced. This will opt both `<style>` and `<script>` tags out of _bundling_ behavior. 
+
+The `is:inline` directive means that `style` and `script` tags:
+
+- **will not** be bundled into an external file
+- **will not** be deduplicated—the element will appear as many times as it is rendered
+- **will** be pre-processed, for example a `lang="sass"` attribute will still generate plain CSS
+- **will** be rendered in the final output HTML where it is authored
 
 ### `is:scoped`, `is:global`
 
 These new directives are for `<style>` tags. They represent scoped (the default) and global (previously `global`) styles.
 
+`is:scoped` and `is:global` styles will be preprocessed, optimized, and bundled by Astro. This RFC intentionally does not propose any specific behavior for how these bundled styles are referenced in the final HTML output—this is an implementation detail that may change over time.
+
 ### `hoist` by default
 
-Support for `<script hoist>` will be removed. This will become the default `<script>` behavior, where `type="module"` is implied and scripts are preprocessed and bundled by default.
+Support for `<script hoist>` will be removed. This will become the default `<script>` behavior, where `type="module"` is implied and scripts are preprocessed, optimized, and bundled by default.
 
-If any script tag has an attribute (ex: `src=`, `type="module"`, `async`) or directive (`define:vars`), it is implied to be `is:inline`. Astro should emit a warning that `is:inline` is needed for clarity.
+This RFC intentionally does not propose any specific behavior for how these bundled scripts are referenced in the final HTML output—this is an implementation detail that may change over time.
+
+If any script tag has an attribute (ex: `type="module"`, `type="text/partytown"`, `async`) or directive (`define:vars`), it is implied to be `is:inline`. Astro should emit a warning that `is:inline` is recommended for clarity.
 
 # Drawbacks
 
@@ -76,13 +89,26 @@ A few other attempts have been made at finalizing this API:
 
 There is a clear need to address this inconsistency but we do not have a clear path forward yet.
 
+## `Script` and `Style` components
+
+One potential alternative would be to introduce magical `<Script>` and `<Style>` components. This was considered, but ultimately rejected because...
+- Whether these components are available on `globalThis` or must be imported could lead to confusion
+- These take Astro further away from similar frameworks like Vue and Svelte, which seem to have no problem with "magic by default" `script` and `style`.
+- These are not actual runtime components that can be renamed or inspected, but rather instructions for the Astro compiler
+
+## Use existing `is:raw` directive instead of introducing `is:inline`
+
+Astro already has a concept of `is:raw`, which has some conceptual overlap with `is:inline`. However, `is:raw` is a generic compiler instruction for processing the children of _any tag_ as plain text. `is:inline` is a compiler instruction specific to `style` and `script` tags and changes how Astro processes that script or style.
+
 # Adoption strategy
 
 - This migration/breaking change should be clearly documented and communicated to users.
-- Possibly introduce a codemod to ease migration?
+- Ideally we would introduce a codemod to ease this migration. This codemod would automatically:
+  - Change any `global` directives on `style` to `is:global`
+  - Add the `is:inline` directive to any `script` elements that do not specify `hoist`
+  - Remove `hoist` and `type="module"` from any `script` element that uses them
 
-# Unresolved questions
+# FAQs
 
 - What happens for things like CodePen embeds?
-- Is `is:inline` really necessary or can any attribute make it implied?
-- If `<script>` is so magical, should it become `<Script>`?
+  - Copy/Paste snippets CodePen embeds typically include a number of attributes on any `script` tags. Astro's compiler should warn you to add the `is:inline` attribute for clarity.
