@@ -42,24 +42,24 @@ Shiki controls theming, so that the end result is `<span style="color: #XXXXXX">
 
 **Proposed Solution**:
 
-Phase 1: Today:
+Phase 1: ✅
 
 - Add a new `<Code>` component, powered by Shiki. More info below. It lives alongside `<Prism>`.
 - **success metric to continue to phase 2:** happy user reports of anyone using the `<Code>` component directly
 
-Phase 2: Soon:
+Phase 2: ✅
 
 - **requires:** a way to set a global theme, across your site/project
 - **requires:** a way to customize your markdown syntax highlighter of choice
 - Move Markdown code blocks to use `<Code>` instead of `<Prism>` (https://github.com/stefanprobst/remark-shiki)
 - Move our recommendation in docs to use `<Code>` over `<Prism>`, but keep references to `<Prism>`.
-- Add warning when you use `<Prism>` to use `<Code>`  instead.
+- ~~Add warning when you use `<Prism>` to use `<Code>`  instead.~~ This would be jarring to users _intentionally_ sticking with Prism
 - **success metric to continue to phase 3:** docs site happy with the new Code component (usage in markdown)
 
-Phase 3: v1.0:
+Phase 3: Soon
 
 - Remove `<Prism>` entirely.
-- Move it into a seperate component, for anyone who still wants it. ex:`import Prism from '@astrojs/prism';` 
+- Move it into a separate component, for anyone who still wants it. ex:`import Prism from '@astrojs/prism';` 
 
 **Detailed Design**:
 
