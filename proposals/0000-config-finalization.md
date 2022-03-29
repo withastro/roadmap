@@ -33,18 +33,16 @@ export default defineConfig({
         format: 'file',
     },
 
+    // A: defaults for both `astro dev` and `astro preview`
     server: {
         port: 3000
     },
 
-    dev: {
-        host: '0.0.0.0',
-    },
-
-    preview: {
-        host: false,
-        port: 8080
-    },
+    // B: configure `astro dev` and `astro preview` individually
+    server({ command }) => ({
+        host: command === 'dev' ? '0.0.0.0' : false,
+        port: command === 'dev' ? 3000 : 3001,
+    }),
 
     markdown: {
         drafts: true,
@@ -94,22 +92,16 @@ For consistency and familiarity, the following properties have been renamed to m
 
 ## Server
 
-This RFC introduces a new `server` option. These settings configure both `dev` and `preview`, but both can be overidden.
+This RFC introduces a new `server` option. These settings configure both `dev` and `preview`, but both can be overidden using a function.
 
 - Add `host`. Type is `string | boolean`, defaults to `false`.
 - Add `port`. Type is `number`, defaults to `3000`.
+- Can be a function that returns `{ host, port }` based on a `{ command = 'dev' | 'preview' }` argument
 
 ## Dev
 
-- Rename `devOptions` => `dev`.
-- Inherits all settings from `server`, each can be overridden here to only apply to `astro dev`.
+- Remove `devOptions`
 - Remove `trailingSlash`. See [Top-Level Options](#top-level-options).
-
-## Preview
-
-This RFC introduces a new `preview` option. 
-
-- Inherits all settings from `server`, each can be overridden here to only apply to `astro preview`.
 
 ## Markdown
 
