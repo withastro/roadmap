@@ -114,6 +114,7 @@ This RFC proposes:
   > Internally this may be implemented in a pluggable manner, but that's an implementation detail.
 - Move the `render[1]` options object to the top-level.
 - Move `buildOptions.draft` => `markdown.drafts`
+- Unify `remarkPlugins` and `rehypePlugins` into `plugins`.
 
 # Sitemap
 
