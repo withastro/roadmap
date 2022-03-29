@@ -15,18 +15,19 @@ When this RFC is accepted, a config file for Astro might look something like thi
 ```js
 import { defineConfig } from 'astro';
 import preact from '@astrojs/preact';
+import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-    log: 'info',
+    logLevel: 'info',
+    root: '.',
 
-    rootDir: '.',
     srcDir: './src',
     publicDir: './public',
     outDir: './dist',
 
     site: 'https://example.com',
+    base: '/',
     trailingSlash: 'always',
-    basePath: '/',
 
     build: {
         format: 'file',
@@ -50,13 +51,12 @@ export default defineConfig({
         syntaxHighlight: 'shiki',
     },
 
-    sitemap: {
-        canonicalURL: 'https://example.com',
-        filter: (page) => page !== 'http://example.com/secret-page')
-    },
-
     integrations: [
-        preact()
+        preact(),
+        sitemap({
+            canonicalURL: 'https://example.com',
+            filter: (page) => page !== 'http://example.com/secret-page')
+        })
     ],
 
     vite: {}
@@ -67,19 +67,19 @@ export default defineConfig({
 
 ## Top-Level Options
 
-- Add `log`. Previously only supported through CLI flag.
+- Add `logLevel`. Previously only supported through CLI flag.
 - Add `trailingSlash`. Previously `devOptions.trailingSlash`.
 - Add `site`. Previously `buildOptions.site`.
-- Add `basePath`. Type is `string`, defaults to `/`. Previously derived from `buildOptions.site.pathname`.
+- Add `base`. Type is `string`, defaults to `/`. Previously derived from `buildOptions.site.pathname`.
 
 ## Directories
 
-For consistency, the following properties have been renamed to include a `Dir` suffix. This is a convention borrowed from tools like Vite and Svelte Kit and will be more familiar to users.
+For consistency and familiarity, the following properties have been renamed to match Vite and SvelteKit where possible.
 
-- Rename `projectRoot` => `rootDir`
+- Rename `projectRoot` => `root`. This matches Vite's `root` option.
 - Rename `src` => `srcDir`
-- Rename `public` => `publicDir`
-- Rename `dist` => `outDir`
+- Rename `public` => `publicDir`. This matches Vite's `publicDir` option.
+- Rename `dist` => `outDir`. This matches Vite's `build.outDir` option, but is moved to the top-level.
 - Remove explicit `pages` option. This is derived from `new URL('./pages', srcDir)`.
 
 ## Build
@@ -125,10 +125,9 @@ This RFC proposes:
 
 # Sitemap
 
-This RFC introduces a new `sitemap` option.
+This RFC proposes that the `buildOptions.sitemap` and `buildOptions.sitemapFilter` options are removed entirely. 
 
-- Add `canonicalURL`. Defaults to top-level `site`.
-- Add `filter`. Type is `(name: string) => boolean`, previously `buildOptions.sitemapFilter`.
+This usecase is handled by the `@astrojs/sitemap` integration, so users should install and configure `@astrojs/sitemap` if they previously used `buildOptions.sitemap`.
 
 ## Style
 
@@ -157,4 +156,6 @@ Churn is the major concern, but now is the time to make breaking "clean-up" chan
 
 In addition to `defineConfig` providing the new config types, this RFC will be aided by documentation in the form of a Mirgration Guide.
 
-If possible, we should introduce a codemod to automate migration.
+Internally, Astro should be able to implement this as a non-breaking change during the v1.0.0 beta period. We should detect and adapt the legacy config format to match the new config format. On CLI startup, we will log helpful migration messages.
+
+Prior to the official v1.0.0 release of Astro, logic around legacy config migration can be removed from the codebase.
