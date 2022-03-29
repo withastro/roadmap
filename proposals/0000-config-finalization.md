@@ -154,7 +154,7 @@ Churn is the major concern, but now is the time to make breaking "clean-up" chan
 
 # Adoption strategy
 
-In addition to `defineConfig` providing the new config types, this RFC will be aided by documentation in the form of a Mirgration Guide.
+In addition to `defineConfig` providing the new config types, this RFC will be aided by documentation in the form of a Migration Guide.
 
 Internally, Astro should be able to implement this as a non-breaking change during the v1.0.0 beta period. We should detect and adapt the legacy config format to match the new config format. On CLI startup, we will log helpful migration messages.
 
