@@ -27,8 +27,6 @@ export async function get({ params, request }) {
 
 # Motivation
 
-TODO
-
 API Routes were originally created for the use-case of generating non-HTML files during a SSG (static-site generation) build, before Astro had support for SSR (server-side rendering). This allowed you to create Atom files, JSON files, and such.
 
 The original API provided [params](https://docs.astro.build/en/reference/api-reference/#params) as the only argument to an API route. When SSR was implemented there was a need to pass in the [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request) object in order to read headers, such as the Cookie header to do authentication.
