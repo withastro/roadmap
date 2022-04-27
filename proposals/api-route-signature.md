@@ -89,6 +89,13 @@ On Discord some alternatives were proposed:
 - Swapping the first and second arguments (`params` and `request`) since `request` is needed more. However it's only needed more in SSR, in SSG `params` is more likely to be needed, so it's the same issue just in reverse.
 - Making `request` be the first argument a context object (containing params) be the second. This has the same drawbacks as the first alternative but is also still a breaking change. Having the first and only argument be a context object seems like the most future-proof option.
 
+## Prior art
+
+Other frameworks have adopted the single-argument form.
+
+- __[Remix]__(https://remix.run/docs/en/v1/guides/api-routes#call-loaders-outside-of-navigation) takes a single argument that is an object containing the `request` in its `loader` API.
+- __[SvelteKit]__(https://kit.svelte.dev/docs/types#additional-types-requestevent) endpoints take a single argument that is an object containing the `request`, `params` (which mirrors our params object), and other contextual information.
+
 # Adoption strategy
 
 This is a breaking change to take place during the beta period, however we can still provide a good backwards-compatible experience before making the final breaking change.
