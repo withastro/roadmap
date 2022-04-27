@@ -78,6 +78,27 @@ export function get({ request }: APIContext) {
 
 In the future you could see APIContext being expanded to add additional properties, such as a read/write cookie interface, without needing to adjust user code.
 
+## Types
+
+There are 2 types provided in the proposal:
+
+- `APIContext` is the context object. You can use it like so:
+  ```ts
+  import type { APIContext } from 'astro';
+
+  export function post(ctx: APIContext) {
+    // ...
+  }
+  ```
+- `APIRoute` is the signature of each route, and can be used like shown below. Notice that using this method we do not need to set the type of the APIContext argument; by setting the type of the function the arguments and return value are known by TypeScript.
+  ```ts
+  import type { APIRoute } from 'astro';
+
+  export const get: APIRoute = async({ request }) => {
+    return new Response(null, { status: 404 });
+  }
+  ```
+
 # Drawbacks
 
 - This would be a breaking change at some point before 1.0. Since we are in the beta period this is not ideal. See the __Adoption Strategy__ section for a plan to mitigate this drawback.
