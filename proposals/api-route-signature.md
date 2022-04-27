@@ -93,8 +93,8 @@ On Discord some alternatives were proposed:
 
 Other frameworks have adopted the single-argument form.
 
-- __[Remix]__(https://remix.run/docs/en/v1/guides/api-routes#call-loaders-outside-of-navigation) takes a single argument that is an object containing the `request` in its `loader` API.
-- __[SvelteKit]__(https://kit.svelte.dev/docs/types#additional-types-requestevent) endpoints take a single argument that is an object containing the `request`, `params` (which mirrors our params object), and other contextual information.
+- __[Remix](https://remix.run/docs/en/v1/guides/api-routes#call-loaders-outside-of-navigation)__ takes a single argument that is an object containing the `request` in its `loader` API.
+- __[SvelteKit](https://kit.svelte.dev/docs/types#additional-types-requestevent)__ endpoints take a single argument that is an object containing the `request`, `params` (which mirrors our params object), and other contextual information.
 
 # Adoption strategy
 
