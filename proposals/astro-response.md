@@ -18,7 +18,7 @@ Astro.response.headers.set('Cache-Control', 'max-age=604800');
 
 # Motivation
 
-When SSR was added to Astro we added the `Astro.request` object which is a [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request), allowing you to example headers (such as cookies) to dynamically handle page renders.
+When SSR was added to Astro we added the `Astro.request` object which is a [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request), allowing you to examine headers (such as cookies) to dynamically handle page renders.
 
 In order to modify the *response* you are able to return a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) within your frontmatter like so:
 
@@ -43,7 +43,7 @@ Presently there is no way to render the template within a `.astro` file while mo
 
 # Detailed design
 
-The `Astro.response` object is to be a place object with the following interface:
+The `Astro.response` object is to be a plain object with the following interface:
 
 ```ts
 interface AstroResponse {
@@ -55,7 +55,7 @@ interface AstroResponse {
 
 Using a plain object rather than a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) allows frontmatter to modify properties that are otherwise readonly, the `status` and `statusText` fields.
 
-After rendering the `AstroResponse` will be used to construct [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) with the `status`, `statusText`, and `headers` passed through to the Response object.
+After rendering is complete, the `AstroResponse` will be used to construct a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) with the `status`, `statusText`, and `headers` passed through to the Response object.
 
 Each property of the interface can be set, if desired.
 
