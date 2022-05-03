@@ -65,14 +65,14 @@ Astro.response.status = 404;
 ---
 ```
 
-Setting headers can be done by modifying the `headers` object *or* by creating a new one.
+Setting headers can be done by modifying the `headers` object. Attempting to set a new Headers object will be ignored (and warn).
 
 ```astro
 ---
 // Set a cookie header
 Astro.response.headers.set('Set-Cookie', 'a=b');
 
-// Create a new headers object
+// This will warn and be ignored.
 Astro.response.headers = new Headers({
   'Set-Cookie': 'a=b'
 });
