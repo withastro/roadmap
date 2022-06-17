@@ -86,11 +86,10 @@ export function definePlugin(plugin, config) {
 
 # Motivation
 
+These differ in use from integrations in that they provide globally available template and data functions
+that can be used in any template. They should be lightweight and provide helpful features.
 
-
-Having functions available in the Global namespace that give additional functionality to end users in an
-easy way to create new server-side features that are aimed at being lightweight. This design is not final
-and would serve better from discussion around the needs, vs Integrations
+This design is not finaland would serve better from discussion around the needs, vs Integrations
 
 # Detailed design
 
