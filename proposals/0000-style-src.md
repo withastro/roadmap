@@ -4,7 +4,9 @@
 
 # Summary
 
-Introducing a new `<style src="">` idea to fix a conceptual bug around importing frontend styles in the server-side Astro frontmatter. Inspired by Vue and our current hoisted `<script src>` support.
+The fact that we import CSS files inside of frontmatter has always bothered me, because frontmatter is meant to be the "server" part of the component. 
+
+This new RFC proposes a new `<style src="">` feature to move external CSS file imports into the HTML template of the Astro component. Inspired by Vue and our current hoisted `<script src>` support.
 
 # Example
 
@@ -65,11 +67,13 @@ This is proposing a new, Astro-specific attribute that is not currently defined 
 
 The Vue community's success with this solution to the same problem means that we would not be alone, and can take some comfort from the fact that it has happily been used for some time there.
 
-#### It's not auto-scanning of styles
+#### Why not just implement automatic `<link>` scanning?
 
-This RFC doesn't propose Auto-scanning the entire Astro component for assets like styles and images. However, it *does* create a step forward in this direction without breaking the "what you write is what you render" promises that we make for the Astro template (outside of our two blessed "magic" tags `<style>` and `<script>`).
+This RFC does not propose auto-scanning the entire Astro component template for `<link>` tags, instead of `<style src="">` attributes. This would go against the ideas of [0016-style-script-defaults](https://github.com/withastro/rfcs/blob/main/proposals/0016-style-script-defaults.md) where we deemed `<script>` and `<style>` the only two "magic" Astro-enhanced tags. Auto-scanning `<link>` tags would also mean removing that `<link>` tag from the final HTML (because Astro styles are bundled elsewhere on the page).
 
-IMO, this should be seen as a seperate feature and discussion from template scanning assets: it doesn't prevent us from tackling auto-scanning later. If we did tackle auto-scanning later, this feature would probably still make sense to maintain for parity with Astro's magic `<script src>`.
+However, it *does* still move us a step forward in this direction, because (like with `<script src="">`) the compiler _is_ scanning the template for this `src` value. You could imagine we continue this more incremental approach with another type of asset next.
+
+This should be seen as a seperate feature and discussion from auto-scanning assets: it doesn't prevent us from tackling auto-scanning later. If we did tackle auto-scanning later, this feature would probably still make sense to maintain for parity with Astro's magic `<script src>`.
 
 # Alternatives
 
