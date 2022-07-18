@@ -11,15 +11,10 @@ Replace `Astro.canonicalURL` with a more general purpose `Astro.url` helper.
 ```js
 // Before:
 const currentPathname = Astro.canonicalURL.pathname;
-const currentPathnameAlt = new URL(Astro.request.url).pathname;
-// After:
-const currentPathname = Astro.url.pathname;
-```
-
-```js
-// Before:
+const currentPathnameAlternativeAPI = new URL(Astro.request.url).pathname;
 const origin = new URL(Astro.request.url).origin;
 // After:
+const currentPathname = Astro.url.pathname;
 const origin = Astro.url.origin;
 ```
 
@@ -55,6 +50,8 @@ In addition, there was confusion over the canonical domain used:
 - If `Astro.site` is not set, what domain does `Astro.canonicalURL` use?
 
 The result is that we have introduced the possibility that in some cases Astro is "lying" to the user about a URL being canonical when it may not be. This is most common when in SSR (where we don't know the built URLs ahead of time) and when Astro.site is not set (where we use the current origin instead of known production origin).
+
+Finally, there was confusion over when to use `Astro.canonicalURL` over `Astro.request.url`. How did the two values differ, and when should I use one over the other? The answer often is: it depends. 
 
 Even with `Astro.canonicalURL`, a user still needs to learn how to construct full URLs themselves for other meta tags like `og:image`. Even wit a helper for one very specific `canonical` meta tag, the user gets no help for creating the other meta tags that require full URL construction. You can see this today in the docs repo.
 
