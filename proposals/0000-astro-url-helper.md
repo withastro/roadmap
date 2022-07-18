@@ -4,7 +4,7 @@
 
 # Summary
 
-Create a general-purpose `Astro.url` helper. Deprecate `Astro.canonicalURL` to use `Astro.url` instead.
+Create a general-purpose `Astro.url` helper. Deprecate `Astro.canonicalURL` in favor of using `Astro.url` instead.
 
 # Example
 
@@ -35,28 +35,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? `http://example.c
 
 # Motivation
 
-![Example diagram showing complexity of current solutions]()
+Since the release of `Astro.request` there has been confusion over when to use `Astro.canonicalURL` over `Astro.request.url`. How did the two values differ, and when should I use one over the other? The answer often is: it depends. 
 
-## Renaming/Replacing `Astro.canonicalURL`
-
-It's difficult for a framework to understand the concept of "canonical URL", since canonical is a concept that can mean different things to different projects. For example:
-
-- How does Astro know if multiple pages should have a single canonical URL?
-- In SSR mode, is every request caught by `[...foo].astro` canonically unique?
-
-In addition, there was confusion over the canonical domain used:
-
-- If `Astro.site` is set, what domain does `Astro.canonicalURL` use?
-- If `Astro.site` is not set, what domain does `Astro.canonicalURL` use?
-
-The result is that we have introduced the possibility that in some cases Astro is "lying" to the user about a URL being canonical when it may not be. This is most common when in SSR (where we don't know the built URLs ahead of time) and when Astro.site is not set (where we use the current origin instead of known production origin).
-
-Finally, there was confusion over when to use `Astro.canonicalURL` over `Astro.request.url`. How did the two values differ, and when should I use one over the other? The answer often is: it depends. 
-
-Even with `Astro.canonicalURL`, a user still needs to learn how to construct full URLs themselves for other meta tags like `og:image`. Even wit a helper for one very specific `canonical` meta tag, the user gets no help for creating the other meta tags that require full URL construction. You can see this today in the docs repo.
-
-While searching, I couldn't find any equivalent site frameworks or site builders that attempted to create a "canonical" idea themselves. Instead, the best provide good primitives that a user can use to create their own canonical URL from. I believe that this is due to the issues described above, where a site builder can never have the full user/business knowledge to say with certainty what is "canonical" and what isn't.
-
+![Example diagram showing complexity of current solutions](https://cdn.discordapp.com/attachments/986683030418620476/996815335686688898/unknown.png)
 
 ## Creating `Astro.url`
 
@@ -72,6 +53,27 @@ const pathname = new URL(Astro.request.url).pathname
 - Lower barrier to entry, for users who don't know how to create their own `URL` object to solve this.
 
 Adding a helper `Astro.url` will reduce boilerplate in our users projects, add trivial complexity to Astro core, and give us a `Astro.canonicalURL` alternative that users will be happy with.
+
+
+## Deprecating `Astro.canonicalURL` in favor of `Astro.url`
+
+It's difficult for a framework to understand the concept of "canonical URL", since canonical is a concept that can mean different things to different projects. For example:
+
+- How does Astro know if multiple pages should have the same canonical URL?
+- In SSR mode, `[...foo].astro` will generate a different canonical URL for every URL path.
+
+In addition, there was confusion over the canonical domain used:
+
+- If `Astro.site` is set, what domain does `Astro.canonicalURL` use?
+- If `Astro.site` is not set, what domain does `Astro.canonicalURL` use?
+
+The result is that we have introduced the possibility that in some cases Astro is "lying" to the user about a URL being canonical when it may not be. This is most common when in SSR (where we don't know the built URLs ahead of time) and when Astro.site is not set (where we use the current origin instead of known production origin).
+
+Even with `Astro.canonicalURL`, a user still needs to learn how to construct full URLs themselves for other meta tags like `og:image`. Even wit a helper for one very specific `canonical` meta tag, the user gets no help for creating the other meta tags that require full URL construction. You can see this today in the docs repo.
+
+While searching, I couldn't find any equivalent site frameworks or site builders that attempted to create a "canonical" idea themselves. Instead, the best provide good primitives that a user can use to create their own canonical URL from. I believe that this is due to the issues described above, where a site builder can never have the full user/business knowledge to say with certainty what is "canonical" and what isn't.
+
+
 
 # Detailed design
 
@@ -91,6 +93,8 @@ This is the meat of the change. You can see the full implementation here: https:
 # Drawbacks
 
 Removing a well-used property like `Astro.canonicalURL` comes with the drawback of a required user migration to the new `Astro.url` property. We can mitigate this pain with a warning and trivial backwards-compatibility for users who continue to `Astro.canonicalURL`. A phased out, complete removal of `Astro.canonicalURL` could come later (post-v1.0 or even v2.0).
+
+This RFC is adds a new feature, `Astro.url`, that has more general usage in more scenarios. It deprecates `Astro.canonicalURL` that has 1 specific use-case. The tradeoff is that it is now slightly more work to produce a "canonical" URL but less work to get the current URL pathname, origin, etc. However, the "more work" needed to create a canonical URL yourself is also now more explicit, so that there is less room for confusion about what the ultimate value is when you build your site.
 
 
 # Alternatives
