@@ -67,7 +67,7 @@ In addition, there was confusion over the canonical domain used:
 - If `Astro.site` is set, what domain does `Astro.canonicalURL` use?
 - If `Astro.site` is not set, what domain does `Astro.canonicalURL` use?
 
-The result is that we have introduced the possibility that in some cases Astro is "lying" to the user about a URL being canonical when it may not be. This is most common when in SSR (where we don't know the built URLs ahead of time) and when Astro.site is not set (where we use the current origin instead of known production origin).
+The result is that `Astro.canonicalURL` may not always be what the user expects. We tell the user it is "canonical", but in some cases we have no way to know what a "canonical" pathname means for the user or what your production domain actually us. Astro does its best to guess, but this can give a false sense of security where the `Astro.canonicalURL` value is actually incorrect without the user realizing it. Today, this is most common when in SSR (where every pathname generates a different canonical URL) and when `Astro.site` is not set (where we use the current origin instead of known production origin).
 
 Even with `Astro.canonicalURL`, a user still needs to learn how to construct full URLs themselves for other meta tags like `og:image`. Even wit a helper for one very specific `canonical` meta tag, the user gets no help for creating the other meta tags that require full URL construction. You can see this today in the docs repo.
 
