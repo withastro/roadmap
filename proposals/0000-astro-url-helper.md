@@ -4,7 +4,7 @@
 
 # Summary
 
-Replace `Astro.canonicalURL` with a more general purpose `Astro.url` helper.
+Create a general-purpose `Astro.url` helper. Deprecate `Astro.canonicalURL` to use `Astro.url` instead.
 
 # Example
 
