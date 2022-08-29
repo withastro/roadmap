@@ -160,7 +160,11 @@ Internally `AstroCookies.prototype.delete` might just call cookies.set() with th
 
 ### Additional notes
 
-- [This library](https://www.npmjs.com/package/timestring) converts spoken word time durations to a date which is needed for the `expires` option.
+- Libraries for converting spoken word time durations to a date for the `expires` feature:
+  - https://github.com/rayepps/durhuman
+  - https://www.npmjs.com/package/timestring
+  - https://github.com/wanasit/chrono
+
 
 # Drawbacks
 
