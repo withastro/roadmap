@@ -14,11 +14,8 @@ type Prefs = {
   darkMode: boolean;
 }
 
-Astro.cookies.set<Prefs>('prefs', {
-  expires: '1 month',
-  value: {
-    darkMode: true
-  }
+Astro.cookies.set<Prefs>('prefs', { darkMode: true }, {
+  expires: '1 month'
 });
 
 const prefs = Astro.cookies.get<Prefs>('prefs').json();
