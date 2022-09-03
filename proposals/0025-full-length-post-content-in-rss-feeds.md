@@ -4,17 +4,17 @@
 
 # Summary
 
-Updating @astrojs/rss to generate feeds that include full `compiledContext()` strings as `content:encoded` in the XML, given a parameter of `contentLength` with a value of `full`.  (This value would default to `summary`, which is the current default behavior.)
+Updating @astrojs/rss to generate feeds that include full `compiledContent()` strings as `content:encoded` in the XML, given a parameter of `contentLength` with a value of `full`.  (This value would default to `summary`, which is the current default behavior.)
 
 # Motivation
 
-I remember when WordPress rolled out the ability to only publish short excerpts in RSS.  Ostensibly, this was to drive traffic to a blog, where analytics about readership could be gathered.  I am not particularly interested in that, so I implemented this change in my own project.  
+ Many authors prefer including full articles in an RSS feed.
 
-# Detailed design
+# Usage
 
 Usage in a project's 	`src/pages/rss.xml.js`:
 
-```
+```js
 const contentLength = 'full';
 
 export const get = () => rss({
@@ -33,16 +33,18 @@ export const get = () => rss({
   });
 ```
 
+# Detailed design
+
 Changes in `astro/packages/astro-rss/src/index.ts`:
 
-```
+```ts
 type RSSOptions = {
 	...
     	contentLength?: "summary" | "full";
 };
 ```
 
-```
+```ts
 type RSSFeedItem = {
 	...
     	/** Item content */
@@ -50,7 +52,7 @@ type RSSFeedItem = {
 };
 ```
 
-```
+```ts
 export async function generateRSS({ rssOptions, items }: GenerateRSSArgs): Promise<string> {
 	const { site, contentLength = 'summary' } = rssOptions;
 	...
@@ -66,7 +68,7 @@ I cannot think of any immediate drawbacks, but I'm open to hearing about them fr
 
 # Adoption strategy
 
-This should be a non-breaking change, as the default behavior will continue unless the developer specifically provides the key/value pair `contentLength: 'full'` *and* a value for `content`.
+This should not be a breaking change, as the default behavior will continue unless the developer specifically provides the key/value pair `contentLength: 'full'` *and* a value for `content`.
 
 # Unresolved questions
 
