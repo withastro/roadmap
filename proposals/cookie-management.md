@@ -164,6 +164,7 @@ Internally `AstroCookies.prototype.delete` might just call cookies.set() with th
   - https://github.com/rayepps/durhuman
   - https://www.npmjs.com/package/timestring
   - https://github.com/wanasit/chrono
+  - https://github.com/vercel/ms
 
 
 # Drawbacks
