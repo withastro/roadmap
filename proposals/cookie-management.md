@@ -37,14 +37,15 @@ Users in the Astro discord often ask about how to use cookies in Astro and we do
 
 ```ts
 interface AstroCookies {
-  get(key: string): AstroCookie | undefined;
-  set(key: string, value: string | Record<string, any>, value: AstroCookieOptions): void;
-  delete(key: string): void;
-  toString(): string;
+  get(key: string): AstroCookie;
+  set(key: string, value: string | Record<string, any>, options: AstroCookieOptions): void;
+  delete(key: string, options: AstroCookieOptions): void;
+  has(key: string): void;
+  headers(): Array<string>;
 }
 ```
 
-When you get or set a cookie, you are dealing with an object with the following properties:
+When you set a cookie you can pass options as well, which looks like:
 
 ```ts
 interface AstroCookieOptions {
@@ -60,7 +61,7 @@ interface AstroCookieOptions {
 
 ## Astro.cookies.get(name)
 
-When you call `Astro.cookies.get(name)` you receive an object that extends from `AstroCookieOptions` to include convenience methods for converting the raw cookie value.
+When you call `Astro.cookies.get(name)` you receive an object that contains the cookie value, as well as convenience methods for converting the raw cookie value.
 
 ```ts
 interface AstroCookie {
@@ -96,7 +97,7 @@ To set a cookie value pass in the key as well as the cookie options. The cookie 
 
 This gives you full control to set cookie options, but we extend them with:
 
-- `expires` also can be a string of human time durations such as `1 month` or `10 days`. This is to make the API a little higher level since this is a common need.
+- `expires` also can be a string of human time durations such as `1 hour` or `10 days`. This is to make the API a little higher level since this is a common need.
 
 The `value` (second argument) can be any value and will be converted to a string. If the value is an object or an array it will be stringified with `JSON.stringify()`.
 
@@ -108,11 +109,37 @@ Removes a cookie. This is likely used within an API route.
 export function post({ request, cookies }) {
   cookies.delete('prefs');
 
+  // Set-Cookie headers will be appended.
   return new Response(null, {
+    status: 302,
     headers: {
-      'Set-Cookie': cookies.toString()
+      Location: '/'
     }
   });
+}
+```
+
+## Astro.cookies.has(key)
+
+Determines if a cookie is present. This could come from the `cookie` header in the request or a cookie set by `Astro.cookies.set()`.
+
+```astro
+---
+Astro.cookies.set('foo', 'bar');
+
+console.log(Astro.cookies.has('foo')); // true
+---
+```
+
+## Astro.cookies.headers()
+
+Provides an iterator of header values that should be set as `Set-Cookie` headers. This is mainly needed for adapters to set cookies using their own APIs.
+
+For example, a Node.js implementation would do:
+
+```js
+for(const value of cookies.headers()) {
+  res.setHeader('Set-Cookie', value);
 }
 ```
 
@@ -156,20 +183,12 @@ However:
 
 If a user calls `Astro.cookies.delete(key)` we want to delete that cookie. To delete a cookie you set the `Set-Cookie` header with a past value for the `expires` option such as `expires=Thu, 01 Jan 1970 00:00:00 GMT`.
 
-Internally `AstroCookies.prototype.delete` might just call cookies.set() with this expires value.
+### Expiration option
 
-### Additional notes
-
-- Libraries for converting spoken word time durations to a date for the `expires` feature:
-  - https://github.com/rayepps/durhuman
-  - https://www.npmjs.com/package/timestring
-  - https://github.com/wanasit/chrono
-  - https://github.com/vercel/ms
-
+To set an expiration using a string duration value let `30 days` we will use the Vercel [ms](https://github.com/vercel/ms) package.
 
 # Drawbacks
 
-- This can be done manually by using cookie libraries, so this doesn't add functionality that can't otherwise be done yourself.
 - This API has a lot of options/features, but they are based on stable libraries so it should be fine. But there is a large API surface for this feature.
 
 # Alternatives
