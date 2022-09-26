@@ -1,6 +1,6 @@
 - Start Date: 2022-08-29
 - Reference Issues: <!-- related issues, otherwise leave empty -->
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/4876
 
 # Summary
 
@@ -39,7 +39,7 @@ Users in the Astro discord often ask about how to use cookies in Astro and we do
 interface AstroCookies {
   get(key: string): AstroCookie;
   set(key: string, value: string | Record<string, any>, options: AstroCookieOptions): void;
-  delete(key: string, options: AstroCookieOptions): void;
+  delete(key: string, options: { path: string; }): void;
   has(key: string): void;
   headers(): Array<string>;
 }
