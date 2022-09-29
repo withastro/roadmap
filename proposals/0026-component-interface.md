@@ -15,7 +15,7 @@ This proposal introduces a new interface called "Component" that is used to desc
 ---
 /**
  * @name Button
- * 
+ *
  * My super button
 */
 interface Component {
@@ -60,7 +60,7 @@ Together, this would create the following signature:
 ```tsx
 /**
  * @name Button
- * 
+ *
  * My super button
  */
 export default function Button__AstroComponent_(_props: Component.props) {}
@@ -109,6 +109,8 @@ But, the following drawbacks:
 Since we can fairly easily achieve this in a way that is backward compatible, we can add support for it in our tooling first, document it (replacing our current `interface Props` documentation) and users will passively migrate to it.
 
 Additionally, the editor tooling could warn when `interface Props` is used and provide a code action to migrate to the new interface to make migration as easy as possible.
+
+Ultimately, we can remove support for `interface Props` in a future major version of Astro as we see fit.
 
 # Unresolved questions
 
