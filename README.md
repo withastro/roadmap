@@ -9,7 +9,7 @@ Many changes, including bug fixes and documentation improvements can be
 implemented and reviewed via the normal GitHub pull request workflow.
 
 Some changes though are "substantial", and we ask that these be put through a
-bit of a design process and produce a consensus among the Astro core team and
+bit of a design process and produce a consensus among the Astro [core team](https://github.com/orgs/withastro/people) and
 the community.
 
 ## The RFC Life-Cycle
@@ -21,15 +21,15 @@ An RFC goes through the following stages:
 - **Landed:** when an RFC’s proposed changes are shipped in an actual release.
 - **Rejected:** when an RFC PR is closed without being merged.
 
-[Pending RFC List](https://github.com/snowpackjs/rfcs/pulls)
+[Pending RFC List](https://github.com/withastro/rfcs/pulls)
 
 ## When to follow this process
 
 You need to follow this process if you intend to make "substantial" changes to
 one of the projects listed below:
 
-- [Astro core](https://github.com/snowpackjs/astro)
-- [Astro compiler](https://github.com/snowpackjs/astro-compiler-next)
+- [Astro core](https://github.com/withastro/astro)
+- [Astro compiler](https://github.com/withastro/compiler)
 
 We are limiting the RFC process for these repos to test out the process in a
 more manageable fashion, and may expand it to cover more projects under the
@@ -93,7 +93,7 @@ and may be implemented with the goal of eventual inclusion into Astro.
    demonstrate understanding of the impact of the design, or are disingenuous
    about the drawbacks or alternatives tend to be poorly-received.
 
-2. Open a new thread in [Discussions](https://github.com/snowpackjs/rfcs/discussions)
+2. Open a new thread in [Discussions](https://github.com/withastro/rfcs/discussions)
    and make sure to set category to "RFC Discussions".
    - Build consensus and integrate feedback in the discussion thread. RFCs that
    have broad support are much more likely to make progress than those that
@@ -106,16 +106,16 @@ and may be implemented with the goal of eventual inclusion into Astro.
      (where "my-feature" is descriptive).
    - Submit a pull request. Make sure to link to the discussion thread.
 
-4. Eventually, the [core team] will decide whether the RFC is a candidate
+4. Eventually, the [core team](https://github.com/orgs/withastro/people) will decide whether the RFC is a candidate
    for inclusion in Astro.
-   - An RFC can be modified based upon feedback from the [core team] and
+   - An RFC can be modified based upon feedback from the [core team](https://github.com/orgs/withastro/people) and
      community. Significant modifications may trigger a new final comment
      period.
    - An RFC may be rejected after public discussion has settled and comments
      have been made summarizing the rationale for rejection. A member of the
-     [core team] should then close the RFC’s associated pull request.
+     [core team](https://github.com/orgs/withastro/people) should then close the RFC’s associated pull request.
    - An RFC may be accepted at the close of its final comment period. A
-     [core team] member will merge the RFC’s associated pull request, at which
+     [core team](https://github.com/orgs/withastro/people) member will merge the RFC’s associated pull request, at which
      point the RFC will become 'active', existing in the [proposals] directory.
    - Once the RFC is implemented, it will be updated with the appropriate
      **Implementation PR**.
@@ -125,7 +125,7 @@ and may be implemented with the goal of eventual inclusion into Astro.
 Once an RFC becomes active then authors may implement it and submit the feature
 as a pull request to the Astro repo. Becoming 'active' is not a rubber stamp,
 and in particular still does not mean the feature will ultimately be merged; it
-does mean that the core team has agreed to it in principle and are amenable to
+does mean that the [core team](https://github.com/orgs/withastro/people) has agreed to it in principle and are amenable to
 merging it.
 
 Furthermore, the fact that a given RFC has been accepted and is 'active' implies
@@ -156,8 +156,8 @@ cannot determine if someone else is already working on it, feel free to ask
 
 ## Reviewing RFCs
 
-Members of the [core team] will attempt to review some set of open RFC pull
-requests on a regular basis. If a core team member believes an RFC PR is ready
+Members of the [core team](https://github.com/orgs/withastro/people) will attempt to review some set of open RFC pull
+requests on a regular basis. If a [core team](https://github.com/orgs/withastro/people) member believes an RFC PR is ready
 to be accepted into active status, they can approve the PR using GitHub’s review
 feature to signal their approval of the RFC.
 
