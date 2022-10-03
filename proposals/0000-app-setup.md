@@ -4,7 +4,7 @@
 
 # Summary
 
-This RFC proposes a unified interface that provides a hook into island **setup**. User-provided hooks should run for both server rendering and client-side hydration.
+This RFC proposes an additional `renderer` option for initializing framework islands with some setup code. User-provided logic runs for both server rendering and client-side hydration, allowing users to do hook into the application lifecycle and register global components/plugins (`vue.use`) or return data Provider components (React, Preact).
 
 # Example
 
@@ -171,7 +171,7 @@ Importantly, the `appEntrypoint` pattern allows us to break out of this pattern 
 
 ## Solve shared state for islands
 
-Originally, this proposal was tightly coupled to a solution for sharing state between islands. However, this RFC solves existing problems in a non-breaking way and provides immediate value even with Astro's existing architecture. Tightly coupling the two proposals would significantly delay any solution from being shipped, meanwhile there is high demand for a feature to solve this.
+Originally, this proposal was tightly coupled to a solution for sharing state between islands. However, this RFC solves existing problems in a non-breaking way and provides immediate value even with Astro's existing architecture. Tightly coupling the two proposals would likely delay any solution from being shipped, but this proposal can be used as a stepping-stone towards shared state in the future.
 
 # Adoption strategy
 
