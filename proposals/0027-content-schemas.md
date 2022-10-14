@@ -13,16 +13,17 @@ This introduces three new concepts:
 
 ## Out of scope
 
-Before diving in, it's worth defining scope up-front: **⚠️ This RFC is focused on frontmatter parsing only.** This means any helpers described will _not_ help you **import** and **render** Markdown and MDX components.
+**⚠️ This RFC is focused on frontmatter parsing only.** This means any helpers described will _not_ help you **import** and **render** Markdown and MDX components.
 
-We recognize this is a blocker to using any helpers described when you need to render a post's contents, as with `getStaticPaths`. This will be tackled in a separate RFC, and we will _not_ PR or ship any features described here until that RFC is ready.
+We recognize this is a blocker to using any helpers described when you need to render a post's contents, as with `getStaticPaths`. This will be investigated separately, and we will _not_ PR or ship any features described until we find a solution to rendering your content in a performant way.
 
 # Glossary
 
-We'll be using the words "schema" and "collection" a lot. Let's define those terms in the context of this RFC:
+We'll be using the words "schema," "collection," and "entry" throughout. Let's define those terms in the context of this RFC:
 
 - **Schema:** a way to codify the "structure" of your frontmatter data
 - **Collection:** a set of data (in this case, Markdown and MDX files) that share a common schema
+- **Entry:** A Markdown or MDX file belonging to a given collection
 
 # Example
 
@@ -276,7 +277,7 @@ We plan to treat `src/content/` as a separate directory managed by Astro, rather
 All generated code will be added to a new directory in your project: `.astro`.
 // TODO: detail here!
 
-### Manifest
+## Manifest
 
 We will generate our own manifest of `src/content/` entries at build time (for the dev server, static builds, _and_ SSR). This will define:
 - All of the collections in `src/content/`
@@ -312,7 +313,7 @@ export const contentMetadataMap = new Map([
 
 **Note:** The user is _not_ expected to view or edit this manifest. This only exists to enable type checking and frontmatter parsing via `fetchContent` and `fetchContentByEntry`.
 
-### `fetchContent` and `fetchContentByEntry`
+## `fetchContent` and `fetchContentByEntry`
 
 Alongside this manifest, we will expose `fetchContent` and `fetchContentByEntry` helpers. Users will import these helpers from the `.astro` directory like so:
 
