@@ -144,9 +144,134 @@ To avoid this, content schemas are **just** focused on processing and returning 
 
 > ⚠️ **Note:** We also intend to tackle performant rendering of Markdown and MDX globs in a separate RFC. [See out-of-scope section](#out-of-scope) for more.
 
-# Detailed design
+# Detailed usage
+
+As you might imagine, Content Schemas have a lot of moving parts. Let's detail each one:
+
+## The `src/content/` directory
+
+This RFC introduces a new, reserved directory for Astro to manage: `src/content/`. This directory is where all collections and schema definitions live.
+
+### Creating a collection
+
+All entries in `src/content/` **must** be nested in a "collection" directory. This allows you to group content based on the schema their frontmatter should use. This is similar to creating a new table in a database, or a new content model in a CMS like Contentful.
+
+What this looks like in practice:
+
+```shell
+src/content/
+  newsletters/
+    # All newsletters have the same frontmatter properties
+    ~schema.ts 
+    week-1.md
+    week-2.md
+    week-3.md
+  blog/
+    # All blog posts have the same frontmatter properties
+    ~schema.ts
+    columbia.md
+    enterprise.md
+    endeavour.md
+```
+
+### Adding a schema
+
+To add type checking to a given collection, you can add a `~schema.{js|mjs|ts}` file inside of that collection directory. This file should:
+1. Have a single named export called `schema`
+2. Use a [Zod object](https://github.com/colinhacks/zod#objects) to define frontmatter properties
+
+For instance, say every `blog/` entry should have a `title`, `slug`, a list of `tags`, and an optional `image` url. We can specify each object property like so:
+
+```ts
+// ~schema.ts
+import { z } from 'zod'
+
+export const schema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  // mark optional properties with `.optional()`
+  image: z.string().optional(),
+  tags: z.array(z.string()),
+});
+```
+
+[Zod](https://github.com/colinhacks/zod) has some benefits over TypeScript as well. Namely, you can check the _shape_ of string values with built-in regexes, like `url()` for URLs and `email()` for emails.
+
+```ts
+export const schema = z.object({
+  // "jeff" would fail to parse, but "hey@blog.biz" would pass
+  authorContact: z.string().email(),
+  // "/post" would fail, but `https://blog.biz/post` would pass
+  canonicalURL: z.string().url(),
+  tags: z.array(z.string()),
+});
+```
+
+You can [browse Zod's documentation](https://github.com/colinhacks/zod) for a complete rundown of features. However, given frontmatter is limited to primitive types like strings and booleans, we don't expect users to dive _deep_ into Zod's complex use cases.
+
+### Fetching content
+
+Astro provides 2 functions to query collections:
+- `fetchContent` - get all entries in a collection, or based on a frontmatter filter
+- `fetchContentByEntry` - get a specific entry in a collection by file name
+
+These functions will have typed based on collections that exist. In other words, `fetchContent('banana')` will raise a type error if there is no `src/content/banana/`.
+
+```astro
+---
+import { fetchContent, fetchContentByEntry } from '.astro';
+// Get all `blog` entries
+const allBlogPosts = await fetchContent('blog');
+// Filter blog posts by frontmatter properties
+const spaceRelatedBlogPosts = await fetchContent('blog', (data) => {
+  return data.tags.includes('space');
+});
+// Get a specific blog post by file name
+const enterprise = await fetchContentByEntry('blog', 'enterprise.md');
+---
+```
+
+### Return type
+
+Assume the `blog` collection schema looks like this:
+
+```ts
+// src/content/blog/~schema.ts
+import { z } from 'zod'
+
+export const schema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  image: z.string().optional(),
+  tags: z.array(z.string()),
+});
+```
+
+`await fetchContent('blog')` will return entries of the following type:
+
+```ts
+{
+  // parsed frontmatter
+  data: {
+    title: string;
+    slug: string;
+    image?: string;
+    tags: string[];
+  };
+  // raw body of the Markdown or MDX document
+  body: string;
+}
+```
+
+Note that `body` is the _raw_ content of the file. This ensures builds remain performant by avoiding expensive rendering pipelines. However, we recognize the value of parsing this body automatically as `Astro.glob` does today. See [out of scope](#out-of-scope) for future investigations planned.
 
 # Drawbacks
+
+By adding structure, we are also adding complexity to your code. This has a few consequences:
+
+1. **[Zod](https://github.com/colinhacks/zod) has a learning curve** compared to writing TypeScript types. We will need to document common uses cases like string parsing, regexing, and transforming to `Date` objects so users can onboard easily. We also consider CLI tools to spin up `schema` entries **vital** to give new users a starting point.
+2. **Magic is always scary,** especially given Astro's bias towards being explicit. Introducing a reserved directory + a sanctioned way to import from that directory is a hurdle to adoption.
+3. **We (as of this RFC) don't help you render your content.** This means `fetchContent` will _not_ replace `Astro.glob` when rendering content is vital, as with `getStaticPaths`. We consider this a blocker to implementing changes proposed here, and should be answered by a separate investigation.
 
 # Alternatives
 
