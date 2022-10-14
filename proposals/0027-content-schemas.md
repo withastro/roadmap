@@ -284,34 +284,9 @@ We will generate our own manifest of `src/content/` entries at build time (for t
 - The schema types used by each collection
 - The parsed frontmatter object and raw content body for each entry in a collection
 
-The generated manifest may look like this (NOT final):
-
-```ts
-// src/.astro/content-manifest.mjs
-export const contentMap = {
-  "blog": {
-    "columbia.md": '/Users/me/my-astro-project/src/content/columbia.md',
-    "endeavour.md": '/Users/me/my-astro-project/src/content/endeavour.md',
-    "enterprise.md": '/Users/me/my-astro-project/src/content/enterprise.md',
-  },
-};
-export const contentMetadataMap = new Map([
-  [contentMap["blog"]["columbia.md"], {
-    data: {"description":"Learn about the Columbia NASA space shuttle.","canonicalURL":"https://astro.build/blog/columbia/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-    body: "Space Shuttle Columbia...",
-  }],
-  [contentMap["blog"]["endeavour.md"], {
-    data: {"description":"Learn about the Endeavour NASA space shuttle.","canonicalURL":"https://astro.build/blog/endeavour/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-    body: "Space Shuttle Endeavour (Orbiter Vehicle Designation: OV-105) is a retired orbiter...",
-  }],
-  [contentMap["blog"]["enterprise.md"], {
-    data: {"description":"Learn about the Enterprise NASA space shuttle.","canonicalURL":"https://astro.build/blog/enterprise/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-    body: "Space Shuttle Enterprise (Orbiter Vehicle Designation: OV-101) was the first orbiter...",
-  }],
-]);
-```
-
 **Note:** The user is _not_ expected to view or edit this manifest. This only exists to enable type checking and frontmatter parsing via `fetchContent` and `fetchContentByEntry`.
+
+[See Appendix](#appendix-a---generated-manifest-sample) for a sample of how this manifest could look.
 
 ## `fetchContent` and `fetchContentByEntry`
 
@@ -390,4 +365,46 @@ Still, we've chosen a flat `collection` + schema file approach to mirror Astro's
 
 # Adoption strategy
 
+Introducing a new reserved directory (`src/content/`) will be a breaking change, so we intend to release as part of Astro 2.0. This should give us time to address all aspects and corner cases of content schemas, and let us tackle performant rendering of content before this is handed off to users (see [out of scope](#out-of-scope)).
+
+We intend `src/content/` to be the recommended way to store Markdown and MDX content in your Astro project. Documentation will be _very_ important to guide adoption! So, we will speak with the docs team on the best information hierarchy. Not only should we surface the concept of a `src/content/` early for new users, but also guide existing users (who may visit the "Markdown & MDX" and Astro glob documentation) to `src/content/` naturally. Ah few initial ideas:
+- Expand [Project Structure](https://docs.astro.build/en/core-concepts/project-structure/) to explain `src/content/`
+- Update Markdown & MDX to reference the Project Structure docs, and expand [Importing Markdown](https://docs.astro.build/en/guides/markdown-content/#importing-markdown) to a more holistic "Using Markdown" section
+- Add a "local content" section to the [Data Fetching](https://docs.astro.build/en/guides/data-fetching/) page
+
+We will also need an appropriate migration guidance for users that _already_ have a `src/content/` directory used for other purposes. Perhaps we can warn users with a `src/content/` that a) contains other file types or b) does not contain any `~schema` files.
+
 # Unresolved questions
+
+This is a pretty major addition, so we invite readers to raise questions below! Still, these are a few our team has today:
+- Should the generated `.astro` directory path be configurable?
+- (inviting core to raise more questions)
+
+## Appendix A - Generated manifest sample 
+
+This is subject to change, but may clarify what code we'll be generating.
+
+```ts
+// src/.astro/content-manifest.mjs
+export const contentMap = {
+  "blog": {
+    "columbia.md": '/Users/me/my-astro-project/src/content/columbia.md',
+    "endeavour.md": '/Users/me/my-astro-project/src/content/endeavour.md',
+    "enterprise.md": '/Users/me/my-astro-project/src/content/enterprise.md',
+  },
+};
+export const contentMetadataMap = new Map([
+  [contentMap["blog"]["columbia.md"], {
+    data: {"description":"Learn about the Columbia NASA space shuttle.","canonicalURL":"https://astro.build/blog/columbia/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+    body: "Space Shuttle Columbia...",
+  }],
+  [contentMap["blog"]["endeavour.md"], {
+    data: {"description":"Learn about the Endeavour NASA space shuttle.","canonicalURL":"https://astro.build/blog/endeavour/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+    body: "Space Shuttle Endeavour (Orbiter Vehicle Designation: OV-105) is a retired orbiter...",
+  }],
+  [contentMap["blog"]["enterprise.md"], {
+    data: {"description":"Learn about the Enterprise NASA space shuttle.","canonicalURL":"https://astro.build/blog/enterprise/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+    body: "Space Shuttle Enterprise (Orbiter Vehicle Designation: OV-101) was the first orbiter...",
+  }],
+]);
+```
