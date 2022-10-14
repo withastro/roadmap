@@ -320,21 +320,18 @@ Alongside this manifest, we will expose `fetchContent` and `fetchContentByEntry`
 ```astro
 ---
 // src/pages/index.astro
-// With a type configured (recommended)
 import { fetchContent, fetchContentByEntry } from '.astro'
-// Without a type alias configured
-import { fetchContent, fetchContentByEntry } from '../.astro'
 ---
 ```
 
-We will recommend adding a path alias to your `tsconfig.json`, in keeping with [our Astro docs guide](https://docs.astro.build/en/guides/typescript/#import-aliases):
+`.astro` will be aliased to the `.astro` directory generated at the base of your project. We hope to apply this alias to your project automatically, though this would be the manual configuration required:
 
 ```json
 {
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      ".astro": ["src/.astro"],
+      ".astro": [".astro"],
     }
   }
 }
@@ -347,10 +344,49 @@ By avoiding the `Astro` global, these fetchers are framework-agnostic. This unlo
 By adding structure, we are also adding complexity to your code. This has a few consequences:
 
 1. **[Zod](https://github.com/colinhacks/zod) has a learning curve** compared to writing TypeScript types. We will need to document common uses cases like string parsing, regexing, and transforming to `Date` objects so users can onboard easily. We also consider CLI tools to spin up `schema` entries **vital** to give new users a starting point.
-2. **Magic is always scary,** especially given Astro's bias towards being explicit. Introducing a reserved directory + a sanctioned way to import from that directory is a hurdle to adoption.
+2. **Magic is always scary,** especially given Astro's bias towards being explicit. Introducing a reserved directory with a sanctioned way to import from that directory is a hurdle to adoption.
 3. **We (as of this RFC) don't help you render your content.** This means `fetchContent` will _not_ replace `Astro.glob` when rendering content is vital, as with `getStaticPaths`. We consider this a blocker to implementing changes proposed here, and should be answered by a separate investigation.
 
 # Alternatives
+
+## Zod
+
+We considered a few alternatives to using Zod for schemas:
+- **Generate schemas from a TypeScript type.** This would let users reuse frontmatter types they already have and avoid the learning curve of a new tool. However, TypeScript is missing a few surface-level features that Zod covers:
+  - Constraining the shape of a given value. For instance, setting a `min` or `max` character length, or testing strings against `email` or `URL` regexes.
+  - [Transforming](https://github.com/colinhacks/zod#transform) a frontmatter value into a new data type. For example, parsing a date string to a `Date` object, and raising a helpful error for invalid dates.
+
+- **Invent our own JSON or YAML-based schema format.** This would fall in-line with a similar open source project, [ContentLayer](https://www.contentlayer.dev/docs/sources/files/mapping-document-types), that specifies types with plain JS. Main drawbacks: replacing one learning curve with another, and increasing the maintenance cost of schemas overtime.
+
+In the end, we've chosen Zod since it can scale to complex use cases and takes the maintenance burden off of Astro's shoulders.
+
+We have also considered exposing the `z` helper as an `astro` dependency rather than a separate `zod` dependency to install in your project:
+
+```ts
+import { z } from 'astro';
+```
+
+This would allow us to version-lock Zod to avoid incompatibility in the future, and make Zod feel more official as a solution.
+
+## Collections vs. globs
+
+We expect most users to compare `fetchContent` with `Astro.glob`. There is a notable difference in how each will grab content:
+- `Astro.glob` accepts wild cards (i.e. `/posts/**/*.md) to grab entries multiple directories deep, filter by file extension, etc.
+- `fetchContent` accepts **a collection name only,** with an optional filter function to filter by frontmatter values.
+
+The latter limits users to fetching a single collection at a time, and removes nested directories as an option. One alternative could be to [mirror Contentlayer's approach](https://www.contentlayer.dev/docs/sources/files/mapping-document-types#resolving-document-type-with-filepathpattern), wiring schemas to wildcards of any shape:
+
+```ts
+// Snippet from Contentlayer documentation
+// https://www.contentlayer.dev/docs/sources/files/mapping-document-types#resolving-document-type-with-filepathpattern
+const Post = defineDocumentType(() => ({
+  name: 'Post',
+  filePathPattern: `posts/**/*.md`,
+  // ...
+}))
+```
+
+Still, we've chosen a flat `collection` + schema file approach to mirror Astro's file-based routing.
 
 # Adoption strategy
 
