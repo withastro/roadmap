@@ -265,6 +265,82 @@ export const schema = z.object({
 
 Note that `body` is the _raw_ content of the file. This ensures builds remain performant by avoiding expensive rendering pipelines. However, we recognize the value of parsing this body automatically as `Astro.glob` does today. See [out of scope](#out-of-scope) for future investigations planned.
 
+# Detailed design
+
+To wire up type inferencing in those `fetchContent` helpers, we'll need to generate some code under-the-hood. Let's explore the engineering work required.
+
+## Generated `.astro` directory
+
+We plan to treat `src/content/` as a separate directory managed by Astro, rather than the Vite pipeline, your `markdown` config, or other external factors. This escapes the `import` pipeline that slows to Markdown and MDX globbing at scale today.
+
+All generated code will be added to a new directory in your project: `.astro`.
+// TODO: detail here!
+
+### Manifest
+
+We will generate our own manifest of `src/content/` entries at build time (for the dev server, static builds, _and_ SSR). This will define:
+- All of the collections in `src/content/`
+- The schema types used by each collection
+- The parsed frontmatter object and raw content body for each entry in a collection
+
+The generated manifest may look like this (NOT final):
+
+```ts
+// src/.astro/content-manifest.mjs
+export const contentMap = {
+  "blog": {
+    "columbia.md": '/Users/me/my-astro-project/src/content/columbia.md',
+    "endeavour.md": '/Users/me/my-astro-project/src/content/endeavour.md',
+    "enterprise.md": '/Users/me/my-astro-project/src/content/enterprise.md',
+  },
+};
+export const contentMetadataMap = new Map([
+  [contentMap["blog"]["columbia.md"], {
+    data: {"description":"Learn about the Columbia NASA space shuttle.","canonicalURL":"https://astro.build/blog/columbia/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+    body: "Space Shuttle Columbia...",
+  }],
+  [contentMap["blog"]["endeavour.md"], {
+    data: {"description":"Learn about the Endeavour NASA space shuttle.","canonicalURL":"https://astro.build/blog/endeavour/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+    body: "Space Shuttle Endeavour (Orbiter Vehicle Designation: OV-105) is a retired orbiter...",
+  }],
+  [contentMap["blog"]["enterprise.md"], {
+    data: {"description":"Learn about the Enterprise NASA space shuttle.","canonicalURL":"https://astro.build/blog/enterprise/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+    body: "Space Shuttle Enterprise (Orbiter Vehicle Designation: OV-101) was the first orbiter...",
+  }],
+]);
+```
+
+**Note:** The user is _not_ expected to view or edit this manifest. This only exists to enable type checking and frontmatter parsing via `fetchContent` and `fetchContentByEntry`.
+
+### `fetchContent` and `fetchContentByEntry`
+
+Alongside this manifest, we will expose `fetchContent` and `fetchContentByEntry` helpers. Users will import these helpers from the `.astro` directory like so:
+
+```astro
+---
+// src/pages/index.astro
+// With a type configured (recommended)
+import { fetchContent, fetchContentByEntry } from '.astro'
+// Without a type alias configured
+import { fetchContent, fetchContentByEntry } from '../.astro'
+---
+```
+
+We will recommend adding a path alias to your `tsconfig.json`, in keeping with [our Astro docs guide](https://docs.astro.build/en/guides/typescript/#import-aliases):
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      ".astro": ["src/.astro"],
+    }
+  }
+}
+```
+
+By avoiding the `Astro` global, these fetchers are framework-agnostic. This unlocks usage in UI component frameworks and endpoint files.
+
 # Drawbacks
 
 By adding structure, we are also adding complexity to your code. This has a few consequences:
