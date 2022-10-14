@@ -4,18 +4,25 @@
 
 # Summary
 
-Content Schemas are a way to import Markdown and MDX content in your Astro projects in a consistent, performant, and type-safe way.
+Content Schemas are a way to fetch Markdown and MDX frontmatter in your Astro projects in a consistent, performant, and type-safe way.
 
 This introduces three new concepts:
-- A new, magical directory that Astro will manage: `src/content/`
+- A new, reserved directory that Astro will manage: `src/content/`
 - A set of helper functions to load entries and collections of entries from this directory
-- "Schemas" to type-check frontmatter data
+- The introduction of "collections" and "schemas" ([see glossary](#glossary)) to type-check frontmatter data
 
 ## Out of scope
 
 Before diving in, it's worth defining scope up-front: **⚠️ This RFC is focused on frontmatter parsing only.** This means any helpers described will _not_ help you **import** and **render** Markdown and MDX components.
 
-We recognize this is a blocker to using any helpers described when you need to render a post's contents, as with `getStaticPaths`. This will be tackled in a separate RFC, and we will _not_ PR any features described here until that RFC is ready.
+We recognize this is a blocker to using any helpers described when you need to render a post's contents, as with `getStaticPaths`. This will be tackled in a separate RFC, and we will _not_ PR or ship any features described here until that RFC is ready.
+
+# Glossary
+
+We'll be using the words "schema" and "collection" a lot. Let's define those terms in the context of this RFC:
+
+- **Schema:** a way to codify the "structure" of your frontmatter data
+- **Collection:** a set of data (in this case, Markdown and MDX files) that share a common schema
 
 # Example
 
@@ -52,7 +59,8 @@ To use this `blog/` collection your project, you can call `fetchContent` and/or 
 
 ```astro
 ---
-import { fetchContent, fetchContentByEntry } from 'astro:content';
+// We'll talk about that `.astro` in the Detailed Design :)
+import { fetchContent, fetchContentByEntry } from '.astro';
 
 // Get all `blog` entries
 const allBlogPosts = await fetchContent('blog');
@@ -79,9 +87,11 @@ const enterprise = await fetchContentByEntry('blog', 'enterprise.md');
 </ul>
 ```
 
+See [detailed usage](#detailed-usage) for a breakdown of each feature.
+
 # Motivation
 
-There are two major problems this RFC addresses.
+There are two major problems this RFC addresses:
 
 ## Frontmatter should be easy to use and debug
 
@@ -91,13 +101,13 @@ First problem: **enforcing consistent frontmatter across your content is a lot t
 ---
 import type { MarkdownInstance } from 'astro';
 
-const posts: MarkdownInstance<{ title: string; ... }> = await Astro.glob('./posts/**/*.md');
+const posts: MarkdownInstance<{ title: string; ... }> = await Astro.glob('./blog/**/*.md');
 ---
 ```
 
 However, there's no guarantee your frontmatter _actually_ matches this `MarkdownInstance` type.
 
-Say `enterprise.md` is missing the required `title` property for instance. When writing a landing page like this:
+Say `blog/columbia.md` is missing the required `title` property. When writing a landing page like this:
 
 ```astro
 ...
@@ -124,7 +134,7 @@ Say `enterprise.md` is missing the required `title` property for instance. When 
 
 ![Error log - Could not parse frontmatter in blog → columbia.md. "title" is required.](../assets/0027-frontmatter-err.png)
 
-This is why schemas are a _huge_ win for a developer's day-to-day. You get autocomplete for properties that match your schema, and helpful hints to fix properties that don't.
+This is why schemas are a _huge_ win for a developer's day-to-day. Astro will autocomplete properties that match your schema, and give helpful errors to fix properties that don't.
 
 ## Importing globs of content can be slow
 
