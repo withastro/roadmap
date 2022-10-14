@@ -272,21 +272,24 @@ To wire up type inferencing in those `fetchContent` helpers, we'll need to gener
 
 ## Generated `.astro` directory
 
-We plan to treat `src/content/` as a separate directory managed by Astro, rather than the Vite pipeline, your `markdown` config, or other external factors. This escapes the `import` pipeline that slows to Markdown and MDX globbing at scale today.
+We plan to treat `src/content/` as a separate directory managed by Astro. This escapes the `import` pipeline that slows to Markdown and MDX globbing at scale today, letting Astro explore new strategies that are best for our use cases.
 
-All generated code will be added to a new directory in your project: `.astro`.
-// TODO: detail here!
+As part of this, we will need a new home for all generated code for your project: the `.astro` directory. This will be written to the base of your project, and will be accessible from any JS module via a type alias:
+
+```ts
+import { fetchContent, fetchContentByEntry, /*future helpers*/ } from '.astro';
+```
 
 ## Manifest
 
-We will generate our own manifest of `src/content/` entries at build time (for the dev server, static builds, _and_ SSR). This will define:
+The first item in this `.astro` directory will be a JS manifest. This will contain a map of all `src/content/` entries, generated at build time or on development server startup. It will contain:
 - All of the collections in `src/content/`
 - The schema types used by each collection
 - The parsed frontmatter object and raw content body for each entry in a collection
 
 **Note:** The user is _not_ expected to view or edit this manifest. This only exists to enable type checking and frontmatter parsing via `fetchContent` and `fetchContentByEntry`.
 
-[See Appendix](#appendix-a---generated-manifest-sample) for a sample of how this manifest could look.
+[See Appendix](#appendix-a---generated-manifest-sample) for a sample of how this manifest might look.
 
 ## `fetchContent` and `fetchContentByEntry`
 
@@ -297,19 +300,6 @@ Alongside this manifest, we will expose `fetchContent` and `fetchContentByEntry`
 // src/pages/index.astro
 import { fetchContent, fetchContentByEntry } from '.astro'
 ---
-```
-
-`.astro` will be aliased to the `.astro` directory generated at the base of your project. We hope to apply this alias to your project automatically, though this would be the manual configuration required:
-
-```json
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      ".astro": [".astro"],
-    }
-  }
-}
 ```
 
 By avoiding the `Astro` global, these fetchers are framework-agnostic. This unlocks usage in UI component frameworks and endpoint files.
@@ -378,7 +368,7 @@ We will also need an appropriate migration guidance for users that _already_ hav
 
 This is a pretty major addition, so we invite readers to raise questions below! Still, these are a few our team has today:
 - Should the generated `.astro` directory path be configurable?
-- (inviting core to raise more questions)
+- (inviting core to raise more questions!)
 
 ## Appendix A - Generated manifest sample 
 
