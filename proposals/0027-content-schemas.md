@@ -30,7 +30,7 @@ We'll be using the words "schema," "collection," and "entry" throughout. Let's d
 
 There are two major problems this RFC aims to solve:
 - Frontmatter without type safety is hard to debug
-- Importing globs of content can be slow
+- Building pages that _only_ need frontmatter (notably, landing pages), is slow with `Astro.glob`
 
 This has led to four goals:
 - Standardize frontmatter type checking at the framework level
@@ -87,14 +87,11 @@ This is why schemas are a _huge_ win for a developer's day-to-day. Astro will au
 
 ## Importing globs of content can be slow
 
-Second problem: **importing globs of content via `Astro.glob` [can be slow at scale.](https://github.com/withastro/astro/issues/4307#issuecomment-1277978007)** This is due to a fundamental flaw with importing: even if you _just_ need the frontmatter of a post, you still wait on the _content_ of that post to render as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries can add minutes to your build.
+Second problem: **importing globs of content via `Astro.glob` [can be slow at scale.](https://github.com/withastro/astro/issues/4307#issuecomment-1277978007)** This is due to a fundamental flaw with importing: even if you _just_ need the frontmatter of a post (i.e. for landing pages), you still wait on the _content_ of that post to render as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries can add minutes to your build.
 
-To avoid this, content schemas are **just** focused on processing and returning a post's frontmatter, **not** the post's contents. This should make Markdown and MDX equally quick to process, and should make landing pages quick to build and debug.
+To avoid this, Content Schemas will focus on processing and returning a post's frontmatter, **not** the post's contents. This should make Markdown and MDX equally quick to process, and should make landing pages quick to build and debug.
 
-We are confident in this approach being more performant long term, as it avoids the work of rendering when 
-...
-
-> ⚠️ **Note:** We also intend to tackle performant rendering of Markdown and MDX globs in a separate RFC. [See out-of-scope section](#out-of-scope) for more.
+We will also **avoid the Vite pipeline** by generating our own metadata object to efficiently look up and type check frontmatter. This avoids the base JS module bottleneck that Vite introduces, [as revealed by Zach Leatherman's Markdown-at-scale benchmark](https://www.zachleat.com/web/build-benchmark/). As such, we are confident that pushing frontmatter fetching outside of the JS module pipeline will let us build the fastest, most performant solution for the landing page glob use case.
 
 # Example
 
