@@ -25,6 +25,75 @@ We'll be using the words "schema," "collection," and "entry" throughout. Let's d
 - **Collection:** a set of data (in this case, Markdown and MDX files) that share a common schema
 - **Entry:** A Markdown or MDX file belonging to a given collection
 
+# Goals
+
+There are two major problems this RFC aims to solve:
+- Frontmatter without type safety is hard to debug
+- Importing globs of content can be slow
+
+This has led to 3 goals:
+- Standardize frontmatter type checking at the framework level
+- Provide valuable error messages to debug and correct frontmatter that is malformed
+- Introduce a way to fetch _just_ frontmatter data from your content, avoiding the expensive rendering pipeline
+
+Let's break down the problem space to better understand the value of this proposal.
+
+# Background
+
+## Frontmatter should be easy to use and debug
+
+First problem: **enforcing consistent frontmatter across your content is a lot to manage.** You can define your own types with a type-cast using `Astro.glob` today:
+
+```astro
+---
+import type { MarkdownInstance } from 'astro';
+
+const posts: MarkdownInstance<{ title: string; ... }> = await Astro.glob('./blog/**/*.md');
+---
+```
+
+However, there's no guarantee your frontmatter _actually_ matches this `MarkdownInstance` type.
+
+Say `blog/columbia.md` is missing the required `title` property. When writing a landing page like this:
+
+```astro
+...
+<ul>
+  {allBlogPosts.map(post => (
+    <li>
+      {post.frontmatter.title.toUpperCase()}
+    </li>
+  ))}
+</ul>
+```
+
+...You'll get the ominous error "cannot read property `toUpperCase` of undefined." Stop me if you've had this monologue before:
+
+> _Aw where did I call `toUpperCase` again?_
+> 
+> _Right, on the landing page. Probably the `title` property._
+>
+> _But which post is missing a title? Agh, better add a `console.log` and scroll through here..._
+>
+> _Ah finally, it was post #1149. I'll go fix that._
+
+**Authors shouldn't have to think like this.** What if instead, they were given a readable error pointing to where the problem is?
+
+![Error log - Could not parse frontmatter in blog → columbia.md. "title" is required.](../assets/0027-frontmatter-err.png)
+
+This is why schemas are a _huge_ win for a developer's day-to-day. Astro will autocomplete properties that match your schema, and give helpful errors to fix properties that don't.
+
+## Importing globs of content can be slow
+
+Second problem: **importing globs of content via `Astro.glob` [can be slow at scale.](https://github.com/withastro/astro/issues/4307#issuecomment-1277978007)** This is due to a fundamental flaw with importing: even if you _just_ need the frontmatter of a post, you still wait on the _content_ of that post to render as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries can add minutes to your build.
+
+To avoid this, content schemas are **just** focused on processing and returning a post's frontmatter, **not** the post's contents. This should make Markdown and MDX equally quick to process, and should make landing pages quick to build and debug.
+
+We are confident in this approach being more performant long term, as it avoids the work of rendering when 
+...
+
+> ⚠️ **Note:** We also intend to tackle performant rendering of Markdown and MDX globs in a separate RFC. [See out-of-scope section](#out-of-scope) for more.
+
 # Example
 
 Say we want to store our `blog` as a collection of Markdown and MDX documents, with consistent frontmatter throughout. We can create a `blog` directory inside of `src/content` like so with a `~schema.ts` file:
@@ -89,61 +158,6 @@ const enterprise = await fetchContentByEntry('blog', 'enterprise.md');
 ```
 
 See [detailed usage](#detailed-usage) for a breakdown of each feature.
-
-# Motivation
-
-There are two major problems this RFC addresses:
-
-## Frontmatter should be easy to use and debug
-
-First problem: **enforcing consistent frontmatter across your content is a lot to manage.** You can define your own types with a type-cast using `Astro.glob` today:
-
-```astro
----
-import type { MarkdownInstance } from 'astro';
-
-const posts: MarkdownInstance<{ title: string; ... }> = await Astro.glob('./blog/**/*.md');
----
-```
-
-However, there's no guarantee your frontmatter _actually_ matches this `MarkdownInstance` type.
-
-Say `blog/columbia.md` is missing the required `title` property. When writing a landing page like this:
-
-```astro
-...
-<ul>
-  {allBlogPosts.map(post => (
-    <li>
-      {post.frontmatter.title.toUpperCase()}
-    </li>
-  ))}
-</ul>
-```
-
-...You'll get the ominous error "cannot read property `toUpperCase` of undefined." Stop me if you've had this monologue before:
-
-> _Aw where did I call `toUpperCase` again?_
-> 
-> _Right, on the landing page. Probably the `title` property._
->
-> _But which post is missing a title? Agh, better add a `console.log` and scroll through here..._
->
-> _Ah finally, it was post #1149. I'll go fix that._
-
-**Authors shouldn't have to think like this.** What if instead, they were given a readable error pointing to where the problem is?
-
-![Error log - Could not parse frontmatter in blog → columbia.md. "title" is required.](../assets/0027-frontmatter-err.png)
-
-This is why schemas are a _huge_ win for a developer's day-to-day. Astro will autocomplete properties that match your schema, and give helpful errors to fix properties that don't.
-
-## Importing globs of content can be slow
-
-Second problem: **importing globs of content via `Astro.glob` [can be slow at scale.](https://github.com/withastro/astro/issues/4307#issuecomment-1277978007)** This is due to a fundamental flaw with importing: even if you _just_ need the frontmatter of a post, you still wait on the _content_ of that post to render as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries can add minutes to your build.
-
-To avoid this, content schemas are **just** focused on processing and returning a post's frontmatter, **not** the post's contents. This should make Markdown and MDX equally quick to process, and should make landing pages quick to build and debug.
-
-> ⚠️ **Note:** We also intend to tackle performant rendering of Markdown and MDX globs in a separate RFC. [See out-of-scope section](#out-of-scope) for more.
 
 # Detailed usage
 
