@@ -355,14 +355,18 @@ Still, we've chosen a flat `collection` + schema file approach to mirror Astro's
 
 # Adoption strategy
 
-Introducing a new reserved directory (`src/content/`) will be a breaking change, so we intend to release as part of Astro 2.0. This should give us time to address all aspects and corner cases of content schemas, and let us tackle performant rendering of content before this is handed off to users (see [out of scope](#out-of-scope)).
+Introducing a new reserved directory (`src/content/`) **will be a breaking change**, so we intend to:
+1. Release behind an experimental flag before 2.0 to get initial feedback
+2. Baseline this flag for Astro 2.0
+
+This should give us time to address all aspects and corner cases of content schemas, and let us tackle performant rendering of content before this is handed off to users (see [out of scope](#out-of-scope)).
 
 We intend `src/content/` to be the recommended way to store Markdown and MDX content in your Astro project. Documentation will be _very_ important to guide adoption! So, we will speak with the docs team on the best information hierarchy. Not only should we surface the concept of a `src/content/` early for new users, but also guide existing users (who may visit the "Markdown & MDX" and Astro glob documentation) to `src/content/` naturally. Ah few initial ideas:
 - Expand [Project Structure](https://docs.astro.build/en/core-concepts/project-structure/) to explain `src/content/`
 - Update Markdown & MDX to reference the Project Structure docs, and expand [Importing Markdown](https://docs.astro.build/en/guides/markdown-content/#importing-markdown) to a more holistic "Using Markdown" section
 - Add a "local content" section to the [Data Fetching](https://docs.astro.build/en/guides/data-fetching/) page
 
-We will also need an appropriate migration guidance for users that _already_ have a `src/content/` directory used for other purposes. Perhaps we can warn users with a `src/content/` that a) contains other file types or b) does not contain any `~schema` files.
+We can also ease migration for users that _already_ have a `src/content/` directory used for other purposes. For instance, can warn users with a `src/content/` that a) contains other file types or b) does not contain any `~schema` files.
 
 # Unresolved questions
 
