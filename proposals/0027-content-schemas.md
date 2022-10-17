@@ -200,6 +200,22 @@ src/content/
     endeavour.md
 ```
 
+### Nested directories
+
+Collections are considered **one level deep.** In other words, you cannot nest collections with different schemas. However, we _will_ allow nested directories to better organize your content. This is vital for certain use cases like internationalization:
+
+```shell
+src/content/
+  docs/
+    en/
+    es/
+    ...
+  # Applies to all nested directories 👇
+  ~schema.ts
+```
+
+All nested directories will share the same schema defined at the top level. Which brings us to...
+
 ## Adding a schema
 
 To add type checking to a given collection, you can add a `~schema.{js|mjs|ts}` file inside of that collection directory. This file should:
