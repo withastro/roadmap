@@ -6,10 +6,11 @@
 
 Content Schemas are a way to fetch Markdown and MDX frontmatter in your Astro projects in a consistent, performant, and type-safe way.
 
-This introduces three new concepts:
+This introduces four new concepts:
 - A new, reserved directory that Astro will manage: `src/content/`
 - A set of helper functions to load entries and collections of entries from this directory
 - The introduction of "collections" and "schemas" ([see glossary](#glossary)) to type-check frontmatter data
+- A new, ignored directory for metadata generated from your project: `.astro/`
 
 ## Out of scope
 
@@ -31,14 +32,15 @@ There are two major problems this RFC aims to solve:
 - Frontmatter without type safety is hard to debug
 - Importing globs of content can be slow
 
-This has led to 3 goals:
+This has led to four goals:
 - Standardize frontmatter type checking at the framework level
 - Provide valuable error messages to debug and correct frontmatter that is malformed
 - Introduce a way to fetch _just_ frontmatter data from your content, avoiding the expensive rendering pipeline
-
-Let's break down the problem space to better understand the value of this proposal.
+- Introduce a place for Astro-specific metadata generated from your project
 
 # Background
+
+Let's break down the problem space to better understand the value of this proposal.
 
 ## Frontmatter should be easy to use and debug
 
