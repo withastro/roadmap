@@ -166,7 +166,19 @@ As you might imagine, Content Schemas have a lot of moving parts. Let's detail e
 
 This RFC introduces a new, reserved directory for Astro to manage: `src/content/`. This directory is where all collections and schema definitions live.
 
-### Creating a collection
+## The `.astro` directory
+
+Since we will preprocess your post frontmatter separate from Vite ([see background](#importing-globs-of-content-can-be-slow)), we need a new home for generated metadata. This will be a special `.astro` directory generated at build time or on dev server startup.
+
+From the user's perspective, `.astro` should be the import source for all _generated_ helpers that smartly understand your project.  Today, this would include [`fetchContent` and `fetchContentByEntry`](#fetchcontent-and-fetchcontentbyentry) imported like so:
+
+```ts
+import { fetchContent, fetchContentByEntry } from '.astro';
+```
+
+We expect `.astro` to live within `node_modules` to avoid checking with your repository. Though, in the future, we would like to explore `.astro` as a home for other generated utilities (ex. a `render404` to pick up custom 404 pages in SSR).
+
+## Creating a collection
 
 All entries in `src/content/` **must** be nested in a "collection" directory. This allows you to group content based on the schema their frontmatter should use. This is similar to creating a new table in a database, or a new content model in a CMS like Contentful.
 
@@ -188,7 +200,7 @@ src/content/
     endeavour.md
 ```
 
-### Adding a schema
+## Adding a schema
 
 To add type checking to a given collection, you can add a `~schema.{js|mjs|ts}` file inside of that collection directory. This file should:
 1. Have a single named export called `schema`
@@ -223,7 +235,7 @@ export const schema = z.object({
 
 You can [browse Zod's documentation](https://github.com/colinhacks/zod) for a complete rundown of features. However, given frontmatter is limited to primitive types like strings and booleans, we don't expect users to dive _deep_ into Zod's complex use cases.
 
-### Fetching content
+## Fetching content
 
 Astro provides 2 functions to query collections:
 - `fetchContent` - get all entries in a collection, or based on a frontmatter filter
@@ -272,6 +284,7 @@ export const schema = z.object({
     image?: string;
     tags: string[];
   };
+  id: string;
   // raw body of the Markdown or MDX document
   body: string;
 }
@@ -285,12 +298,19 @@ To wire up type inferencing in those `fetchContent` helpers, we'll need to gener
 
 ## Generated `.astro` directory
 
-We plan to treat `src/content/` as a separate directory managed by Astro. This escapes the `import` pipeline that slows to Markdown and MDX globbing at scale today, letting Astro explore new strategies that are best for our use cases.
+As discussed in [Detailed Usage](#the-astro-directory), the `.astro` directory will be home to generated metadata and user-facing utilities that use this metadata. Today, this includes a manifest of entries in `src/content/`, and the `fetchContent` and `fetchContentByEntry` utilities.
 
-As part of this, we will need a new home for all generated code for your project: the `.astro` directory. This will be written to the base of your project, and will be accessible from any JS module via a type alias:
-
-```ts
-import { fetchContent, fetchContentByEntry, /*future helpers*/ } from '.astro';
+```shell
+node_modules/
+  .astro/
+    # metadata
+    contentMap.mjs
+    contentMap.d.ts
+    # user-facing utilities
+    index.mjs
+    index.d.ts
+    # generated package for module resolution
+    package.json
 ```
 
 ## Manifest
@@ -311,7 +331,7 @@ Alongside this manifest, we will expose `fetchContent` and `fetchContentByEntry`
 ```astro
 ---
 // src/pages/index.astro
-import { fetchContent, fetchContentByEntry } from '.astro'
+import { fetchContent, fetchContentByEntry } from '.astro';
 ---
 ```
 
@@ -365,6 +385,16 @@ const Post = defineDocumentType(() => ({
 ```
 
 Still, we've chosen a flat `collection` + schema file approach to mirror Astro's file-based routing.
+
+## Vite modules vs `.astro` directory
+
+The `.astro` directory could also be represented as a virtual module with generated type definitions. The team considered a `astro:` prefix for all generated utilities similar to `node:`'s prefix. We definitely like this parallel, since it established Astro more as a platform for building your application.
+
+```ts
+import { fetchContent } from 'astro:content';
+```
+
+However, the technical implementation of an `astro:content` is a bit more complex for type checking. Even if user-facing utilities like `fetchContent` came from this virtual module, we would _still_ need a [generated metadata file](#appendix-a---generated-manifest-sample) somewhere in your project for TypeScript's type inferencing. To simplify this code generation, we decided user-facing functions and metadata could live together under `.astro`, though we are open to exploring the `astro:` prefix concept in the future.
 
 # Adoption strategy
 
