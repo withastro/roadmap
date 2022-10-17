@@ -374,27 +374,32 @@ This is a pretty major addition, so we invite readers to raise questions below! 
 
 This is subject to change, but may clarify what code we'll be generating.
 
+Note: this is built to optimize collection and entry lookup. There are a few performance optimizations to consider:
+- Could we extract `data` and `body` to separate lookups to speed up these nested objects?
+- Would a `Map` be faster than a plain object, assuming we write frequently during development?
+- Could we flatten the whole thing with a separate collection lookup map for `fetchContent` to index?
+
+...For now, I kept the design naive :)
+
 ```ts
 // src/.astro/content-manifest.mjs
 export const contentMap = {
-  "blog": {
-    "columbia.md": '/Users/me/my-astro-project/src/content/columbia.md',
-    "endeavour.md": '/Users/me/my-astro-project/src/content/endeavour.md',
-    "enterprise.md": '/Users/me/my-astro-project/src/content/enterprise.md',
-  },
-};
-export const contentMetadataMap = new Map([
-  [contentMap["blog"]["columbia.md"], {
-    data: {"description":"Learn about the Columbia NASA space shuttle.","canonicalURL":"https://astro.build/blog/columbia/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-    body: "Space Shuttle Columbia...",
-  }],
-  [contentMap["blog"]["endeavour.md"], {
-    data: {"description":"Learn about the Endeavour NASA space shuttle.","canonicalURL":"https://astro.build/blog/endeavour/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-    body: "Space Shuttle Endeavour (Orbiter Vehicle Designation: OV-105) is a retired orbiter...",
-  }],
-  [contentMap["blog"]["enterprise.md"], {
-    data: {"description":"Learn about the Enterprise NASA space shuttle.","canonicalURL":"https://astro.build/blog/enterprise/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-    body: "Space Shuttle Enterprise (Orbiter Vehicle Designation: OV-101) was the first orbiter...",
-  }],
-]);
+  blog: {
+    'columbia.md': {
+      id: '/Users/me/my-astro-project/src/content/blog/columbia.md',
+      data: {"description":"Learn about the Columbia NASA space shuttle.","canonicalURL":"https://astro.build/blog/columbia/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+      body: "Space Shuttle Columbia...",
+    },
+    'endeavour.md': {
+      id: '/Users/me/my-astro-project/src/content/blog/endeavour.md',
+      data: {"description":"Learn about the Endeavour NASA space shuttle.","canonicalURL":"https://astro.build/blog/endeavour/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+      body: "Space Shuttle Endeavour (Orbiter Vehicle Designation: OV-105) is a retired orbiter...",
+    },
+    'enterprise.md': {
+      id: '/Users/me/my-astro-project/src/content/blog/enterprise.md',
+      data: {"description":"Learn about the Enterprise NASA space shuttle.","canonicalURL":"https://astro.build/blog/enterprise/","publishedDate":"Sat May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
+      body: "Space Shuttle Enterprise (Orbiter Vehicle Designation: OV-101) was the first orbiter...",
+    }
+  }
+}
 ```
