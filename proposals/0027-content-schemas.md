@@ -284,13 +284,20 @@ export const schema = z.object({
     image?: string;
     tags: string[];
   };
+  // unique identifier. Today, the absolute file path
   id: string;
   // raw body of the Markdown or MDX document
   body: string;
 }
 ```
 
-Note that `body` is the _raw_ content of the file. This ensures builds remain performant by avoiding expensive rendering pipelines. However, we recognize the value of parsing this body automatically as `Astro.glob` does today. See [out of scope](#out-of-scope) for future investigations planned.
+We have purposefully generalized Markdown-specific terms like `frontmatter` and `file` to agnostic names like `data` and `id`. This leaves the door open to fetch content hosted _outside_ your local project in the future, following naming conventions from headless CMSes like Contentful.
+
+Also note that `body` is the _raw_ content of the file. This ensures builds remain performant by avoiding expensive rendering pipelines. However, we recognize the value of parsing this body automatically as `Astro.glob` does today. We will investigate this use case separately.
+
+## Mapping to pages
+
+TODO
 
 # Detailed design
 
