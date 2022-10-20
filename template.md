@@ -33,6 +33,12 @@ implementation to implement. This should get into specifics and corner-cases,
 and include examples of how the feature is used. Any new terminology should be
 defined here.
 
+# Testing strategy
+
+How will this feature's implementation be tested? Explain if this can be tested with
+unit tests or integration tests or something else. If relevant, explain the test
+cases that will be added to cover all of the ways this feature might be used.
+
 # Drawbacks
 
 Why should we *not* do this? Please consider:
