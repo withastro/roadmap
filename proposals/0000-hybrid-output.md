@@ -66,10 +66,10 @@ export let output = undefined; output = 'server';
 
 ## Internal API
 
-Astro needs to detect/understand the `export const output` syntax. This should be implemented as a specific post-processing Babel plugin. The plugin will detect the existence of valid ESM exports of `output` (`export const output`, `export let output`, `export var output`, `export { output }`, etc) and attach the statically detected `output` value to the module metadata under the `astro` namespace. This will allow us to track the `output` mode of any public route.
+Astro needs to detect/understand the `export const output` syntax. This should be implemented as a specific post-processing Vite plugin. The plugin will detect the existence of valid ESM exports of `output` (`export const output`, `export let output`, `export var output`, `export { output }`, etc) and attach the statically detected `output` value to the module metadata under the `astro` namespace. This will allow us to track the `output` mode of any public route.
 
 > **Note**
-> Astro Routes include `.astro` pages, but also API endpoints (`src/pages/api/user.ts`)! It's important that this RFC handles both of these constraints in a uniform way, hence the use of a post-processing Babel plugin rather than implementing this feature in `@astrojs/compiler`.
+> Astro Routes include `.astro` pages, but also API endpoints (`src/pages/api/user.ts`)! It's important that this RFC handles both of these constraints in a uniform way, hence the use of a post-processing Vite plugin rather than implementing this feature in `@astrojs/compiler`.
 
 The **build** API needs to be updated to handle the new `'hybrid'` output mode. Implementation-wise, this will be similar to the existing `'server'` implementation, but it will also adopt portions of the `'static'` build to statically generate any routes that are not handled at request time.
 
@@ -83,7 +83,7 @@ An adapter will be required when building for `hybrid` output, because we will b
 
 This implementation will largely be tested with full fixture-based integration tests, because we will need to verify the build output is structured correctly, which will be difficult to do with unit tests.
 
-The Babel plugin that detects `export const output` will be unit tested against all valid `export` formats outlined above.
+The Vite plugin that detects `export const output` will be unit tested against all valid `export` formats outlined above, as well as invalid dynamic exports.
 
 # Drawbacks
 
@@ -121,6 +121,12 @@ There are many possible user-facing APIs for exposing control over `output`. We 
 ---
 <h1>Hello world</h1>
 ```
+
+### E. Introduce this feature _under_ `output: 'server'` mode
+
+**Pros** one less concept to learn, no third-party updates needed
+**Cons** less clear adoption story, introduces yet another different feature set between `'static' | 'server'`, defaults to `server` rather than `static` for all routes, (hybrid mode should be a granular switch from static => server rather than an opt-in to static) 
+
 
 # Adoption strategy
 
