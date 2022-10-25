@@ -49,8 +49,8 @@ There are two public API surfaces to this RFC:
 - Updating the `astro.config.mjs` to accept a new `output` value, `'hybrid'`. The existing values of `'static' | 'server'` would remain supported. A value of `'hybrid'` will enabled detection for the following feature:
 - Allowing routes (files in `pages/`) to self-declare a granular `output` value. The existing `output` values of `'static' | 'server'` would both be valid.
 
-**For performance reasons, this declaration must be statically analyzable.**
-Only string literal values will be accepted. Other declaration values will throw an error and fail the build. This mirrors similar constraints that Vite has for compile-time (macro) features like dynamic `import()` and `import.meta.glob`.
+**This declaration must be statically analyzable!**
+Only string literal values will be accepted. This is because a route cannot dynamically be static or server rendered based on an incoming request—this value _must_ be known at build time. Other declaration values will throw an error and fail the build. This mirrors similar constraints that Vite has for compile-time (macro) features like dynamic `import()` and `import.meta.glob`.
 
 ```astro
 ---
