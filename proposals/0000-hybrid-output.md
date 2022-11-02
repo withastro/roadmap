@@ -8,59 +8,62 @@ Currently, Astro's [`output`](https://docs.astro.build/en/reference/configuratio
 
 # Example
 
-This RFC proposes a new, opt-in `output` mode named `'hybrid'`.
+This RFC proposes introducing route-level control when using `output: 'server'`.
 
 ```js
 import { defineConfig } from 'astro/config'
 import node from '@astrojs/node'
 
 export default defineConfig({
-  output: 'hybrid',
+  output: 'server',
   adapter: node()
 })
 ```
 
-For individual routes, `'static'` will be the default. To opt-in to `'server'` output, users may `export const output: 'static' | 'server'`.
+For individual routes, `'server'` will be the default. To opt-in to `'static'` output, users may `export const output = "static"`.
 
 ```astro
 ---
-export const output = 'server'
+// This route should be generated at build time!
+export const output = "static"
 
-const text = Astro.url.searchParams.get('text') ?? 'Hello world!';
+const text = await fetch('https://example.com/').then(res => res.text())
 ---
 
-<h1 set:html={text} />
+<Fragment set:html={text} />
 ```
 
 # Motivation
 
 Since Astro v1.0.0 was released, we've gotten consistent feedback that more granular control over `output` is a requirement for scaling projects. Users would like to statically render some routes and server render others, reducing the need for full static rebuilds for frequently changing data.
 
-One very common use-case is a fully static site that also exposes `api/` endpoints which are handled on the server. Another common example is a largely static site that can generate a few dynamic pages at request time (for example, a user profile page).
+One common use-case is a fully static site that also exposes `api/` endpoints which are handled on the server. Another common example is a largely dynamic site that can generate a few static pages (like a landing page) at request time. Another use-case is pre-generating routes with heavy dependencies (like `puppeteer`) to slim down the server output.
 
-The eventual solution should enable granular control over `output` on a per-route basis. Since Astro defaults to `'static'` output, this should remain the default in the eventual solution as well.
+The eventual solution should enable granular control over `output` on a per-route basis. Since `output: 'server'` will default Astro to `'server'` output, this should remain the default.
 
 # Detailed design
 
 ## Public API
 
-There are two public API surfaces to this RFC:
+There is only one public API surface change included in this RFC, assuming you are already using `output: 'server'`.
 
-- Updating the `astro.config.mjs` to accept a new `output` value, `'hybrid'`. The existing values of `'static' | 'server'` would remain supported. A value of `'hybrid'` will enabled detection for the following feature:
-- Allowing routes (files in `pages/`) to self-declare a granular `output` value. The existing `output` values of `'static' | 'server'` would both be valid.
+- Allowing routes (files in `pages/`) to self-declare a granular `output` value. The existing `output` values of `'static' | 'server'` would both be valid, but `'server'` is assumed as the default.
 
 **This declaration must be statically analyzable!**
+
 Only string literal values will be accepted. This is because a route cannot dynamically be static or server rendered based on an incoming request—this value _must_ be known at build time. Other declaration values will throw an error and fail the build. This mirrors similar constraints that Vite has for compile-time (macro) features like dynamic `import()` and `import.meta.glob`.
 
 ```astro
 ---
 // Valid – constant string literal
 export const output = 'server'
+
 // Invalid – cannot be determined at compile-time
-export const output = static ? 'static' : 'server';
-export const output = value;
-export const output = 'ser' + 'ver';
-export let output = undefined; output = 'server';
+export let output = 'server'                         // `let` implies mutability
+export const output = static ? 'static' : 'server';  // `static` variable is unknown at build time
+export const output = value;                         // `value` variable is unknown at build time
+export const output = 'ser' + 'ver';                 // string concatenation is non-trivial to perform at build time
+export let output = undefined; output = 'server';    // dynamic assignment is unknown at build time
 ---
 ```
 
@@ -71,13 +74,15 @@ Astro needs to detect/understand the `export const output` syntax. This should b
 > **Note**
 > Astro Routes include `.astro` pages, but also API endpoints (`src/pages/api/user.ts`)! It's important that this RFC handles both of these constraints in a uniform way, hence the use of a post-processing Vite plugin rather than implementing this feature in `@astrojs/compiler`.
 
-The **build** API needs to be updated to handle the new `'hybrid'` output mode. Implementation-wise, this will be similar to the existing `'server'` implementation, but it will also adopt portions of the `'static'` build to statically generate any routes that are not handled at request time.
+The **build** API needs to be updated to perform static generation for any `static` routes. Implementation-wise, the existing `'server'` implementation must be updated to also generate static routes. Per the common use cases, the dependencies of any `static` routes should _not_ be included in the final server bundle, so static and server generation should be implemented in two seperate bundles.
 
-The **dev** server must be updated to allow `searchParams` and other features which are currently only avaliable with `server` rendering to be allowed on a per-route basis.
+The output of the build will be `server/` and `client/` directories as it is now, but statically generated routes will be emitted as assets (`.html` or other files) in the `client/` directory. These must be included as assets in the server manifest.
+
+The **dev** server must be updated to disallow `searchParams` and other features on `static` routes. They are currently only avaliable when `server` rendering, but this is handled on a project-wide basis.
 
 ## Adapter Support
 
-An adapter will be required when building for `hybrid` output, because we will be building a server with some statically generated routes. Adapters will need to be updated to handle `hybrid` output.
+Adapters are still required when building for `server` output. Since the asset manifest is already exposed, adapters _may_ choose to perform optimizations on emitted `.html` files, but are not required to do so.
 
 # Testing strategy
 
@@ -87,10 +92,9 @@ The Vite plugin that detects `export const output` will be unit tested against a
 
 # Drawbacks
 
-- A new output mode will increase the complexity and maintenance costs of our `build` and `adapter` implementations.
 - The `export const output` syntax is JS-like, but since it requires static analysis, it does not support the full dynamicism of JS that users might expect. Clear errors will help ease this problem.
-- Having a separate mode for `hybrid` increases cognitive overhead and the learning curve of Astro.
-- `hybrid` output should arguably be the default `output` mode (similar to Next.js), but to avoid a breaking change we're going with an opt-in adoption approach
+- With this architecture, `server` output should arguably be the default `output` mode (similar to Next.js). To avoid a breaking change, we'll remain with our existing opt-in adoption approach.
+- This RFC does not propose any way to configure `static` output for all routes in a directory. Adding this behavior could be explored in a follow-up RFC. 
 
 # Alternatives
 
@@ -122,18 +126,23 @@ There are many possible user-facing APIs for exposing control over `output`. We 
 <h1>Hello world</h1>
 ```
 
-### E. Introduce this feature _under_ `output: 'server'` mode
+### E. Introduce this feature under a new `output: 'hybrid'` mode
 
-**Pros** one less concept to learn, no third-party updates needed
-**Cons** less clear adoption story, introduces yet another different feature set between `'static' | 'server'`, defaults to `server` rather than `static` for all routes, (hybrid mode should be a granular switch from static => server rather than an opt-in to static) 
+**Pros** clearer incremental adoption story, could default to `static`
+**Cons** more cognitive overhead, conceptually `hybrid` isn't an `output` mode but a building technique, `static` doesn't seem like the right default
+
+### F. Use file-based routing conventions like `route.server.astro`.
+
+**Pros** statically analyzable, immediately clear which files do what
+**Cons** complicates routing logic, makes it harder to adopt other file-based routing changes in the future
 
 
 # Adoption strategy
 
-- Adoption will be entirely opt-in by setting `output: 'hybrid'` in your `astro.config.mjs` file.
+- Adoption will be entirely opt-in by setting `output: 'server'` in your `astro.config.mjs` file and adding `export const output = "static"` to a route.
 - This is not a breaking change, it is new behavior
-- Third-party adapters will need to coordinate changes to support `hybrid` output, but for the most part the logic will be very similar to the existing `server` output.
+- Third-party adapters will not necessarily need to change to support this new hybrid output as it builds on top of the existing `server` output
 
 # Unresolved questions
 
-- Should API Endpoints default to `output = "server"`? This seems more ergonomic than manually opting every API Endpoint into `'server'` output...
+- Any public API changes needed for adapters?
