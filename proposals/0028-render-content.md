@@ -7,7 +7,7 @@ Created: October 17, 2022 2:05 PM
 
 <aside>
 
-💡 **This RFC compliments our [Content Schemas RFC](https://www.notion.so/Content-Schemas-35f1952fb0a24b30b681b0509ac4d7c2).** We recommend reading that document first to understand the goals of “Content” as a concept, and where “render content” fits into that story.
+💡 **This RFC compliments our [Content Schemas RFC](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md).** We recommend reading that document first to understand the goals of “Content” as a concept, and where “render content” fits into that story.
 
 </aside>
 
@@ -154,7 +154,7 @@ const { Content } = await renderContent(firstNewsletter);
 
 In this example:
 
-1. We use `fetchContent` to get a reference to whatever we want to render ([see the Content Schema RFC example](https://www.notion.so/Content-Schemas-35f1952fb0a24b30b681b0509ac4d7c2))
+1. We use `fetchContent` to get a reference to whatever we want to render ([see the Content Schema RFC example](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md#example))
 2. We pass this fetched entry to `renderContent`. This **imports** our entry processed through the Vite pipeline to retrieve a `Content` component, and **injects** all component resources (styles and nested island dependencies) onto the page.
 
 <aside>
@@ -249,7 +249,7 @@ With this complete, `renderContent` can now update resource sets using, say. `th
 
 ## A new `renderContentMap`
 
-The Content Schemas proposal [presented a new manifest](https://www.notion.so/Content-Schemas-35f1952fb0a24b30b681b0509ac4d7c2) generated from `src/content`, stored in a `.astro` directory as a cache. We expect `renderContent` to add a lazy `import.meta.glob` call (see background) so we can avoid loading each module until used.
+The Content Schemas proposal [presented a new manifest](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md) generated from `src/content`, stored in a `.astro` directory as a cache. We expect `renderContent` to add a lazy `import.meta.glob` call (see background) so we can avoid loading each module until used.
 
 ```tsx
 export const renderContentMap = import.meta.glob('src/content/**/*.{md,mdx}', { query: { SPECIAL_FLAG: true } });
