@@ -2,6 +2,8 @@
 - Reference Issues: https://github.com/withastro/astro/issues/4307#issuecomment-1277978007
 - Implementation PR: https://github.com/withastro/astro/pull/5291
 
+# Content Schemas
+
 <aside>
 
 💡 **This RFC is complimented by [the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md).** Our goal is to propose and accept both of these RFCs as a pair before implementing any features discussed. We recommend reading that document *after* reading this to understand how all use cases can be covered.
