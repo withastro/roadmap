@@ -4,7 +4,7 @@
 
 <aside>
 
-💡 **This RFC is complimented by [the Render Content proposal](https://www.notion.so/Render-Content-c6cd515b8ed84ab9ba937b3f5271b2cf).** Our goal is to propose and accept both of these RFCs as a pair before implementing any features discussed. We recommend reading that document *after* reading this to understand how all use cases can be covered.
+💡 **This RFC is complimented by [the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md).** Our goal is to propose and accept both of these RFCs as a pair before implementing any features discussed. We recommend reading that document *after* reading this to understand how all use cases can be covered.
 </aside>
 
 Content Schemas are a way to fetch Markdown and MDX frontmatter in your Astro projects in a consistent, performant, and type-safe way.
@@ -81,7 +81,7 @@ To avoid this, Content Schemas will focus on processing and returning a post's f
 
 <aside>
 
-💡 Don’t worry, it will still be easy to retrieve a post’s content when you need it! [See the Render Content proposal](https://www.notion.so/Render-Content-c6cd515b8ed84ab9ba937b3f5271b2cf) for more.
+💡 Don’t worry, it will still be easy to retrieve a post’s content when you need it! [See the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for more.
 
 </aside>
 
@@ -376,7 +376,7 @@ This will generate routes for every entry in our collection, mapping each entry 
 
 ### Rendering contents
 
-The above example generates routes, but what about rendering our `.md` files on the page? We suggest [reading the Render Content proposal](https://www.notion.so/Render-Content-c6cd515b8ed84ab9ba937b3f5271b2cf) for full details on how `fetchContent` will compliment that story. 
+The above example generates routes, but what about rendering our `.md` files on the page? We suggest [reading the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for full details on how `fetchContent` will compliment that story. 
 
 # Detailed design
 
