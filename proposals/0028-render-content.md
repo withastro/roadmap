@@ -1,5 +1,7 @@
 - Start Date: 2022-10-14
-- Reference Issues: https://github.com/withastro/astro/issues/4307#issuecomment-1277978007
+- Reference Issues:
+	- https://github.com/withastro/astro/issues/3816
+
 - Implementation PR: https://github.com/withastro/astro/pull/5291
 
 # Render Content
