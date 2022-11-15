@@ -20,12 +20,12 @@ export default defineConfig({
 })
 ```
 
-For individual routes, `'server'` will be the default. To opt-in to `'static'` output, users may `export const output = "static"`.
+For individual routes, `'server'` will be the default. To opt-in to `'static'` output, users may `export const prerender = true`.
 
 ```astro
 ---
 // This route should be generated at build time!
-export const output = "static"
+export const prerender = true
 
 const text = await fetch('https://example.com/').then(res => res.text())
 ---
@@ -47,29 +47,30 @@ The eventual solution should enable granular control over `output` on a per-rout
 
 There is only one public API surface change included in this RFC, assuming you are already using `output: 'server'`.
 
-- Allowing routes (files in `pages/`) to self-declare a granular `output` value. The existing `output` values of `'static' | 'server'` would both be valid, but `'server'` is assumed as the default.
+- Allowing routes (files in `pages/`) to self-declare a `prerender` value. If `export const prerender = true` is present, that route will be prerendered.
 
 **This declaration must be statically analyzable!**
 
-Only string literal values will be accepted. This is because a route cannot dynamically be static or server rendered based on an incoming request—this value _must_ be known at build time. Other declaration values will throw an error and fail the build. This mirrors similar constraints that Vite has for compile-time (macro) features like dynamic `import()` and `import.meta.glob`.
+Only boolean literal values will be accepted. This is because a route cannot dynamically be static or server rendered based on an incoming request—this value _must_ be known at build time. Other declaration values will throw an error and fail the build. This mirrors similar constraints that Vite has for compile-time (macro) features like dynamic `import()` and `import.meta.glob`.
 
 ```astro
 ---
-// Valid – constant string literal
-export const output = 'server'
+// Valid – constant boolean literal
+export const prerender = true
+// Valid, but not useful (this is the default)
+export const prerender = false
 
 // Invalid – cannot be determined at compile-time
-export let output = 'server'                         // `let` implies mutability
-export const output = static ? 'static' : 'server';  // `static` variable is unknown at build time
-export const output = value;                         // `value` variable is unknown at build time
-export const output = 'ser' + 'ver';                 // string concatenation is non-trivial to perform at build time
-export let output = undefined; output = 'server';    // dynamic assignment is unknown at build time
+export let prerender = true;                           // `let` implies mutability
+export const prerender = !!static;                     // `static` variable is unknown at build time
+export const prerender = value;                        // `value` variable is unknown at build time
+export let prerender = undefined; prerender = true;    // dynamic assignment is unknown at build time
 ---
 ```
 
 ## Internal API
 
-Astro needs to detect/understand the `export const output` syntax. This should be implemented as a specific post-processing Vite plugin. The plugin will detect the existence of valid ESM exports of `output` (`export const output`, `export let output`, `export var output`, `export { output }`, etc) and attach the statically detected `output` value to the module metadata under the `astro` namespace. This will allow us to track the `output` mode of any public route.
+Astro needs to detect/understand the `export const prerender` syntax. This should be implemented as a specific post-processing Vite plugin. The plugin will detect the existence of valid ESM exports of `prerender` (`export const prerender`, `export { prerender }`, etc) and attach the statically detected `prerender` value to the module metadata under the `astro` namespace. This will allow us to track the `output` mode of any public route.
 
 > **Note**
 > Astro Routes include `.astro` pages, but also API endpoints (`src/pages/api/user.ts`)! It's important that this RFC handles both of these constraints in a uniform way, hence the use of a post-processing Vite plugin rather than implementing this feature in `@astrojs/compiler`.
@@ -88,13 +89,13 @@ Adapters are still required when building for `server` output. Since the asset m
 
 This implementation will largely be tested with full fixture-based integration tests, because we will need to verify the build output is structured correctly, which will be difficult to do with unit tests.
 
-The Vite plugin that detects `export const output` will be unit tested against all valid `export` formats outlined above, as well as invalid dynamic exports.
+The Vite plugin that detects `export const prerender` will be unit tested against all valid `export` formats outlined above, as well as invalid dynamic exports.
 
 # Drawbacks
 
-- The `export const output` syntax is JS-like, but since it requires static analysis, it does not support the full dynamicism of JS that users might expect. Clear errors will help ease this problem.
+- The `export const prerender` syntax is JS-like, but since it requires static analysis, it does not support the full dynamicism of JS that users might expect. Clear errors will help ease this problem.
 - With this architecture, `server` output should arguably be the default `output` mode (similar to Next.js). To avoid a breaking change, we'll remain with our existing opt-in adoption approach.
-- This RFC does not propose any way to configure `static` output for all routes in a directory. Adding this behavior could be explored in a follow-up RFC. 
+- This RFC does not propose any way to configure `prerender` for all routes in a directory. Adding this behavior could be explored in a follow-up RFC. 
 
 # Alternatives
 
@@ -139,7 +140,7 @@ There are many possible user-facing APIs for exposing control over `output`. We 
 
 # Adoption strategy
 
-- Adoption will be entirely opt-in by setting `output: 'server'` in your `astro.config.mjs` file and adding `export const output = "static"` to a route.
+- Adoption will be entirely opt-in by setting `output: 'server'` in your `astro.config.mjs` file and adding `export const prerender = true` to a route.
 - This is not a breaking change, it is new behavior
 - Third-party adapters will not necessarily need to change to support this new hybrid output as it builds on top of the existing `server` output
 
