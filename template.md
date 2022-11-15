@@ -8,22 +8,36 @@ A brief, one or two sentence explanation of the proposal.
 
 # Example
 
-If the proposal involves a new or changed API, then;
+If the proposal involves a new or changed API, then include a basic code example.
+Otherwise, omit this section if it's not applicable.
 
-- include a basic code example; otherwise,
-- omit this section if it's not applicable.
+# Background
 
-# Motivation
+Include any useful background detail that that explains why this RFC is important.
+What situation created the problems and RFC goals outlined below? Why now?
+Be brief, if possible!
 
-In this section, step back and ask yourself:
+It can be useful to illustrate your RFC as a user problem in this section.
+(ex: "Users have reported that it is difficult to do X in Astro today.")
 
-> Why are we doing this? Why does it matter?
-> What use cases does it support? What is the expected outcome?
+# Goals
 
-Please focus on explaining the motivation, so that if this RFC is not accepted,
-the motivation could be used to develop alternative solutions. In other words,
-enumerate the constraints you are trying to solve without coupling them too
-closely to the solution you have in mind.
+A **bulleted-list** outlining the intended goals of this RFC. 
+
+- What are the exact problems that you are trying to solve with this RFC?
+- Separate these goals from the solution that you will outline below.
+- If this RFC isn't approved, these goals can be used to develop alternative solutions.
+
+# Non-Goals 
+
+A **bulleted-list** outlining what is intentionally left out of this RFC. 
+This gives the reader the correct context on what is and isn't meant to be considered:
+
+- Non-goal: A goal that is intentionally not addressed in this RFC.
+- Out-of-scope: A goal that is related, but intentionally avoided here.
+- Future: A goal that is related, but left to be addressed in the future.
+
+Omit this section if it's not applicable.
 
 # Detailed design
 
