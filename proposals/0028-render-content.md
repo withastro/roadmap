@@ -298,6 +298,16 @@ The Content Schemas proposal [presented a new manifest](https://github.com/witha
 export const renderEntryMap = import.meta.glob('src/content/**/*.{md,mdx}', { query: { SPECIAL_FLAG: true } });
 ```
 
+# Testing strategy
+
+- **`astro build` integration tests:** Ensure styles and component scripts are present when using `renderEntry` + MDX.
+- **`astro dev` e2e tests:** validate styles are added and removed when MDX styles and components are modified.
+
+# Drawbacks
+
+- Injecting styles via `renderEntry` requires access to the page's SSR result. This leads to failures in TypeScript files that may not be expected, and involves some level of tech debt to properly delay and inject assets.
+- Separating "rendering" from "getting" may be confusing to `Astro.glob` users. This is one more moving piece to explain, though [there are parallels to Nuxt 3](https://content.nuxtjs.org/api/composables/use-document-driven) that could help documentation.
+
 # Alternatives
 
 The main alternative to `renderEntry` would be modifying the internals of `Astro.glob` to similarly differ resource imports until a `Content` component is called. This is certainly possible, but has a 2 main caveats:
@@ -305,7 +315,11 @@ The main alternative to `renderEntry` would be modifying the internals of `Astro
 - Content Schemas are poised to replace arbitrary globs for Markdown and MDX, for the benefits presented in that RFC. Doubling down on `Astro.glob` for **rendering** these documents would likely confuse users, as they’d need to move between glob syntax and collection-based fetching fairly often.
 - Focusing on `Astro.glob` would likely expand this RFC’s scope beyond `src/content` to include any directory in your project. This makes an experimental release a bit more unpredictable, and abandoning “safe” directories like `src/content` could close doors for optimization in the future.
 
-# Open questions
+# Adoption strategy
+
+[See content schemas proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md#adoption-strategy)
+
+# Unresolved questions
 
 - Can and **should** we merge `renderEntry`'s behavior into `getCollection`? i.e. making the `Content` component available on all content entries as an async function, rather than using a separate import?
 - Can `renderEntry` make importing content more performant? i.e. can we explore other avenues to avoid loading content until absolutely necessary, speeding up our MDX processing time to more closely match Markdown?
