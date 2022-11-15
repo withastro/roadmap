@@ -523,33 +523,38 @@ This is a pretty major addition, so we invite readers to raise questions below! 
 
 ## Appendix A - Generated manifest sample
 
-This is subject to change, but may clarify what code we'll be generating.
+> This is subject to change, but should clarify what code we need to generate.
 
-Note: this is built to optimize collection and entry lookup. There are a few performance optimizations to consider:
-
-- Could we extract `data` and `body` to separate lookups to speed up these nested objects?
-- Would a `Map` be faster than a plain object, assuming we write frequently during development?
-- Could we flatten the whole thing with a separate collection lookup map for `fetchContent` to index?
+We will generate a manifest for types **only,** and rely on `import.meta.glob` to retrieve frontmatter in code. The generated type manifest will look something like this:
 
 ```tsx
-// src/.astro/content-manifest.mjs
-export const contentMap = {
-  blog: {
-    'columbia.md': {
-      id: 'columbia.md',
-      data: {"description":"Learn about the Columbia NASA space shuttle.","canonicalURL":"<https://astro.build/blog/columbia/","publishedDate":"Sat> May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-      body: "Space Shuttle Columbia...",
+// src/.astro/content-manifest.d.ts
+export declare const entryMap: {
+	"blog": {
+    "columbia.md": {
+      id: "columbia.md",
+      slug: "columbia",
+      collection: "blog",
+      body: string,
+      data: z.infer<typeof schemaMap["blog"]['schema']>
     },
-    'endeavour.md': {
-      id: 'endeavour.md',
-      data: {"description":"Learn about the Endeavour NASA space shuttle.","canonicalURL":"<https://astro.build/blog/endeavour/","publishedDate":"Sat> May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-      body: "Space Shuttle Endeavour (Orbiter Vehicle Designation: OV-105) is a retired orbiter...",
+    "endeavour.md": {
+      id: "endeavour.md",
+      slug: "endeavour",
+      collection: "blog",
+      body: string,
+      data: z.infer<typeof schemaMap["blog"]['schema']>
     },
-    'enterprise.md': {
-      id: 'enterprise.md',
-      data: {"description":"Learn about the Enterprise NASA space shuttle.","canonicalURL":"<https://astro.build/blog/enterprise/","publishedDate":"Sat> May 21 2022 00:00:00 GMT-0400 (Eastern Daylight Time)","modifiedDate":"Sun May 22 2022 00:00:00 GMT-0400 (Eastern Daylight Time)"},
-      body: "Space Shuttle Enterprise (Orbiter Vehicle Designation: OV-101) was the first orbiter...",
-    }
-  }
-}
+    "promo/launch-week.mdx": {
+      id: "promo/launch-week.mdx",
+      slug: "promo/launch-week",
+      collection: "blog",
+      body: string,
+      data: z.infer<typeof schemaMap["blog"]['schema']>
+    },
+  },
+};
+export declare const schemaMap: {
+	"blog": typeof import("/Users/benholmes/Repositories/astro/examples/with-content/src/content/blog/~schema"),
+};
 ```
