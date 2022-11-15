@@ -48,7 +48,7 @@ src/content/
     enterprise.md
     columbia.md
     endeavour.md
-    ~schema.ts
+    ~schema.ts # Optional
 ```
 
 We can use `getCollection` to retrieve type-safe frontmatter:
@@ -84,7 +84,7 @@ const enterprise = await getEntry('blog', 'enterprise.md');
 </ul>
 ```
 
-And add a `~schema.ts` to enforce frontmatter fields:
+And optionally add a `~schema.ts` to enforce frontmatter fields:
 
 ```tsx
 // src/content/blog/~schema.ts
