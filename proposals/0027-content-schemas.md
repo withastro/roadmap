@@ -9,6 +9,8 @@
 💡 **This RFC is complimented by [the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md).** Our goal is to propose and accept both of these RFCs as a pair before implementing any features discussed. We recommend reading that document *after* reading this to understand how all use cases can be covered.
 </aside>
 
+# Summary
+
 Content Schemas are a way to fetch Markdown and MDX frontmatter in your Astro projects in a consistent, performant, and type-safe way.
 
 This introduces four new concepts:
@@ -18,7 +20,7 @@ This introduces four new concepts:
 - The introduction of "collections" and "schemas" ([see glossary](#glossary-📖)) to type-check frontmatter data
 - A new, ignored directory for metadata generated from your project: `.astro/`
 
-# Glossary 📖
+## Glossary 📖
 
 We'll be using the words "schema," "collection," and "entry" throughout. Let's define those terms in the context of this RFC:
 
@@ -26,7 +28,71 @@ We'll be using the words "schema," "collection," and "entry" throughout. Let's d
 - **Collection:** a set of data that share a common schema. In this case, Markdown and MDX files
 - **Entry:** A piece of data (Markdown or MDX file) belonging to a given collection
 
-# Background
+# Example
+
+Say we want a landing page for our collection of blog posts:
+
+```bash
+src/content/
+  blog/
+    enterprise.md
+    columbia.md
+    endeavour.md
+    ~schema.ts
+```
+
+We can use `getCollection` to retrieve type-safe frontmatter:
+
+```tsx
+---
+// src/pages/index.astro
+// We'll talk about that `.astro` in the Detailed design :)
+import { getCollection, getEntry } from '.astro';
+
+// Get all `blog` entries
+const allBlogPosts = await getCollection('blog');
+// Filter blog posts by frontmatter properties
+const draftBlogPosts = await getCollection('blog', ({ data }) => {
+  return data.status === 'draft';
+});
+// Get a specific blog post by file name
+const enterprise = await getEntry('blog', 'enterprise.md');
+---
+
+<ul>
+  {allBlogPosts.map(post => (
+    <li>
+      {/* access frontmatter properties with `.data` */}
+      <a href={post.data.slug}>{post.data.title}</a>
+      {/* each property is type-safe, */}
+      {/* so expect nice autocomplete and red squiggles here! */}
+      <time datetime={post.data.publishedDate.toISOString()}>
+        {post.data.publishedDate.toDateString()}
+      </time>
+    </li>
+  ))}
+</ul>
+```
+
+And add a `~schema.ts` to enforce frontmatter fields:
+
+```tsx
+// src/content/blog/~schema.ts
+import { z } from 'zod'
+
+export const schema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  // mark optional properties with `.optional()`
+  image: z.string().optional(),
+  tags: z.array(z.string()),
+  // transform to another data type with `transform`
+  // ex. convert date strings to Date objects
+  publishedDate: z.string().transform((str) => new Date(str)),
+});
+```
+
+# Motivation
 
 Let's break down the problem space to better understand the value of this proposal.
 
@@ -93,77 +159,11 @@ To avoid this, Content Schemas will focus on processing and returning a post's f
 - Standardize frontmatter type checking at the framework level
 - Provide valuable error messages to debug and correct frontmatter that is malformed
 
-# Out-of-scope / Future
+## Out-of-scope / Future
 
 - **This RFC is focused on Markdown and MDX content only.** We see how this generic pattern of “collections” and “schemas” may extend to other resources like YAML, JSON, image assets, and more. We would love to explore these avenues if the concept of schemas is accepted.
 
-# Example
-
-Say we want a landing page for our collection of blog posts:
-
-```bash
-src/content/
-  blog/
-    enterprise.md
-    columbia.md
-    endeavour.md
-    ~schema.ts
-```
-
-We can use `getCollection` to retrieve type-safe frontmatter:
-
-```tsx
----
-// src/pages/index.astro
-// We'll talk about that `.astro` in the Detailed design :)
-import { getCollection, getEntry } from '.astro';
-
-// Get all `blog` entries
-const allBlogPosts = await getCollection('blog');
-// Filter blog posts by frontmatter properties
-const draftBlogPosts = await getCollection('blog', ({ data }) => {
-  return data.status === 'draft';
-});
-// Get a specific blog post by file name
-const enterprise = await getEntry('blog', 'enterprise.md');
----
-
-<ul>
-  {allBlogPosts.map(post => (
-    <li>
-      {/* access frontmatter properties with `.data` */}
-      <a href={post.data.slug}>{post.data.title}</a>
-      {/* each property is type-safe, */}
-      {/* so expect nice autocomplete and red squiggles here! */}
-      <time datetime={post.data.publishedDate.toISOString()}>
-        {post.data.publishedDate.toDateString()}
-      </time>
-    </li>
-  ))}
-</ul>
-```
-
-And add a `~schema.ts` to enforce frontmatter fields:
-
-```tsx
-// src/content/blog/~schema.ts
-import { z } from 'zod'
-
-export const schema = z.object({
-  title: z.string(),
-  slug: z.string(),
-  // mark optional properties with `.optional()`
-  image: z.string().optional(),
-  tags: z.array(z.string()),
-  // transform to another data type with `transform`
-  // ex. convert date strings to Date objects
-  publishedDate: z.string().transform((str) => new Date(str)),
-});
-```
-
-Let’s break these features down.
-
-# Detailed usage
+# Detailed design
 
 As you might imagine, Content Schemas have a lot of moving parts. Let's detail each one:
 
@@ -380,7 +380,7 @@ This will generate routes for every entry in our collection, mapping each entry 
 
 The above example generates routes, but what about rendering our `.md` files on the page? We suggest [reading the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for full details on how `getCollection` will compliment that story. 
 
-# Detailed design
+# Detailed implementation
 
 To wire up type inferencing in those `getCollection` helpers, we'll need to generate some code under-the-hood. Let's explore the engineering work required.
 
@@ -426,6 +426,15 @@ import { getCollection, getEntry } from '.astro';
 ```
 
 By avoiding the `Astro` global, these fetchers are framework-agnostic. This unlocks usage in UI component frameworks and endpoint files.
+
+# Testing strategy
+
+Since this feature relies on a magic directory (`src/content/`), we will need tests up to the end-to-end level. To summarize:
+
+- **dev server e2e tests**: validate that `getCollection` and `getEntry` are usable as schema and entry files change.
+- **`astro check` integration test**: ensure generated types pass our type validator.
+- **`astro build` integration test**: ensure entries and collections build successfully, with expected data present in the build.
+- **type file generator unit tests**: Type gen should be independently testable, so it's worth a snapshot test validating the output.
 
 # Drawbacks
 
