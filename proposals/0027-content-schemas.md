@@ -28,6 +28,16 @@ We'll be using the words "schema," "collection," and "entry" throughout. Let's d
 - **Collection:** a set of data that share a common schema. In this case, Markdown and MDX files
 - **Entry:** A piece of data (Markdown or MDX file) belonging to a given collection
 
+# Goals ⭐️
+
+- Make landing and index pages easy to create and debug
+- Standardize frontmatter type checking at the framework level
+- Provide valuable error messages to debug and correct frontmatter that is malformed
+
+## Out-of-scope / Future
+
+- **This RFC is focused on Markdown and MDX content only.** We see how this generic pattern of “collections” and “schemas” may extend to other resources like YAML, JSON, image assets, and more. We would love to explore these avenues if the concept of schemas is accepted.
+
 # Example
 
 Say we want a landing page for our collection of blog posts:
@@ -152,16 +162,6 @@ To avoid this, Content Schemas will focus on processing and returning a post's f
 💡 Don’t worry, it will still be easy to retrieve a post’s content when you need it! [See the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for more.
 
 </aside>
-
-# Goals ⭐️
-
-- Make landing and index pages easy to create and debug
-- Standardize frontmatter type checking at the framework level
-- Provide valuable error messages to debug and correct frontmatter that is malformed
-
-## Out-of-scope / Future
-
-- **This RFC is focused on Markdown and MDX content only.** We see how this generic pattern of “collections” and “schemas” may extend to other resources like YAML, JSON, image assets, and more. We would love to explore these avenues if the concept of schemas is accepted.
 
 # Detailed design
 
