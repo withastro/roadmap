@@ -187,7 +187,7 @@ We expect `.astro` to live at the base of your project directory. This falls inl
 
 ## Creating a collection
 
-All entries in `src/content/` **must** be nested in a "collection" directory. This allows you to group content based on the schema their frontmatter should use. This is similar to creating a new table in a database, or a new content model in a CMS like Contentful.
+All entries in `src/content/` **must** be nested in a "collection" directory. This allows you to get a collection of entries based on the directory name, and optionally enforce frontmatter types with a schema. This is similar to creating a new table in a database, or a new content model in a CMS like Contentful.
 
 What this looks like in practice:
 
@@ -209,7 +209,7 @@ src/content/
 
 ### Nested directories
 
-Collections are considered **one level deep**, so you cannot nest collections or schemas within other collections. However, we *will* allow nested directories to better organize your content. This is vital for certain use cases like internationalization:
+Collections are considered **one level deep**, so you cannot nest collections (or collection schemas) within other collections. However, we *will* allow nested directories to better organize your content. This is vital for certain use cases like internationalization:
 
 ```bash
 src/content/
@@ -221,11 +221,11 @@ src/content/
     ...
 ```
 
-All nested directories will share the same schema defined at the top level. Which brings us to...
+All nested directories will share the same (optional) schema defined at the top level. Which brings us to...
 
 ## Adding a schema
 
-To add type checking to a given collection, you can add a `~schema.{js|mjs|ts}` file inside of that collection directory. This file should:
+Schemas are an optional way to enforce frontmatter types in a collection. To add a collection schema, you can create a `~schema.{js|mjs|ts}` file inside of that collection directory. This file should:
 
 1. Have a named export called `schema`
 2. Use a [Zod object](https://github.com/colinhacks/zod#objects) to define frontmatter properties
