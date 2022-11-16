@@ -48,7 +48,7 @@ src/content/
     enterprise.md
     columbia.md
     endeavour.md
-    ~schema.ts # Optional
+    schema.ts # Optional
 ```
 
 We can use `getCollection` to retrieve type-safe frontmatter:
@@ -84,10 +84,10 @@ const enterprise = await getEntry('blog', 'enterprise.md');
 </ul>
 ```
 
-And optionally add a `~schema.ts` to enforce frontmatter fields:
+And optionally add a `schema.ts` to enforce frontmatter fields:
 
 ```tsx
-// src/content/blog/~schema.ts
+// src/content/blog/schema.ts
 import { z } from 'zod'
 
 export const schema = z.object({
@@ -195,13 +195,13 @@ What this looks like in practice:
 src/content/
   newsletters/
     # All newsletters have the same frontmatter properties
-    ~schema.ts
+    schema.ts
     week-1.md
     week-2.md
     week-3.md
   blog/
     # All blog posts have the same frontmatter properties
-    ~schema.ts
+    schema.ts
     columbia.md
     enterprise.md
     endeavour.md
@@ -214,7 +214,7 @@ Collections are considered **one level deep**, so you cannot nest collections (o
 ```bash
 src/content/
   # Applies to all nested directories 👇
-  ~schema.ts
+  schema.ts
   docs/
     en/
     es/
@@ -225,7 +225,7 @@ All nested directories will share the same (optional) schema defined at the top 
 
 ## Adding a schema
 
-Schemas are an optional way to enforce frontmatter types in a collection. To add a collection schema, you can create a `~schema.{js|mjs|ts}` file inside of that collection directory. This file should:
+Schemas are an optional way to enforce frontmatter types in a collection. To add a collection schema, you can create a `schema.{js|mjs|ts}` file inside of that collection directory. This file should:
 
 1. Have a named export called `schema`
 2. Use a [Zod object](https://github.com/colinhacks/zod#objects) to define frontmatter properties
@@ -233,7 +233,7 @@ Schemas are an optional way to enforce frontmatter types in a collection. To add
 For instance, say every `blog/` entry should have a `title`, `slug`, a list of `tags`, and an optional `image` url. We can specify each object property like so:
 
 ```tsx
-// ~schema.ts
+// schema.ts
 import { z } from 'zod'
 
 export const schema = z.object({
@@ -287,7 +287,7 @@ const enterprise = await getEntry('blog', 'enterprise.md');
 Assume the `blog` collection schema looks like this:
 
 ```tsx
-// src/content/blog/~schema.ts
+// src/content/blog/schema.ts
 import { z } from 'zod'
 
 export const schema = z.object({
@@ -512,7 +512,7 @@ We intend `src/content/` to be the recommended way to store Markdown and MDX con
 - Update Markdown & MDX to reference the Project Structure docs, and expand [Importing Markdown](https://docs.astro.build/en/guides/markdown-content/#importing-markdown) to a more holistic "Using Markdown" section
 - Add a "local content" section to the [Data Fetching](https://docs.astro.build/en/guides/data-fetching/) page
 
-We can also ease migration for users that *already* have a `src/content/` directory used for other purposes. For instance, can warn users with a `src/content/` that a) contains other file types or b) does not contain any `~schema` files.
+We can also ease migration for users that *already* have a `src/content/` directory used for other purposes. For instance, we can warn users with a `src/content/` that a) contains other file types or b) does not contain any `schema` files.
 
 # Unresolved questions
 
@@ -555,6 +555,6 @@ export declare const entryMap: {
   },
 };
 export declare const schemaMap: {
-	"blog": typeof import("/Users/benholmes/Repositories/astro/examples/with-content/src/content/blog/~schema"),
+	"blog": typeof import("/Users/benholmes/Repositories/astro/examples/with-content/src/content/blog/schema"),
 };
 ```
