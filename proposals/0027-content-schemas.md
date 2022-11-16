@@ -400,6 +400,12 @@ my-project-directory/
     index.d.ts
 ```
 
+### Syncing this directory
+
+The `.astro` directory will be generated when starting the dev server and during production builds. This means type inferencing _will not work_ until either of these commands are run.
+
+We will add this generation step to the `astro check` command as well, in case users want a lightweight command to generate the `.astro` directory during development. This is inspired by [Svelte's `svelte-kit sync`](https://kit.svelte.dev/docs/cli#svelte-kit-sync) CLI command.
+
 ## Manifest
 
 The first item in this `.astro` directory will be a JS manifest. This will contain a map of all `src/content/` entries, generated at build time or on server request. It will contain:
