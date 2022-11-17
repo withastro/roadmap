@@ -8,24 +8,37 @@ A brief, one or two sentence explanation of the proposal.
 
 # Example
 
-If the proposal involves a new or changed API, then;
+If the proposal involves a new or changed API, then include a basic code example.
+Otherwise, omit this section if it's not applicable.
 
-- include a basic code example; otherwise,
-- omit this section if it's not applicable.
+# Background & Motivation
 
-# Motivation
+Include any useful background detail that that explains why this RFC is important.
+What are the problems that this RFC sets out to solve? Why now? Be brief!
 
-In this section, step back and ask yourself:
+It can be useful to illustrate your RFC as a user problem in this section.
+(ex: "Users have reported that it is difficult to do X in Astro today.")
 
-> Why are we doing this? Why does it matter?
-> What use cases does it support? What is the expected outcome?
+# Goals
 
-Please focus on explaining the motivation, so that if this RFC is not accepted,
-the motivation could be used to develop alternative solutions. In other words,
-enumerate the constraints you are trying to solve without coupling them too
-closely to the solution you have in mind.
+A **concise, bulleted-list** outlining the intended goals of this RFC. 
 
-# Detailed design
+- What are the exact problems that you are trying to solve with this RFC?
+- Separate these goals from the solution that you will outline below.
+- If this RFC isn't approved, these goals can be used to develop alternative solutions.
+
+# Non-Goals 
+
+A **concise, bulleted-list** outlining anything intentionally left out of this RFC:
+
+- Non-goal: A goal that is intentionally not addressed in this RFC.
+- Out-of-scope: A goal that is related, but intentionally avoided here.
+- Future: A goal that is related, but left to be addressed in the future.
+
+This gives the reader the correct context on what is intentionally left out of scope.
+It is okay to leave this section empty.
+
+# Detailed Design
 
 This is the bulk of the RFC. Explain the design in enough detail for somebody
 familiar with Astro to understand, and for somebody familiar with the
@@ -33,7 +46,7 @@ implementation to implement. This should get into specifics and corner-cases,
 and include examples of how the feature is used. Any new terminology should be
 defined here.
 
-# Testing strategy
+# Testing Strategy
 
 How will this feature's implementation be tested? Explain if this can be tested with
 unit tests or integration tests or something else. If relevant, explain the test
@@ -64,7 +77,7 @@ Please consider:
 - Can we provide a runtime adapter library for the original API it replaces?
 - How will this affect other projects in the Astro ecosystem?
 
-# Unresolved questions
+# Unresolved Questions
 
 Optional, but suggested for first drafts.
 What parts of the design are still to be determined?
