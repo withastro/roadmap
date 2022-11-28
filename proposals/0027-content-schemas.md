@@ -114,7 +114,7 @@ First problem: **enforcing consistent frontmatter across your content is a lot t
 ---
 import type { MarkdownInstance } from 'astro';
 
-const posts: MarkdownInstance<{ title: string; ... }> = await Astro.glob('./blog/**/*.md');
+const posts: Array<MarkdownInstance<{ title: string; ... }>> = await Astro.glob('./blog/**/*.md');
 ---
 ```
 
