@@ -165,7 +165,7 @@ To avoid this, Content Schemas will focus on processing and returning a post's f
 
 </aside>
 
-# Detailed design
+# User-facing API breakdown
 
 As you might imagine, Content Schemas have a lot of moving parts. Let's detail each one:
 
@@ -399,7 +399,7 @@ This will generate routes for every entry in our collection, mapping each entry 
 
 The above example generates routes, but what about rendering our `.md` files on the page? We suggest [reading the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for full details on how `getCollection` will compliment that story. 
 
-# Detailed implementation
+# Detailed design
 
 To wire up type inferencing in those `getCollection` helpers, we'll need to generate some code under-the-hood. Let's explore the engineering work required.
 
