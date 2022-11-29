@@ -208,22 +208,23 @@ As you might imagine, there’s a bit of trickery needed to selectively add styl
 - **Returns: `{ Content: AstroComponentFactory }`**
     - A `Content` component for use in Astro or MDX files
 
-## Full usage breakdown
+## Usage breakdown
+
+You can render a collection entry using an ID and collection name. These are both available from the `getEntry` and `getCollection` results:
 
 ```tsx
 ---
-import { getCollection, renderEntry } from '.astro';
+import { getEntry, renderEntry } from '.astro';
 
-// Option 1: renderEntry by getCollection return value
-const firstNewsletter = await getCollection('newsletter', 'first.md');
+// Option 1: renderEntry by getCollection or getEntry return value
+const firstNewsletter = await getEntry('newsletter', 'first.md');
 const { Content } = await renderEntry(firstNewsletter);
 
-// Option 2: renderEntry by ID
+// Option 2: renderEntry by id and collection
 // Useful when the full `getCollection` return object is not available
-const { Content } = await renderEntry('newsletter/first.md');
-// Or, if you just have an entry ID from a `getCollection` call:
-const { id, slug } = await getCollection('newsletter', 'first.md');
-const { Content } = await renderEntry(id);
+const { id, collection, slug } = await getEntry('newsletter', 'first.md');
+// ... somewhere later
+const { Content } = await renderEntry({ id, collection });
 ---
 
 <Content />
