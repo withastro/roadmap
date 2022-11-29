@@ -84,14 +84,14 @@ const enterprise = await getEntry('blog', 'enterprise.md');
 </ul>
 ```
 
-And optionally add a `index.ts` to enforce frontmatter fields:
+And optionally define a schema to enforce frontmatter fields:
 
 ```tsx
-// src/content/blog/index.ts
+// src/content/config.ts
 import { z, defineCollection } from 'astro:content';
 
-export default defineCollection({
-  schema: z.object({
+const blog = defineCollection({
+  schema: {
     title: z.string(),
     slug: z.string(),
     // mark optional properties with `.optional()`
@@ -100,8 +100,10 @@ export default defineCollection({
     // transform to another data type with `transform`
     // ex. convert date strings to Date objects
     publishedDate: z.string().transform((str) => new Date(str)),
-  })
+  },
 });
+
+export const collections = { blog };
 ```
 
 # Motivation
@@ -204,15 +206,13 @@ What this looks like in practice:
 
 ```bash
 src/content/
+  # All newsletters have the same frontmatter properties
   newsletters/
-    # All newsletters have the same frontmatter properties
-    index.ts
     week-1.md
     week-2.md
     week-3.md
+  # All blog posts have the same frontmatter properties
   blog/
-    # All blog posts have the same frontmatter properties
-    index.ts
     columbia.md
     enterprise.md
     endeavour.md
@@ -224,9 +224,8 @@ Collections are considered **one level deep**, so you cannot nest collections (o
 
 ```bash
 src/content/
-  # Applies to all nested directories 👇
-  index.ts
   docs/
+    # docs schema applies to all nested directories 👇
     en/
     es/
     ...
@@ -236,18 +235,18 @@ All nested directories will share the same (optional) schema defined at the top 
 
 ## Adding a schema
 
-Schemas are an optional way to enforce frontmatter types in a collection. To add a collection schema, you can create a `index.{js|mjs|ts}` file inside of that collection directory. This file should:
+Schemas are an optional way to enforce frontmatter types in a collection. To collection schemas, you can create a `src/content/config.{js|mjs|ts}` file. This file should:
 
-1. Have a default export with all collection configuration. We will offer a `defineCollection` utility for this, similar to `defineConfig` in your `astro.config.*` today (see example below).
-2. Use a [Zod object](https://github.com/colinhacks/zod#objects) to define frontmatter properties. The `z` utility will be built-in and exposed by `astro:content`.
+1. `export` a `collections` object, with each object key corresponding to the collection's folder name. We will offer a `defineCollection` utility similar to `defineConfig` in your `astro.config.*` today (see example below).
+2. Use a [Zod object](https://github.com/colinhacks/zod#objects) to define schema properties. The `z` utility will be built-in and exposed by `astro:content`.
 
 For instance, say every `blog/` entry should have a `title`, `slug`, a list of `tags`, and an optional `image` url. We can specify each object property like so:
 
-```tsx
-// index.ts
+```ts
+// src/content/config.ts
 import { z, defineCollection } from 'astro:content';
 
-export default defineCollection({
+const blog = defineCollection({
   schema: {
     title: z.string(),
     slug: z.string(),
@@ -256,6 +255,16 @@ export default defineCollection({
     tags: z.array(z.string()),
   },
 });
+
+export const collections = { blog };
+```
+
+You can also include dashes `-` in your collection name using a string as the key:
+
+```ts
+const myNewsletter = defineCollection({...});
+
+export const collections = { 'my-newsletter': myNewsletter };
 ```
 
 ### Why Zod?
@@ -304,10 +313,10 @@ const enterprise = await getEntry('blog', 'enterprise.md');
 Assume the `blog` collection schema looks like this:
 
 ```tsx
-// src/content/blog/index.ts
+// src/content/config.ts
 import { defineCollection, z } from 'astro:content';
 
-export default defineCollection({
+const blog = defineCollection({
   schema: {
     title: z.string(),
     slug: z.string(),
@@ -315,6 +324,8 @@ export default defineCollection({
     tags: z.array(z.string()),
   },
 });
+
+export const collections = { blog };
 ```
 
 `await getCollection('blog')` will return entries of the following type:
@@ -496,7 +507,7 @@ We expect most users to compare `getCollection` with `Astro.glob`. There is a no
 
 The latter limits users to fetching a single collection at a time, and removes nested directories as a filtering option (unless you regex the ID by hand). One alternative could be to [mirror Contentlayer's approach](https://www.contentlayer.dev/docs/sources/files/mapping-document-types#resolving-document-type-with-filepathpattern), wiring schemas to wildcards of any shape:
 
-```tsx
+```ts
 // Snippet from Contentlayer documentation
 // <https://www.contentlayer.dev/docs/sources/files/mapping-document-types#resolving-document-type-with-filepathpattern>
 const Post = defineDocumentType(() => ({
@@ -538,21 +549,21 @@ This is a pretty major addition, so we invite readers to raise questions below! 
 
 We will generate a manifest for types **only,** and rely on `import.meta.glob` to retrieve frontmatter in code. The generated type manifest will look something like this:
 
-```tsx
+```ts
 // src/.astro/content-types.d.ts
 declare module 'astro:content' {
 	export { z } from 'astro/zod';
-  // Utility type: get type of a given collection schema
+  // Get type of a given collection schema
 	export type CollectionEntry<C extends keyof typeof entryMap> =
 		typeof entryMap[C][keyof typeof entryMap[C]];
-  // Utility for `getStaticPaths` generation
+  // Generate `getStaticPaths` result
 	export function collectionToPaths<C extends keyof typeof entryMap>(
 		collection: C
 	): Promise<import('astro').GetStaticPathsResult>;
-  // Utility for schema configuration
-	export function defineCollection<
-		{ schema: import('astro/zod').ZodRawShape }
-	>(input: C): C;
+
+	type BaseCollectionConfig = { schema: import('astro/zod').ZodRawShape };
+	export function defineCollection<C extends BaseCollectionConfig>(input: C): C;
+
 	export function getEntry<C extends keyof typeof entryMap, E extends keyof typeof entryMap[C]>(
 		collection: C,
 		entryKey: E
@@ -575,27 +586,30 @@ declare module 'astro:content' {
 		headings: import('astro').MarkdownHeading[];
 	}>;
 
+	type InferEntrySchema<C extends keyof typeof entryMap> = import('astro/zod').infer<
+		import('astro/zod').ZodObject<CollectionsConfig['collections'][C]['schema']>
+	>;
+
 	const entryMap: {
-		"docs": {
-      "en/introduction.md": {
-        id: "en/introduction.md",
-        slug: "en/introduction",
+		"blog": {
+      "first-post.md": {
+        id: "first-post.md",
+        slug: "first-post",
         body: string,
-        collection: "docs",
-        data: import('astro/zod').infer<import('astro/zod').ZodObject<typeof schemaMap['docs']["default"]['schema']>>
+        collection: "blog",
+        data: InferEntrySchema<"blog">
       },
-      "en/page-2.md": {
-        id: "en/page-2.md",
-        slug: "en/page-2",
+      "markdown-style-guide.md": {
+        id: "markdown-style-guide.md",
+        slug: "markdown-style-guide",
         body: string,
-        collection: "docs",
-        data: import('astro/zod').infer<import('astro/zod').ZodObject<typeof schemaMap['docs']["default"]['schema']>>
+        collection: "blog",
+        data: InferEntrySchema<"blog">
       },
       ...
     },
 	};
-	const schemaMap: {
-    docs: import('/path/to/docs/content/index.ts'),
-  }
+
+	type CollectionsConfig = typeof import('/path/to/project/src/content/config');
 }
 ```
