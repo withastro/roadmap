@@ -241,6 +241,34 @@ In this example:
 
 </aside>
 
+### Retrieve `headings` and `injectedFrontmatter`
+
+You may also need `renderEntry` to retrieve results from the remark or rehype pipelines. This includes:
+- generated headings - [see our existing `getHeadings` utility](https://docs.astro.build/en/guides/integrations-guide/mdx/#getheadings)
+- injected frontmatter - [see our frontmatter injection example for reading time](https://docs.astro.build/en/guides/markdown-content/#example-injecting-frontmatter)
+
+Each can be accessed like so:
+
+```tsx
+---
+import { getCollection, renderEntry } from 'astro:content';
+const blogPosts = await getCollection('blog');
+---
+
+{blogPosts.map(post => {
+  const {
+    injectedFrontmatter, // all properties injected via remark
+    headings, // result of `getHeadings`
+  } = renderEntry(post);
+  const { readingTime } = injectedFrontmatter;
+  const h1 = headings.find(h => h.depth === 1);
+  
+  return <p>{h1} - {readingTime} min read</p>
+})}
+```
+
+> **🙋‍♂️ Why don't `getCollection` and `getEntry` contain these values?** The remark and rehype pipelines are only run when your content is rendered. `renderEntry` has access to the complete rendered result, so we can expose **values based on a post's contents** from here!
+
 ## Flagging `src/content` resources
 
 Currently, we crawl **every** module imported by a given page to discover styles and component resources used, and dump all discovered resources into sets of `scripts`, `styles`, and `links`. 
