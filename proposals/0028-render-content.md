@@ -255,11 +255,11 @@ import { getCollection, renderEntry } from 'astro:content';
 const blogPosts = await getCollection('blog');
 ---
 
-{blogPosts.map(post => {
+{blogPosts.map(async (post) => {
   const {
     injectedFrontmatter, // all properties injected via remark
     headings, // result of `getHeadings`
-  } = renderEntry(post);
+  } = await renderEntry(post);
   const { readingTime } = injectedFrontmatter;
   const h1 = headings.find(h => h.depth === 1);
   
