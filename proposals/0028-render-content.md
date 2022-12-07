@@ -306,7 +306,7 @@ export function renderEntry(/* ... */) {
 }
 ```
 
-This tells Astro that this file does head propagation, so any component (all the way up the tree) that imports it will check to see if it is using a component that does head propagation.
+This tells the Astro renderer to look for and add propagated HTML into the document `head`.
 
 The `createComponent` function takes an object where we can create a component that does head propagation. Pseudo-code for that will look like:
 
