@@ -296,28 +296,41 @@ function crawlCss(currentModule, discoveredStyles, discoveredSrcContentStyles) {
 
 ## Adding `src/content` resources from `renderEntry`
 
-Once we’ve pulled our `src/content` resources for later, we need to inject these resources onto the page. Today, Astro frontmatter can reach for the `$$result` object to access this.
+Once we’ve pulled our `src/content` resources for later, we need to inject these resources (such as stylesheets) onto the page. Astro has internal support for head propagation through a special comment. The module that implements `renderEntry` will look like:
 
-Our draft implementation injects the following into any **Astro** file that explicitly imports `renderEntry`:
+```js
+// astro-head-inject
 
-```tsx
-import { renderEntry } from '.astro';
-/* Injected */ import { renderEntry as $$renderEntry } from '.astro';
-...
-const $$stdin = $$createcomponent(async ($$result, $$props, $$slots) => {
-	const Astro = $$result.createAstro($$Astro, $$props, $$slots);
-	Astro.self = $$stdin;
-	/* Injected */ let renderEntry = $$renderEntry.bind($$result);
-	const userFrontmatterStuff...	
-}));
+export function renderEntry(/* ... */) {
+	// ...
+}
 ```
 
-Two important pieces here:
+This tells the Astro renderer to look for and add propagated HTML into the document `head`.
 
-- We inject a separate `$$renderEntry` import to modify what variables it may access.
-- We declare a local variable in the compiled frontmatter, ensuring the variable name matches the named `renderEntry` import from the user. This will shadow the user import so we can `bind` the result object for `renderEntry` to access.
+The `createComponent` function takes an object where we can create a component that does head propagation. Pseudo-code for that will look like:
 
-With this complete, `renderEntry` can now update resource sets using, say. `this.links.add(...)`
+```js
+import { createComponent } from 'astro/runtime/server/index.js';
+
+export function renderEntry() {
+	return createComponent({
+		factory(result, props, slots) {
+			return createHeadAndContent(
+				renderUniqueStylesheet(result, {
+					href: '/path/to/these/styles.css'
+				}),
+				renderTemplate`${renderComponent(result, 'Other', Other, props, slots)}`
+			);
+		},
+		propagation: 'self'
+	});
+}
+```
+
+The key piece is `propagation: 'self'`, which tells Astro to wait for this component to render and inject its head content.
+
+This means that this component can be used anywhere, such as in layout components. Styles will be added lazily only where/when the component is used in a template.
 
 ## A new `renderEntryMap`
 
