@@ -328,7 +328,7 @@ export function renderEntry() {
 }
 ```
 
-The key pieces here is that the implementation sets `propagation: 'self'`. Doing that triggers Astro to wait for this component to render in inject its head content.
+The key piece is `propagation: 'self'`, which tells Astro to wait for this component to render and inject its head content.
 
 This means that this component can be used anywhere, such as in layout components. Styles will be added lazily only where/when the component is used in a template.
 
