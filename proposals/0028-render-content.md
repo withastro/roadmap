@@ -296,7 +296,7 @@ function crawlCss(currentModule, discoveredStyles, discoveredSrcContentStyles) {
 
 ## Adding `src/content` resources from `renderEntry`
 
-Once we’ve pulled our `src/content` resources for later, we need to inject these resources (such as stylesheets) onto the page. Astro has internal support for head propagation through a special comment. The module that implements renderEntry will look like:
+Once we’ve pulled our `src/content` resources for later, we need to inject these resources (such as stylesheets) onto the page. Astro has internal support for head propagation through a special comment. The module that implements `renderEntry` will look like:
 
 ```js
 // astro-head-inject
