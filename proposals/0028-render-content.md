@@ -8,7 +8,7 @@
 
 <aside>
 
-💡 **This RFC compliments our [Content Schemas RFC](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md).** We recommend reading that document first to understand the goals of “Content” as a concept, and where rendering content fits into that story.
+💡 **This RFC compliments our [Content Collections RFC](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md).** We recommend reading that document first to understand the goals of “Content” as a concept, and where rendering content fits into that story.
 
 </aside>
 
@@ -232,7 +232,7 @@ const { Content } = await renderEntry({ id, collection });
 
 In this example:
 
-1. We use `getEntry` or `getCollection` to get references to whatever we want to render ([see the Content Schema RFC example](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md#example))
+1. We use `getEntry` or `getCollection` to get references to whatever we want to render ([see the Content Schema RFC example](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md#example))
 2. We pass this fetched entry to `renderEntry`. This **imports** our entry processed through the Vite pipeline to retrieve a `Content` component, and **injects** all component resources (styles and nested island dependencies) onto the page.
 
 <aside>
@@ -334,7 +334,7 @@ This means that this component can be used anywhere, such as in layout component
 
 ## A new `renderEntryMap`
 
-The Content Schemas proposal [presented a new manifest](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md) generated from `src/content`, stored in a `.astro` directory as a cache. We expect `renderEntry` to add a lazy `import.meta.glob` call (see background) so we can avoid loading each module until used.
+The Content Collections proposal [presented a new manifest](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md) generated from `src/content`, stored in a `.astro` directory as a cache. We expect `renderEntry` to add a lazy `import.meta.glob` call (see background) so we can avoid loading each module until used.
 
 ```tsx
 export const renderEntryMap = import.meta.glob('src/content/**/*.{md,mdx}', { query: { SPECIAL_FLAG: true } });
@@ -354,12 +354,12 @@ export const renderEntryMap = import.meta.glob('src/content/**/*.{md,mdx}', { qu
 
 The main alternative to `renderEntry` would be modifying the internals of `Astro.glob` to similarly differ resource imports until a `Content` component is called. This is certainly possible, but has a 2 main caveats:
 
-- Content Schemas are poised to replace arbitrary globs for Markdown and MDX, for the benefits presented in that RFC. Doubling down on `Astro.glob` for **rendering** these documents would likely confuse users, as they’d need to move between glob syntax and collection-based fetching fairly often.
+- Content Collections are poised to replace arbitrary globs for Markdown and MDX, for the benefits presented in that RFC. Doubling down on `Astro.glob` for **rendering** these documents would likely confuse users, as they’d need to move between glob syntax and collection-based fetching fairly often.
 - Focusing on `Astro.glob` would likely expand this RFC’s scope beyond `src/content` to include any directory in your project. This makes an experimental release a bit more unpredictable, and abandoning “safe” directories like `src/content` could close doors for optimization in the future.
 
 # Adoption strategy
 
-[See content schemas proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-schemas.md#adoption-strategy)
+[See content Collections proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md#adoption-strategy)
 
 # Unresolved questions
 

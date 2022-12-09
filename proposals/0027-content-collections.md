@@ -2,7 +2,7 @@
 - Reference Issues: https://github.com/withastro/astro/issues/4307#issuecomment-1277978007
 - Implementation PR: https://github.com/withastro/astro/pull/5291
 
-# Content Schemas
+# Content Collections
 
 <aside>
 
@@ -11,7 +11,7 @@
 
 # Summary
 
-Content Schemas are a way to fetch Markdown and MDX frontmatter in your Astro projects in a consistent, performant, and type-safe way.
+Content Collections are a way to fetch Markdown and MDX frontmatter in your Astro projects in a consistent, performant, and type-safe way.
 
 This introduces four new concepts:
 
@@ -159,7 +159,7 @@ This is why schemas are a *huge* win for a developer's day-to-day. Astro will au
 
 Second problem: **importing globs of content via `Astro.glob` can be slow at scale.** This is due to a fundamental flaw with importing: even if you *just* need the frontmatter of a post (i.e. for landing pages), you still wait on the *content* of that render and parse to a JS module as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries [can slow down dev server HMR updates significantly](https://github.com/withastro/astro/issues/4307).
 
-To avoid this, Content Schemas will focus on processing and returning a post's frontmatter, **not** the post's contents, **and** avoid transforming documents to JS modules. This should make Markdown and MDX equally quick to process, and should make landing pages faster to build and debug.
+To avoid this, Content Collections will focus on processing and returning a post's frontmatter, **not** the post's contents, **and** avoid transforming documents to JS modules. This should make Markdown and MDX equally quick to process, and should make landing pages faster to build and debug.
 
 <aside>
 
@@ -169,7 +169,7 @@ To avoid this, Content Schemas will focus on processing and returning a post's f
 
 # User-facing API breakdown
 
-As you might imagine, Content Schemas have a lot of moving parts. Let's detail each one:
+As you might imagine, Content Collections have a lot of moving parts. Let's detail each one:
 
 ## The `src/content/` directory
 
@@ -185,7 +185,7 @@ To clarify, **the user will not view or edit files in the `.astro` directory.** 
 
 ## The `astro:content` module
 
-Content Schemas introduces a new virtual module convention for Astro using the `astro:` prefix. Since all types and utilities are generated based on your content, we are free to use whatever name we choose. We chose `astro:` for this proposal since:
+Content Collections introduces a new virtual module convention for Astro using the `astro:` prefix. Since all types and utilities are generated based on your content, we are free to use whatever name we choose. We chose `astro:` for this proposal since:
 1. It falls in-line with [NodeJS' `node:` convention](https://2ality.com/2021/12/node-protocol-imports.html).
 2. It leaves the door open for future `astro:` utility modules based on your project's configuration.
 
@@ -435,7 +435,7 @@ We will add this generation step to the `astro check` command as well, in case u
 
 ## Exposing the Zod `z` utility
 
-Content Schemas will expose Zod as an Astro built-in. This will be available from the `astro:content` module:
+Content Collections will expose Zod as an Astro built-in. This will be available from the `astro:content` module:
 
 ```ts
 import { z } from 'astro:content';
@@ -526,7 +526,7 @@ Introducing a new reserved directory (`src/content/`) will be a breaking change 
 1. Release behind an experimental flag before 2.0 to get initial feedback
 2. Baseline this flag for Astro 2.0
 
-This should give us time to address all aspects and corner cases of content schemas.
+This should give us time to address all aspects and corner cases of content Collections.
 
 We intend `src/content/` to be the recommended way to store Markdown and MDX content in your Astro project. Documentation will be *very* important to guide adoption! So, we will speak with the docs team on the best information hierarchy. Not only should we surface the concept of a `src/content/` early for new users, but also guide existing users (who may visit the "Markdown & MDX" and Astro glob documentation) to `src/content/` naturally. A few initial ideas:
 
@@ -541,7 +541,7 @@ We can also ease migration for users that *already* have a `src/content/` direct
 This is a pretty major addition, so we invite readers to raise questions below! Still, these are a few our team has today:
 
 - Should the generated `.astro` directory path be configurable?
-- How should we “pitch” Content Schemas to `Astro.glob` users today?
+- How should we “pitch” Content Collections to `Astro.glob` users today?
 
 ## Appendix A - Generated manifest sample
 
