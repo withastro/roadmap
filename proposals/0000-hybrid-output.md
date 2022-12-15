@@ -1,31 +1,21 @@
 - Start Date: 2022-10-25
 - Reference Issues: TODO
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/5297
 
 # Summary
 
-Currently, Astro's [`output`](https://docs.astro.build/en/reference/configuration-reference/#output) enables developers to switch between `'static'` (default) and `'server'` outputs. One of our most requested features is to enable route-level control of `output` so that some routes can be server-rendered while others are statically generated.
+Astro's server [`output`](https://docs.astro.build/en/reference/configuration-reference/#output) is extremely powerful, but in many cases it is difficult to beat the speed and cacheability of static HTML. One of our most requested features is to enable route-level control of `output` so that some routes can be server-rendered while others are statically generated.
+
+This RFC proposes a new Prerender API to control output behavior on the page level.
 
 # Example
 
-This RFC proposes introducing route-level control when using `output: 'server'`.
-
-```js
-import { defineConfig } from 'astro/config'
-import node from '@astrojs/node'
-
-export default defineConfig({
-  output: 'server',
-  adapter: node()
-})
-```
-
-For individual routes, `'server'` will be the default. To opt-in to `'static'` output, users may `export const prerender = true`.
+When using `output: 'server'`, individual routes will be rendered at request time unless they are opted-in to prerendering. Users may add `export const prerender = true` to any file in `pages/` which should be rendered at build time rather than request time.
 
 ```astro
 ---
 // This route should be generated at build time!
-export const prerender = true
+export const prerender = true;
 
 const text = await fetch('https://example.com/').then(res => res.text())
 ---
@@ -37,9 +27,9 @@ const text = await fetch('https://example.com/').then(res => res.text())
 
 Since Astro v1.0.0 was released, we've gotten consistent feedback that more granular control over `output` is a requirement for scaling projects. Users would like to statically render some routes and server render others, reducing the need for full static rebuilds for frequently changing data.
 
-One common use-case is a fully static site that also exposes `api/` endpoints which are handled on the server. Another common example is a largely dynamic site that can generate a few static pages (like a landing page) at request time. Another use-case is pre-generating routes with heavy dependencies (like `puppeteer`) to slim down the server output.
+One common use-case is a fully static site that also exposes `api/` endpoints which are handled on the server. Another common example is a largely dynamic site that generates pages at request time, but prerenders heavily-trafficked pages (like a landing page) at build time. Another use-case is pre-generating routes with computationally-intensive dependencies (like `puppeteer`) to do as much work as possible ahead of time.
 
-The eventual solution should enable granular control over `output` on a per-route basis. Since `output: 'server'` will default Astro to `'server'` output, this should remain the default.
+Astro already has two `output` modes, `server` and `static`. Since `server` already requires deployment adapters, the Prerender API will be an enhancement to the existing `server` mode.
 
 # Detailed design
 
@@ -47,7 +37,7 @@ The eventual solution should enable granular control over `output` on a per-rout
 
 There is only one public API surface change included in this RFC, assuming you are already using `output: 'server'`.
 
-- Allowing routes (files in `pages/`) to self-declare a `prerender` value. If `export const prerender = true` is present, that route will be prerendered.
+- Allowing routes (files in `pages/`) to self-declare a `prerender` value. If `export const prerender = true` is present, that route will be prerendered to a static file at build time.
 
 **This declaration must be statically analyzable!**
 
@@ -83,7 +73,9 @@ The **dev** server must be updated to disallow `searchParams` and other features
 
 ## Adapter Support
 
-Adapters are still required when building for `server` output. Since the asset manifest is already exposed, adapters _may_ choose to perform optimizations on emitted `.html` files, but are not required to do so.
+Adapters are required when building for `server` output. Prerendered routes will be added to the static asset manifest, the contents of which are always served before falling back to a request-time Astro route. 
+
+Since the asset manifest is already exposed, adapters will serve the static `.html` files ahead of the server route. For many adapters, this is already handled automatically.
 
 # Testing strategy
 
@@ -99,7 +91,7 @@ The Vite plugin that detects `export const prerender` will be unit tested agains
 
 # Alternatives
 
-There are many possible user-facing APIs for exposing control over `output`. We considered many alternatives, but settled on `export const output` as the one with the most favorable tradeoffs.
+There are many possible user-facing APIs for exposing control over `output`. We considered many alternatives, but settled on `export const prerender` as the one with the most favorable tradeoffs.
 
 ### A. Magical exported functions (ala Next's `getStaticPaths`)
 
@@ -140,10 +132,11 @@ There are many possible user-facing APIs for exposing control over `output`. We 
 
 # Adoption strategy
 
-- Adoption will be entirely opt-in by setting `output: 'server'` in your `astro.config.mjs` file and adding `export const prerender = true` to a route.
-- This is not a breaking change, it is new behavior
-- Third-party adapters will not necessarily need to change to support this new hybrid output as it builds on top of the existing `server` output
+- This feature will be released behind an experimental flag to collect feedback.
+  - Opt-in to this new behavior by setting the `experimental.prerender` flag in your `astro.config.mjs` file and adding `export const prerender = true` to a route.
+- This should not be a breaking change, but some sites that may rely on the structure of our `dist/` directory may have to update to accomodate our new output formats. 
+- Third-party adapters will require minimal changes to support this new hybrid output, as it builds on top of the existing `server` output. We will be updating our official adapters with support for this over time.
 
 # Unresolved questions
 
-- Any public API changes needed for adapters?
+N/A
