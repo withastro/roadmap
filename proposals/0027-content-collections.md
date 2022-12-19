@@ -36,7 +36,13 @@ We'll be using the words "schema," "collection," and "entry" throughout. Let's d
 
 ## Out-of-scope / Future
 
-- **This RFC is focused on Markdown and MDX content only.** We see how this generic pattern of “collections” and “schemas” may extend to other resources like YAML, JSON, image assets, and more. We would love to explore these avenues if the concept of schemas is accepted.
+First, **this RFC is focused on Markdown and MDX content only.** We see how this generic pattern of “collections” and “schemas” may extend to other resources like YAML, JSON, image assets, and more. We would love to explore these avenues if the concept of schemas is accepted.
+
+We also expect users to attempt relative paths (i.e. `![image](./image.png)`) in their Markdown and MDX files. Since these files will be query-able by `.astro` files, **we don't expect these paths to resolve correctly without added preprocessing.**
+
+For simplicity, we will consider this use case out-of-scope. This is in-keeping with how Astro handles relative paths in Markdown and MDX today. We will raise an error whenever relative paths are used, and encourage users to use absolute assets paths instead. 
+
+We recognize this is a 
 
 # Example
 
