@@ -403,7 +403,26 @@ export async function getStaticPaths() {
 }
 ```
 
-This will generate routes for every entry in our collection, mapping each entry slug (a path relative to `src/content/docs`) to a URL. 
+This will generate routes for every entry in our collection, mapping each entry slug (a path relative to `src/content/docs`) to a URL.
+
+### Custom slugs
+
+You may prefer to compute custom slugs for each entry instead of relying on the auto-generated `slug`. This is useful for generating slugs based on frontmatter, or mapping your preferred directory structure (ex. `/content/blog/2022-05-10/post.md`) to URLs on your site (ex. `/content/blog/post`). You can add the `slug` argument to your collection config (`src/content/config.*`) like so:
+
+```ts
+import { defineCollection } from 'astro:content';
+
+const blog = defineCollection({
+  slug({ id, defaultSlug, data, body }) {
+    return data.slug ?? myCustomSlugify(id);
+  },
+  schema: {...}
+});
+
+export const collections = { blog };
+```
+
+Note the `slug` function can access the default generated slug, entry ID, parsed frontmatter, and raw body. This allows you to generate a custom slug based on any of those values.
 
 ### Rendering contents
 
