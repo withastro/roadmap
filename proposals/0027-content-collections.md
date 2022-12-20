@@ -42,7 +42,10 @@ We also expect users to attempt relative paths (i.e. `![image](./image.png)`) in
 
 For simplicity, we will consider this use case out-of-scope. This is in-keeping with how Astro handles relative paths in Markdown and MDX today. We will raise an error whenever relative paths are used, and encourage users to use absolute assets paths instead. 
 
-We recognize this is a 
+## Prior Art
+
+- [**Contentlayer**](https://www.contentlayer.dev/) - This is a framework-agnostic tool for managing both local and remote content. Their schema-based approach to Markdown frontmatter types is especially notable, and informs the "schema" approach of content collections.
+- [**Nuxt Content**](https://content.nuxtjs.org/) - This plugin brings Markdown management to NuxtJS. Their use of a `content/` directory and their ability to generate pages from content have each informed this RFC.
 
 # Example
 
