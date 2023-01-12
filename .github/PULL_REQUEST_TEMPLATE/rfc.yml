@@ -1,0 +1,38 @@
+name: "RFC"
+description: "Submit an official RFC"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Warning**
+        > **This template is reserved for approved proposals and Astro maintainers only.**
+        > You are probably looking to [**start a discussion**](https://github.com/withastro/rfcs/discussions/new)!
+
+        Community members who would like to propose an idea or feature should begin 
+        by creating a GitHub Discussion. See the repo [`README.md`](https://github.com/withastro/rfcs#readme) for more info.
+  - type: input
+    id: startDate
+    attributes:
+      label: Start Date
+      description: "Today's date, YYYY-MM-DD"
+      placeholder: "YYYY-MM-DD"
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: "  Short summary on what problem this RFC solves, and concise example usage of the feature"
+      render: markdown
+    validations:
+      required: true
+  - type: input
+    id: links
+    attributes:
+      label: Full Rendered Proposal
+      description: |
+        Link to a GitHub-rendered version of your RFC, e.g.
+        You can find this link by navigating to this file on your branch.
+      placeholder: "https://github.com/<USERNAME>/rfcs/blob/<BRANCH>/rfcs/my-proposal.md"
+    validations:
+      required: true
