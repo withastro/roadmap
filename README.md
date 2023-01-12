@@ -1,172 +1,67 @@
-# Astro RFC
+# Astro Project Roadmap
 
-## What is an RFC?
+Status: Draft, In progress
 
-The "RFC" (request for comments) process is intended to provide a consistent and
-controlled path for new features to enter the framework.
+## Overview
 
-Many changes, including bug fixes and documentation improvements can be
-implemented and reviewed via the normal GitHub pull request workflow.
+- [Glossary](#glossary)
+- [Stage 1: Proposal](#stage-1-proposal)
+- [Stage 2: Accepted Proposal](#stage-2-accepted-proposal)
+- [Stage 3: RFC \& Development](#stage-3-rfc--development)
+- [Stage 4: Ship it!](#stage-4-ship-it)
 
-Some changes though are "substantial", and we ask that these be put through a
-bit of a design process and produce a consensus among the Astro [core team](https://github.com/orgs/withastro/people) and
-the community.
+## Glossary
 
-## The RFC Life-Cycle
+> **Proposal Champion:** A proposal is more likely to move forward in this process if it has a **champion** attached to it. This role is self-nominated and open to anyone (both maintainers and community members are welcome to volunteer). It may be the original proposal author, or someone who joins later. The responsibility of a champion is to help shepard the proposal through the later parts of this process, including: writing the detailed RFC, responding to and incorporating feedback, and eventually implementing the proposal in code.
+>
+> **You are not alone as a champion!** If this is your first time writing an RFC or design document, our maintainer team is expected to work with you and guide you through this process.
 
-An RFC goes through the following stages:
+## Stage 1: Proposal
 
-- **Pending:** when the RFC is submitted as a PR.
-- **Active:** when an RFC PR is merged and undergoing implementation.
-- **Landed:** when an RFC’s proposed changes are shipped in an actual release.
-- **Rejected:** when an RFC PR is closed without being merged.
+**Goal:** Unstructured, low-friction conversations on ideas and improvements to Astro. Useful for gathering early feedback and gauging interest with the community and maintainers.
 
-[Pending RFC List](https://github.com/withastro/rfcs/pulls)
+**Requirements:** None! To suggest an improvement, [create a new Discussion](https://github.com/withastro/rfcs/discussions) using our (completely optional) [proposal template](stage-1--discussion-template.md?plain=1).
 
-## When to follow this process
+**Location:** GitHub Discussions [(see all open proposals).](https://github.com/withastro/rfcs/discussions) The Astro Discord channel `#feedback-ideas` can also be used to throw an idea out for quick initial feedback, but be warned that chat is short-lived and not designed for longer-lived discussion.
 
-You need to follow this process if you intend to make "substantial" changes to
-one of the projects listed below:
+## Stage 2: Accepted Proposal
 
-- [Astro core](https://github.com/withastro/astro)
-- [Astro compiler](https://github.com/withastro/compiler)
+**Goal:** Confirm proposal feasibility with Astro Maintainers and TSC.
 
-We are limiting the RFC process for these repos to test out the process in a
-more manageable fashion, and may expand it to cover more projects under the
-`@withastro` organization in the future. For now, if you wish to suggest changes
-to those other projects, please use their respective issue lists.
+**Requirements:** An existing GitHub Discussion proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
 
-What constitutes a "substantial" change is evolving based on community norms,
-but may include the following:
+**Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/rfcs/issues)
 
-- A new feature that creates new API surface area
-- Changing the semantics or behavior of an existing API
-- The removal of features that are already shipped as part of the release channel.
-- The introduction of new idiomatic usage or conventions, even if they do not
-  include code changes to Astro itself.
+**What to Expect:** A proposal reaches this stage (aka "is accepted") during a meeting with Maintainers and TSC, following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
-Some changes do not require an RFC:
+When a proposal is accepted, a TSC member will create a new GitHub Issue summarizing the original proposal using our official template. At this point, the proposal champion is free to move on to the next stage. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue.
 
-- Additions that strictly improve objective, numerical quality criteria
-  (speedup, better browser support)
-- Fixing objectively incorrect behavior
-- Rephrasing, reorganizing or refactoring
-- Addition or removal of warnings
-- Additions only likely to be _noticed by_ other implementors-of-Astro,
-  invisible to users-of-Astro.
+In some cases, a proposal may be explicitly rejected by TSC if it is known to be infeasible, or go against some existing goals/mission of the project. In the event of an explicit rejection, a TSC member will comment on to the proposal explaining the reasoning for rejection.
 
-If you submit a pull request to implement a new feature without going through
-the RFC process, it may be closed with a polite request to submit an RFC first.
+A stale, accepted proposal can be removed (rejected after a previous acceptance) at any time following the same, existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
-## Why do you need to do this
+## Stage 3: RFC & Development
 
-It is great that you are considering suggesting new features or changes to
-Astro - we appreciate your willingness to contribute! However, as Astro becomes
-more widely used, we need to take stability more seriously, and thus have to
-carefully consider the impact of every change we make that may affect end users.
-On the other hand, we also feel that Astro has reached a stage where we want to
-start consciously preventing further complexity from new API surfaces.
+**Goal:** Begin development! Gather implementation feedback and work with maintainers during development.
 
-These constraints and tradeoffs may not be immediately obvious to users who are
-proposing a change just to solve a specific problem they just ran into. The RFC
-process serves as a way to guide you through our thought process when making
-changes to Astro, so that we can be on the same page when discussing why or why
-not these changes should be made.
+**Requirements:** An accepted proposal (Stage 2) and a proposal champion to author and implement the RFC.
 
-## Gathering feedback before submitting
+**Location:** GitHub Pull Requests [(see all in-progress RFCs)](https://github.com/withastro/rfcs/pulls) [(see all finished RFCs)](https://github.com/withastro/rfcs/tree/main/rfcs)
 
-It’s often helpful to get feedback on your concept before diving into the level
-of API design detail required for an RFC.
-**You may open an issue on this repo to start a high-level discussion**, with
-the goal of eventually formulating an RFC pull request with the specific
-implementation design.
+**What to Expect:** To create an RFC for an already-accepted proposal, the proposal champion must use our [`stage-3--rfc-template.md`](stage-3--rfc-template.md?plain=1) RFC template in the repo. The initial sections of the RFC template should be copy-pasted from the the accepted proposal (they match 1:1). All remaining sections are left for the champion to complete with the implementation and tradeoff details of the RFC.
 
-## What the process is
+You do not need to get an RFC approved before beginning development! One of the best ways to validate your RFC is to prototype, so early prototyping and parallel development alongside the RFC is strongly encouraged. The RFC is a living document during this stage, and is most useful for gathering feedback as you build. An RFC will not be accepted and merged until it's PR is also ready to merge.
 
-In short, to get a major feature added to Astro, one must first get the RFC
-merged into the RFC repo as a markdown file. At that point the RFC is 'active'
-and may be implemented with the goal of eventual inclusion into Astro.
+The proposal champion can request feedback on their RFC at any point, either asynchronously in Discord (inside the `#dev`/`#dev-ptal` channel) or during our weekly community call. Maintainers are expected to provide timely feedback at this stage so that the RFC author is never blocked. If you are an RFC champion and need access to the `#dev-ptal` channel, message **@fks** for permission.
 
-1. Work on your proposal in a Markdown file based on the template
-   (`template.md`) found in this repo.
-   - Put care into the details: RFCs that do not present convincing motivation,
-   demonstrate understanding of the impact of the design, or are disingenuous
-   about the drawbacks or alternatives tend to be poorly-received.
+## Stage 4: Ship it!
 
-2. Open a new thread in [Discussions](https://github.com/withastro/rfcs/discussions)
-   and make sure to set category to "RFC Discussions".
-   - Build consensus and integrate feedback in the discussion thread. RFCs that
-   have broad support are much more likely to make progress than those that
-   don’t receive any comments.
+An RFC is ready to be approved and finalized once it's Pull Request is ready for its final review. RFC approval can happen asynchronously, or in-person during one of our weekly community calls.
 
-3. If the proposal receives non-trivial interest from community members and
-   generally positive feedback, you can prepare a Pull Request:
-   - Fork this repo.
-   - Create your proposal as `proposals/my-feature.md`
-     (where "my-feature" is descriptive).
-   - Submit a pull request. Make sure to link to the discussion thread.
+Final RFC approval happens by vote, following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
-4. Eventually, the [core team](https://github.com/orgs/withastro/people) will decide whether the RFC is a candidate
-   for inclusion in Astro.
-   - An RFC can be modified based upon feedback from the [core team](https://github.com/orgs/withastro/people) and
-     community. Significant modifications may trigger a new final comment
-     period.
-   - An RFC may be rejected after public discussion has settled and comments
-     have been made summarizing the rationale for rejection. A member of the
-     [core team](https://github.com/orgs/withastro/people) should then close the RFC’s associated pull request.
-   - An RFC may be accepted at the close of its final comment period. A
-     [core team](https://github.com/orgs/withastro/people) member will merge the RFC’s associated pull request, at which
-     point the RFC will become 'active', existing in the [proposals] directory.
-   - Once the RFC is implemented, it will be updated with the appropriate
-     **Implementation PR**.
+---
 
-## Details on Active RFCs
+**Prior Art / Special Thanks**
 
-Once an RFC becomes active then authors may implement it and submit the feature
-as a pull request to the Astro repo. Becoming 'active' is not a rubber stamp,
-and in particular still does not mean the feature will ultimately be merged; it
-does mean that the [core team](https://github.com/orgs/withastro/people) has agreed to it in principle and are amenable to
-merging it.
-
-Furthermore, the fact that a given RFC has been accepted and is 'active' implies
-nothing about what priority is assigned to its implementation, nor whether
-anybody is currently working on it.
-
-Modifications to active RFC’s can be done in followup PRs. We strive to write
-each RFC in a manner that it will reflect the final design of the feature; but
-the nature of the process means that we cannot expect every merged RFC to
-actually reflect what the end result will be at the time of the next major
-release; therefore we try to keep each RFC document somewhat in sync with the
-language feature as planned, tracking such changes via followup pull requests to
-the document.
-
-## Implementing an RFC
-
-The author of an RFC is not obligated to implement it. Of course, the RFC author
-(like any other developer) is welcome to post an implementation for review after
-the RFC has been accepted.
-
-An active RFC should have the link to the implementation PR listed if there is
-one. Feedback to the actual implementation should be conducted in the
-implementation PR instead of the original RFC PR.
-
-If you are interested in working on the implementation for an 'active' RFC, but
-cannot determine if someone else is already working on it, feel free to ask
-(e.g. by leaving a comment on the associated issue).
-
-## Reviewing RFCs
-
-Members of the [core team](https://github.com/orgs/withastro/people) will attempt to review some set of open RFC pull
-requests on a regular basis. If a [core team](https://github.com/orgs/withastro/people) member believes an RFC PR is ready
-to be accepted into active status, they can approve the PR using GitHub’s review
-feature to signal their approval of the RFC.
-
-**Astro’s RFC process is forked from the [Vue RFC process]**
-**which itself owes inspiration to the**
-**[React RFC process], [Rust RFC process] and [Ember RFC process].**
-
-[vue rfc process]: https://github.com/vuejs/rfcs
-[react rfc process]: https://github.com/reactjs/rfcs
-[rust rfc process]: https://github.com/rust-lang/rfcs
-[ember rfc process]: https://github.com/emberjs/rfcs
-[proposals]: https://github.com/withastro/rfcs/tree/main/proposals
+This process is an amalgamation of [Remix's Open Development process](https://remix.run/blog/open-development) and our previous [RFC process](https://github.com/withastro/rfcs/blob/78b736c28fe487ad02ec76bb038ad1087c471057/README.md), which had been based on the RFC processeses of the Vue, React, Rust, and Ember projects.
