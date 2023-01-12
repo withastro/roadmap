@@ -1,7 +1,5 @@
 # Astro Project Roadmap
 
-Status: Draft, In progress
-
 ## Overview
 
 - [Glossary](#glossary)
