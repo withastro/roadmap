@@ -17,33 +17,33 @@ body:
         write your proposal using whatever format and length as you'd like. You can always 
         come back and restructure your proposal later, once you've collected some early feedback.
   - type: textarea
-    id: background
+    id: main
     attributes:
-      label: Background & Motivation
-      description: |
+      label: Body
+      value: |
+        # Summary
+
+        A brief, one or two sentence explanation of the proposal.
+
+        # Background & Motivation
+
         Include any useful background detail that that explains why this RFC is important.
         What are the problems that this RFC sets out to solve? Why now? Be brief!
 
         It can be useful to illustrate your RFC as a user problem in this section.
         (ex: "Users have reported that it is difficult to do X in Astro today.")
-    validations:
-      required: true
-  - type: textarea
-    id: goals
-    attributes:
-      label: Goals
-      description: |
-        A **concise, bulleted-list** outlining the intended goals of this RFC.
+
+        # Goals
+
+        A **concise, bulleted-list** outlining the intended goals of this RFC. 
 
         - What are the exact problems that you are trying to solve with this RFC?
         - Separate these goals from the solution that you will outline below.
         - If this RFC isn't approved, these goals can be used to develop alternative solutions.
-    validations:
-      required: true
-  - type: textarea
-    id: example
-    attributes:
-      label: Example
-      description: |
+
+        # Example
+
         If the proposal involves a new or changed API, then include a basic code example.
         Otherwise, omit this section if it's not applicable.
+    validations:
+      required: true

@@ -22,7 +22,7 @@ body:
     id: summary
     attributes:
       label: Summary
-      description: "  Short summary on what problem this RFC solves, and concise example usage of the feature"
+      description: "Short summary on what problem this RFC solves, and concise example usage of the feature"
       render: markdown
     validations:
       required: true
