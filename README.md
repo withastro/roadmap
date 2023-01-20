@@ -26,7 +26,7 @@
 
 **Goal:** Confirm proposal feasibility with Astro Maintainers and TSC.
 
-**Requirements:** An existing GitHub Discussion proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
+**Requirements:** An existing proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
 
 **Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/rfcs/issues)
 
