@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: "Stage 1 - Proposal"
+  - name: "Stage 1 - Submit a Proposal"
     url: https://github.com/withastro/rfcs/discussions
     about: Start here! Propose a new feature idea or enhancement for Astro.
-  - name: "Stage 3 - RFC"
+  - name: "Stage 3 - Submit an RFC"
     url: https://github.com/withastro/rfcs/pulls
     about: Submit an RFC to implement an accepted proposal.
