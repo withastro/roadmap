@@ -14,7 +14,7 @@ body:
   - type: textarea
     id: main
     attributes:
-      label: Body
+      label: Your Proposal
       value: |
         # Summary
 
