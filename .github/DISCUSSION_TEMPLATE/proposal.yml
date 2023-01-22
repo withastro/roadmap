@@ -1,5 +1,3 @@
-name: "Proposal"
-description: "Propose a new Astro feature"
 labels: ["Proposal"]
 body:
   - type: markdown
