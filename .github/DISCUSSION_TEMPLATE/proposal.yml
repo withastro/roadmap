@@ -7,13 +7,10 @@ body:
 
         Welcome! 👋
 
-        If you are interested in proposing a new feature or improvement to Astro, 
-        then you are in the right place! 
+        If you are interested in proposing a new feature or improvement to Astro, then you are in the right place! 
 
         This template covers most of the questions you will be asked about your proposal.
-        **This template is completely optional!** You are free to delete it, and use
-        whatever format or length you prefer. You can always come back later to restructure 
-        your proposal.
+        **This template is completely optional!** You are free to delete it, and use whatever format or length you prefer. You can always come back later to restructure your proposal.
   - type: textarea
     id: main
     attributes:
