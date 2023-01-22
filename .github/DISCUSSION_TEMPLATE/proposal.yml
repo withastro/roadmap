@@ -14,7 +14,7 @@ body:
   - type: textarea
     id: main
     attributes:
-      label: Your Proposal
+      label: Proposal
       value: |
         # Summary
 
@@ -40,5 +40,9 @@ body:
 
         If the proposal involves a new or changed API, then include a basic code example.
         Otherwise, omit this section if it's not applicable.
+  - type: markdown
+    attributes:
+      value: |
+        [Learn more](https://github.com/withastro/roadmap) about our proposal and RFC process.
     validations:
       required: true
