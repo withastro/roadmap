@@ -1,14 +1,14 @@
-name: "[Maintainers Only] Accepted Proposal"
-description: "This template is reserved for accepted proposals and Astro maintainers only."
+name: "[Maintainers Only] Stage 2 - Create an Accepted Proposal"
+description: "This template is reserved for Astro maintainers only."
 body:
   - type: markdown
     attributes:
       value: |
-        > **This template is reserved for accepted proposals and Astro maintainers only.**
-        > You are probably looking to [**start a discussion**](https://github.com/withastro/rfcs/discussions/new)!
+        > **This template is reserved for Astro maintainers to officially accept existing discussions.**
+        > You are probably looking to [**start a new discussion**](https://github.com/withastro/rfcs/discussions/new)!
 
-        > Community members who would like to propose an idea or feature should begin 
-        > by creating a GitHub Discussion. See the repo [`README.md`](https://github.com/withastro/rfcs#readme) for more info.
+        > To propose a new feature idea or enhancement, you should begin by creating a Discussion.
+        > See the repo [`README.md`](https://github.com/withastro/rfcs#readme) for more info.
   - type: textarea
     id: main
     attributes:
