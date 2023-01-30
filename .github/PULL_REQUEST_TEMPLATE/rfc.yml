@@ -33,6 +33,6 @@ body:
       description: |
         Link to a GitHub-rendered version of your RFC, e.g.
         You can find this link by navigating to this file on your branch.
-      placeholder: "https://github.com/<USERNAME>/rfcs/blob/<BRANCH>/rfcs/my-proposal.md"
+      placeholder: "https://github.com/<USERNAME>/rfcs/blob/<BRANCH>/proposals/my-proposal.md"
     validations:
       required: true

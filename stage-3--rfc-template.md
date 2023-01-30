@@ -1,11 +1,11 @@
-<!-- 
+<!--
   Note: You are probably looking for `stage-1--discussion-template.md`!
   This template is reserved for anyone championing an already-approved proposal.
-  
-  Community members who would like to propose an idea or feature should begin 
+
+  Community members who would like to propose an idea or feature should begin
   by creating a GitHub Discussion. See the repo README.md for more info.
 
-  To use this template: create a new, empty file in the repo under `rfcs/${ID}.md`.
+  To use this template: create a new, empty file in the repo under `proposals/${ID}.md`.
   Replace `${ID}` with the official accepted proposal ID, found in the GitHub Issue
   of the accepted proposal.
 -->
@@ -33,13 +33,13 @@ It can be useful to illustrate your RFC as a user problem in this section.
 
 # Goals
 
-A **concise, bulleted-list** outlining the intended goals of this RFC. 
+A **concise, bulleted-list** outlining the intended goals of this RFC.
 
 - What are the exact problems that you are trying to solve with this RFC?
 - Separate these goals from the solution that you will outline below.
 - If this RFC isn't approved, these goals can be used to develop alternative solutions.
 
-# Non-Goals 
+# Non-Goals
 
 A **concise, bulleted-list** outlining anything intentionally left out of this RFC:
 
@@ -66,7 +66,7 @@ cases that will be added to cover all of the ways this feature might be used.
 
 # Drawbacks
 
-Why should we *not* do this? Please consider:
+Why should we _not_ do this? Please consider:
 
 - Implementation cost, both in term of code size and complexity.
 - Whether the proposed feature can be implemented in user space.
