@@ -1,5 +1,5 @@
 - Start Date: 2022-06-01
-- Reference Issues: https://github.com/withastro/rfcs/discussions/201
+- Reference Issues: https://github.com/withastro/roadmap/discussions/201
 - Implementation PR: https://github.com/withastro/astro/pull/3457
 
 # Summary
@@ -13,25 +13,26 @@ Recently, @FredKSchott made a thread on the discord #feedback-and-suggestions ch
 export default defineConfig({
   integrations: [
     {
-      name: 'my-netlify-integration',
+      name: "my-netlify-integration",
       hooks: {
-        'astro:config:setup': ({injectRoute}) => {
+        "astro:config:setup": ({ injectRoute }) => {
           injectRoute({
             /** The route on which to output the entryPoint */
-            pattern: '/admin',
+            pattern: "/admin",
             /** Bare module specifier pointing to a pre-made admin page */
-            entryPoint: 'my-netlify-integration/admin.astro'
-          })
-        }
-      }
-    }
-  ]
+            entryPoint: "my-netlify-integration/admin.astro",
+          });
+        },
+      },
+    },
+  ],
 });
 ```
 
 # Motivation
 
 Some usecases for this could be:
+
 - Adding an `/admin` page for headless CMSes
 - Implementation of [tailwind-config-viewer](https://github.com/rogden/tailwind-config-viewer)
 - Authentication providers could very easily ship the required redirectCallback routes etc, e.g. `googleProvider()`, `facebookProvider()`
@@ -39,18 +40,18 @@ Some usecases for this could be:
 
 # Detailed design
 
-There is a prototype implementation here: 
+There is a prototype implementation here:
 https://github.com/withastro/astro/pull/3457
 
 ## Proposed API
 
 ```ts
 export interface InjectedRoute {
-  pattern: string,
-  entryPoint: string
+  pattern: string;
+  entryPoint: string;
 }
 
-function injectRoute(injectRoute: InjectedRoute): void {};
+function injectRoute(injectRoute: InjectedRoute): void {}
 ```
 
 # Drawbacks
@@ -69,7 +70,7 @@ This is a new API and won't require any migrations.
 
 **Resolved:** ✅
 
-**Q:** _Should `_`'s in route names be allowed?_
+**Q:** _Should `_`'s in route names be allowed?\_
 
 **A:** Yes. An expected usecase for `injectRoute` is to add "private" routes, like for example `/_admin`, and allowing `_`'s will also help avoid nameclashes. The draft implementation currently already supports this.
 
@@ -84,24 +85,20 @@ This is a new API and won't require any migrations.
 ```js
 function myIntegration(config) {
   return {
-    name: 'my-integration',
+    name: "my-integration",
     hooks: {
-      'astro:config:setup': ({injectRoute}) => {
+      "astro:config:setup": ({ injectRoute }) => {
         injectRoute({
-          pattern: config?.routes?.admin ?? '/admin',
-          entryPoint: 'my-integration/admin.astro'
+          pattern: config?.routes?.admin ?? "/admin",
+          entryPoint: "my-integration/admin.astro",
         });
-      }
-    }
-  }
+      },
+    },
+  };
 }
 
 export default defineConfig({
-  integrations: [
-    myIntegration({routes: 
-      { admin: '/custom-path/admin' }
-    })
-  ]
+  integrations: [myIntegration({ routes: { admin: "/custom-path/admin" } })],
 });
 ```
 
@@ -124,19 +121,17 @@ export default defineConfig({
 ```js
 function myIntegration(config) {
   return {
-    name: 'my-integration',
+    name: "my-integration",
     hooks: {
-      'astro:config:setup': ({command, injectRoute}) => {
+      "astro:config:setup": ({ command, injectRoute }) => {
         /** This route will only be injected during dev-time */
-        if(command === 'dev') injectRoute(routeConfig);
-      }
-    }
-  }
+        if (command === "dev") injectRoute(routeConfig);
+      },
+    },
+  };
 }
 
 export default defineConfig({
-  integrations: [
-    myIntegration()
-  ]
+  integrations: [myIntegration()],
 });
 ```

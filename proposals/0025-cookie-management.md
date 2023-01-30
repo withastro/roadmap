@@ -38,8 +38,12 @@ Users in the Astro discord often ask about how to use cookies in Astro and we do
 ```ts
 interface AstroCookies {
   get(key: string): AstroCookie;
-  set(key: string, value: string | Record<string, any>, options: AstroCookieOptions): void;
-  delete(key: string, options: { path: string; }): void;
+  set(
+    key: string,
+    value: string | Record<string, any>,
+    options: AstroCookieOptions
+  ): void;
+  delete(key: string, options: { path: string }): void;
   has(key: string): void;
   headers(): Array<string>;
 }
@@ -54,7 +58,7 @@ interface AstroCookieOptions {
   httpOnly?: boolean;
   maxAge?: number;
   path?: string;
-  sameSite?: boolean | 'lax' | 'none' | 'strict';
+  sameSite?: boolean | "lax" | "none" | "strict";
   secure?: boolean;
 }
 ```
@@ -107,14 +111,14 @@ Removes a cookie. This is likely used within an API route.
 
 ```js
 export function post({ request, cookies }) {
-  cookies.delete('prefs');
+  cookies.delete("prefs");
 
   // Set-Cookie headers will be appended.
   return new Response(null, {
     status: 302,
     headers: {
-      Location: '/'
-    }
+      Location: "/",
+    },
   });
 }
 ```
@@ -138,8 +142,8 @@ Provides an iterator of header values that should be set as `Set-Cookie` headers
 For example, a Node.js implementation would do:
 
 ```js
-for(const value of cookies.headers()) {
-  res.setHeader('Set-Cookie', value);
+for (const value of cookies.headers()) {
+  res.setHeader("Set-Cookie", value);
 }
 ```
 
@@ -155,7 +159,7 @@ In .astro files it is available as `Astro.cookies` and in API routes it is a pro
 
 ```js
 export function post({ cookies }) {
-  const prefs = cookies.get('prefs');
+  const prefs = cookies.get("prefs");
 
   // ...
 }
@@ -177,7 +181,7 @@ When setting the headers during the rendering phase we need to take the AstroCoo
 However:
 
 - We only need to `Set-Cookie` if there is a change, such as a cookie value being set or a cookie being deleted.
-- If the user has provided their own `Set-Cookie` header we should *not* set the header ourselves. Don't attempt to merge the header, just use the manually set value of the user.
+- If the user has provided their own `Set-Cookie` header we should _not_ set the header ourselves. Don't attempt to merge the header, just use the manually set value of the user.
 
 ### Deleting cookies
 
@@ -193,7 +197,7 @@ To set an expiration using a string duration value let `30 days` we will use the
 
 # Alternatives
 
-- There was a previous [Cookie Management](https://github.com/withastro/rfcs/discussions/182) discussion. This was based on a proposed browser API. That proposal hasn't been adopted by other backend frameworks and has some downsides, such as async get/set that don't make sense for our use-case.
+- There was a previous [Cookie Management](https://github.com/withastro/roadmap/discussions/182) discussion. This was based on a proposed browser API. That proposal hasn't been adopted by other backend frameworks and has some downsides, such as async get/set that don't make sense for our use-case.
 
 # Adoption strategy
 
@@ -201,5 +205,5 @@ This is a completely additive feature that should have no effect on existing app
 
 # Unresolved questions
 
-- The cookie Options mirrors the npm __cookie__ package except is allows spoken-word `expires` option.
+- The cookie Options mirrors the npm **cookie** package except is allows spoken-word `expires` option.
   - Should we punt in this? It seems useful but there is a cost to extending the options from this library.

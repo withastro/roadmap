@@ -1,6 +1,6 @@
 - Start Date: 2021-12-13
 - Reference Issues:
-  - Previous: https://github.com/withastro/rfcs/pull/44
+  - Previous: https://github.com/withastro/roadmap/pull/44
 - Implementation PR: https://github.com/withastro/astro/pull/2168
 
 # Summary
@@ -53,20 +53,20 @@ const { animal } = Astro.props;
 <img src={await import(`../images/${animal}.png`)} />
 ```
 
-The above will result in *all* of the images in `../images/` getting built, but only the one you select will be used.
+The above will result in _all_ of the images in `../images/` getting built, but only the one you select will be used.
 
 # Motivation
 
 - Astro is currently only able to build sites with a few hundred pages. Since the introduction of `getStaticPaths` we have known that developers would want to build site into the thousands or tens of thousands of pages.
-- Astro's build process relies on scanning the rendered HTML and then *update* the HTML as well, to replace assets with the hashed paths in the build.
-  - Because of the above, performance has actually regressed in __0.21__, even though it was never the best even before.
-- In order to support __SSR__ in the future we have to move away from page-scanning as the way to find and build assets, since SSR apps by their nature *cannot* be rendered ahead of time.
+- Astro's build process relies on scanning the rendered HTML and then _update_ the HTML as well, to replace assets with the hashed paths in the build.
+  - Because of the above, performance has actually regressed in **0.21**, even though it was never the best even before.
+- In order to support **SSR** in the future we have to move away from page-scanning as the way to find and build assets, since SSR apps by their nature _cannot_ be rendered ahead of time.
 
 # Detailed design
 
 ## Enforced static use of client directives
 
-The client directives such as `client:load`, `client:idle`, etc will need to be defined in the hydrated component where they are used, and not rendered dynamically. For example the following is __not allowed__:
+The client directives such as `client:load`, `client:idle`, etc will need to be defined in the hydrated component where they are used, and not rendered dynamically. For example the following is **not allowed**:
 
 ```astro
 ---
@@ -79,21 +79,23 @@ const attrs = {
 <Clock {...attrs} />
 ```
 
-We need to know that the site depends on the `client:idle` directive, so that we can *build* the client-side JavaScript needed.
+We need to know that the site depends on the `client:idle` directive, so that we can _build_ the client-side JavaScript needed.
 
 The implementation will be:
 
 1. In the compiler, include the used directive as part of the exported metadata about the component.
 2. In the compiler, mark the component as having statically included a directive.
-  - How to mark is up to the implementer, but we have other metadata attached to hydrated component usage already, and it would make sense to follow this same method.
-3. When rendering, if a component contains a client directive, make sure the directive is matched by the marking in __(2)__.
+
+- How to mark is up to the implementer, but we have other metadata attached to hydrated component usage already, and it would make sense to follow this same method.
+
+3. When rendering, if a component contains a client directive, make sure the directive is matched by the marking in **(2)**.
 4. If the marking is not there, we know that the directive must have been added statically. Throw an `Error` message for this, letting the user know that the directive must be added statically.
 
 ## Deprecate Astro.resolve
 
 To deprecate `Astro.resolve` we should:
 
-- Add a warning to the `Astro.resolve` method that says that it is deprecated and links to documentation on alternatives such as the [local: proposal](https://github.com/withastro/rfcs/pull/59) and `import.meta.glob`.
+- Add a warning to the `Astro.resolve` method that says that it is deprecated and links to documentation on alternatives such as the [local: proposal](https://github.com/withastro/roadmap/pull/59) and `import.meta.glob`.
 - After one major version of Astro, replace the warning with an error, preventing its usage in dev or the build.
 
 # Drawbacks
@@ -106,8 +108,8 @@ No other alternatives have been designed at this time. I do not believe it will 
 
 # Adoption strategy
 
-- Add the behaviors described in this PR behind a flag, `--experimental-static-build`.  A PR that brings partial support for this [already exists](https://github.com/withastro/astro/pull/2168).
-- Promote the usage of the [local: directive](https://github.com/withastro/rfcs/pull/59), if that RFC passes, over `Astro.resolve` in documentation and on Discord.
+- Add the behaviors described in this PR behind a flag, `--experimental-static-build`. A PR that brings partial support for this [already exists](https://github.com/withastro/astro/pull/2168).
+- Promote the usage of the [local: directive](https://github.com/withastro/roadmap/pull/59), if that RFC passes, over `Astro.resolve` in documentation and on Discord.
 - Add a deprecation warning to `Astro.resolve` that exists for at least 1 major version.
 - Once the static build becomes the default, leave in the legacy flag behind a flag (such as `--legacy-build`) for 1 major version.
 - Remove `Astro.resolve` and fully enforce static directives when this feature becomes unflagged.

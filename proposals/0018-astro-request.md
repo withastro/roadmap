@@ -1,5 +1,5 @@
 - Start Date: 2022-03-21
-- Reference Issues: https://github.com/withastro/rfcs/discussions/151
+- Reference Issues: https://github.com/withastro/roadmap/discussions/151
 - Implementation PR: <!-- leave empty -->
 
 # Summary
@@ -45,7 +45,7 @@ The Request object allows access to headers through the `request.headers` Map-li
 
 # Detailed design
 
-__Astro.request__ is currently an object with this interface:
+**Astro.request** is currently an object with this interface:
 
 ```typescript
 interface AstroRequest {
@@ -65,7 +65,7 @@ This change will move `canonicalURL` and `params` up to the `Astro` object and m
 ```typescript
 // Partial
 interface Astro {
-    /** get the current canonical URL */
+  /** get the current canonical URL */
   canonicalURL: URL;
 
   /** get page params (dynamic pages only) */
@@ -102,7 +102,7 @@ A few alternatives have been tried:
 - Making Astro.request be a Request but then also adding the `params` and `canonicalURL` properties.
   - Feel that doing it this way makes it harder to document and the code becomes slightly more complex.
 
-Either of these options would be *fine*, but if we were designing Astro from the start with SSR in mind we would probably have made it a Request, so doing so now before 1.0 seems like good timing.
+Either of these options would be _fine_, but if we were designing Astro from the start with SSR in mind we would probably have made it a Request, so doing so now before 1.0 seems like good timing.
 
 # Adoption strategy
 

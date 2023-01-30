@@ -6,7 +6,8 @@
 
 <aside>
 
-💡 **This RFC is complimented by [the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md).** Our goal is to propose and accept both of these RFCs as a pair before implementing any features discussed. We recommend reading that document *after* reading this to understand how all use cases can be covered.
+💡 **This RFC is complimented by [the Render Content proposal](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0028-render-content.md).** Our goal is to propose and accept both of these RFCs as a pair before implementing any features discussed. We recommend reading that document _after_ reading this to understand how all use cases can be covered.
+
 </aside>
 
 # Summary
@@ -40,7 +41,7 @@ First, **this RFC is focused on Markdown and MDX content only.** We see how this
 
 We also expect users to attempt relative paths (i.e. `![image](./image.png)`) in their Markdown and MDX files. Since these files will be query-able by `.astro` files, **we don't expect these paths to resolve correctly without added preprocessing.**
 
-For simplicity, we will consider this use case out-of-scope. This is in-keeping with how Astro handles relative paths in Markdown and MDX today. We will raise an error whenever relative paths are used, and encourage users to use absolute assets paths instead. 
+For simplicity, we will consider this use case out-of-scope. This is in-keeping with how Astro handles relative paths in Markdown and MDX today. We will raise an error whenever relative paths are used, and encourage users to use absolute assets paths instead.
 
 ## Prior Art
 
@@ -96,7 +97,7 @@ And optionally define a schema to enforce frontmatter fields:
 
 ```tsx
 // src/content/config.ts
-import { z, defineCollection } from 'astro:content';
+import { z, defineCollection } from "astro:content";
 
 const blog = defineCollection({
   schema: {
@@ -130,7 +131,7 @@ const posts: Array<MarkdownInstance<{ title: string; ... }>> = await Astro.glob(
 ---
 ```
 
-However, there's no guarantee your frontmatter *actually* matches this `MarkdownInstance` type.
+However, there's no guarantee your frontmatter _actually_ matches this `MarkdownInstance` type.
 
 Say `blog/columbia.md` is missing the required `title` property. When writing a landing page like this:
 
@@ -147,31 +148,29 @@ Say `blog/columbia.md` is missing the required `title` property. When writing a 
 
 ...You'll get the ominous error "cannot read property `toUpperCase` of undefined." Stop me if you've had this monologue before:
 
-> *Aw where did I call `toUpperCase` again?*
-> 
-> 
-> *Right, on the landing page. Probably the `title` property.*
-> 
-> *But which post is missing a title? Agh, better add a `console.log` and scroll through here...*
-> 
-> *Ah finally, it was post #1149. I'll go fix that.*
-> 
+> _Aw where did I call `toUpperCase` again?_
+>
+> _Right, on the landing page. Probably the `title` property._
+>
+> _But which post is missing a title? Agh, better add a `console.log` and scroll through here..._
+>
+> _Ah finally, it was post #1149. I'll go fix that._
 
 **Authors shouldn't have to think like this.** What if instead, they were given a readable error pointing to where the problem is?
 
 ![Frontmatter error overlay - Could not parse frontmatter in blog -> columbia.md. "title" is required.](../assets/0027-frontmatter-err.png)
 
-This is why schemas are a *huge* win for a developer's day-to-day. Astro will autocomplete properties that match your schema, and give helpful errors to fix properties that don't.
+This is why schemas are a _huge_ win for a developer's day-to-day. Astro will autocomplete properties that match your schema, and give helpful errors to fix properties that don't.
 
 ## Importing globs of content can be slow
 
-Second problem: **importing globs of content via `Astro.glob` can be slow at scale.** This is due to a fundamental flaw with importing: even if you *just* need the frontmatter of a post (i.e. for landing pages), you still wait on the *content* of that render and parse to a JS module as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries [can slow down dev server HMR updates significantly](https://github.com/withastro/astro/issues/4307).
+Second problem: **importing globs of content via `Astro.glob` can be slow at scale.** This is due to a fundamental flaw with importing: even if you _just_ need the frontmatter of a post (i.e. for landing pages), you still wait on the _content_ of that render and parse to a JS module as well. Though less of a problem with Markdown, globbing hundreds-to-thousands of MDX entries [can slow down dev server HMR updates significantly](https://github.com/withastro/astro/issues/4307).
 
 To avoid this, Content Collections will focus on processing and returning a post's frontmatter, **not** the post's contents, **and** avoid transforming documents to JS modules. This should make Markdown and MDX equally quick to process, and should make landing pages faster to build and debug.
 
 <aside>
 
-💡 Don’t worry, it will still be easy to retrieve a post’s content when you need it! [See the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for more.
+💡 Don’t worry, it will still be easy to retrieve a post’s content when you need it! [See the Render Content proposal](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0028-render-content.md) for more.
 
 </aside>
 
@@ -211,17 +210,17 @@ To clarify, **the user will not view or edit files in the `.astro` directory.** 
 ## The `astro:content` module
 
 Content Collections introduces a new virtual module convention for Astro using the `astro:` prefix. Since all types and utilities are generated based on your content, we are free to use whatever name we choose. We chose `astro:` for this proposal since:
+
 1. It falls in-line with [NodeJS' `node:` convention](https://2ality.com/2021/12/node-protocol-imports.html).
 2. It leaves the door open for future `astro:` utility modules based on your project's configuration.
 
 The user will import helpers like `getCollection` and `getEntry` from `astro:content` like so:
 
 ```tsx
-import { getCollection, getEntry } from 'astro:content';
+import { getCollection, getEntry } from "astro:content";
 ```
 
 Users can also expect full auto-importing and intellisense from their editor.
-
 
 ## Creating a collection
 
@@ -245,7 +244,7 @@ src/content/
 
 ### Nested directories
 
-Collections are considered **one level deep**, so you cannot nest collections (or collection schemas) within other collections. However, we *will* allow nested directories to better organize your content. This is vital for certain use cases like internationalization:
+Collections are considered **one level deep**, so you cannot nest collections (or collection schemas) within other collections. However, we _will_ allow nested directories to better organize your content. This is vital for certain use cases like internationalization:
 
 ```bash
 src/content/
@@ -269,7 +268,7 @@ For instance, say every `blog/` entry should have a `title`, `slug`, a list of `
 
 ```ts
 // src/content/config.ts
-import { z, defineCollection } from 'astro:content';
+import { z, defineCollection } from "astro:content";
 
 const blog = defineCollection({
   schema: {
@@ -295,8 +294,9 @@ export const collections = { 'my-newsletter': myNewsletter };
 ### Why Zod?
 
 We chose [Zod](https://github.com/colinhacks/zod) since it offers key benefits over plain TypeScript types. Namely:
+
 - specifying default values for optional fields using `.default()`
-- checking the *shape* of string values with built-in regexes, like `.url()` for URLs and `.email()` for emails
+- checking the _shape_ of string values with built-in regexes, like `.url()` for URLs and `.email()` for emails
 
 ```tsx
 ...
@@ -339,7 +339,7 @@ Assume the `blog` collection schema looks like this:
 
 ```tsx
 // src/content/config.ts
-import { defineCollection, z } from 'astro:content';
+import { defineCollection, z } from "astro:content";
 
 const blog = defineCollection({
   schema: {
@@ -366,7 +366,7 @@ export const collections = { blog };
   };
   // unique identifier. Today, the file path relative to src/content/[collection]
   id: '[filePath]'; // union from all entries in src/content/[collection]
-	// URL-ready slug computed from ID, relative to collection 
+	// URL-ready slug computed from ID, relative to collection
 	// ex. "docs/home.md" -> "home"
 	slug: '[fileBase]'; // union from all entries in src/content/[collection]
   // raw body of the Markdown or MDX document
@@ -376,15 +376,15 @@ export const collections = { blog };
 
 We have purposefully generalized Markdown-specific terms like `frontmatter` and `file` to agnostic names like `data` and `id`. This also follows naming conventions from headless CMSes like Contentful.
 
-Also note that `body` is the *raw* content of the file. This ensures builds remain performant by avoiding expensive rendering pipelines. See [“Moving to `src/pages/`"](#mapping-to-srcpages) to understand how a `<Content />` component could be used to render this file, and pull in that pipeline only where necessary.
+Also note that `body` is the _raw_ content of the file. This ensures builds remain performant by avoiding expensive rendering pipelines. See [“Moving to `src/pages/`"](#mapping-to-srcpages) to understand how a `<Content />` component could be used to render this file, and pull in that pipeline only where necessary.
 
 ### Nested directories
 
 [As noted earlier](#nested-directories), you may organize entries into directories as well. The result will **still be a flat array** when fetching a collection via `getCollection`, with the nested directory reflected in an entry’s `id`:
 
 ```tsx
-const docsEntries = await getCollection('docs');
-console.log(docsEntries)
+const docsEntries = await getCollection("docs");
+console.log(docsEntries);
 /*
 -> [
 	{ id: 'en/getting-started.md', slug: 'en/getting-started', data: {...} },
@@ -396,11 +396,11 @@ console.log(docsEntries)
 */
 ```
 
-This is in-keeping with our database table and CMS collection analogies. Directories are a way to organize your content, but do *not* effect the underlying, flat collection → entry relationship.
+This is in-keeping with our database table and CMS collection analogies. Directories are a way to organize your content, but do _not_ effect the underlying, flat collection → entry relationship.
 
 ## Mapping to `src/pages/`
 
-We imagine users will want to map their collections onto live URLs on their site. This should be  similar to globbing directories outside of `src/pages/` today, using `getStaticPaths` to generate routes dynamically.
+We imagine users will want to map their collections onto live URLs on their site. This should be similar to globbing directories outside of `src/pages/` today, using `getStaticPaths` to generate routes dynamically.
 
 Say you have a `docs` collection subdivided by locale like so:
 
@@ -452,7 +452,7 @@ Note the `slug` function can access the default generated slug, entry ID, parsed
 
 ### Rendering contents
 
-The above example generates routes, but what about rendering our `.md` files on the page? We suggest [reading the Render Content proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0028-render-content.md) for full details on how `getCollection` will compliment that story. 
+The above example generates routes, but what about rendering our `.md` files on the page? We suggest [reading the Render Content proposal](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0028-render-content.md) for full details on how `getCollection` will compliment that story.
 
 # Detailed design
 
@@ -482,14 +482,14 @@ We will add this generation step to the `astro check` command as well, in case u
 Content Collections will expose Zod as an Astro built-in. This will be available from the `astro:content` module:
 
 ```ts
-import { z } from 'astro:content';
+import { z } from "astro:content";
 ```
 
 This avoids exposing Zod from the base `astro` package, preventing unecessary dependencies in core (SSR builds being the main consideration). However, to populate this virtual module, we will need a separate `astro/zod` module to expose all utilities. Here's an example of how a `zod.mjs` package export may look:
 
 ```js
 // zod.mjs
-import * as mod from 'zod';
+import * as mod from "zod";
 export { mod as z };
 export default mod;
 ```
@@ -536,8 +536,8 @@ There are alternative solutions to consider across several categories:
 We considered a few alternatives to using Zod for schemas:
 
 - **Generate schemas from a TypeScript type.** This would let users reuse frontmatter types they already have and avoid the learning curve of a new tool. However, TypeScript is missing a few surface-level features that Zod covers:
-    - Constraining the shape of a given value. For instance, setting a `min` or `max` character length, or testing strings against `email` or `URL` regexes.
-    - [Transforming](https://github.com/colinhacks/zod#transform) a frontmatter value into a new data type. For example, parsing a date string to a `Date` object, and raising a helpful error for invalid dates.
+  - Constraining the shape of a given value. For instance, setting a `min` or `max` character length, or testing strings against `email` or `URL` regexes.
+  - [Transforming](https://github.com/colinhacks/zod#transform) a frontmatter value into a new data type. For example, parsing a date string to a `Date` object, and raising a helpful error for invalid dates.
 - **Invent our own JSON or YAML-based schema format.** This would fall in-line with a similar open source project, [ContentLayer](https://www.contentlayer.dev/docs/sources/files/mapping-document-types), that specifies types with plain JS. Main drawbacks: replacing one learning curve with another, and increasing the maintenance cost of schemas overtime.
 
 In the end, we've chosen Zod since it can scale to complex use cases and takes the maintenance burden off of Astro's shoulders.
@@ -546,7 +546,7 @@ In the end, we've chosen Zod since it can scale to complex use cases and takes t
 
 We expect most users to compare `getCollection` with `Astro.glob`. There is a notable difference in how each will grab content:
 
-- `Astro.glob` accepts wild cards (i.e. `/posts/**/*.md) to grab entries multiple directories deep, filter by file extension, etc.
+- `Astro.glob` accepts wild cards (i.e. `/posts/\*_/_.md) to grab entries multiple directories deep, filter by file extension, etc.
 - `getCollection` accepts **a collection name only,** with an optional filter function to filter by entry values.
 
 The latter limits users to fetching a single collection at a time, and removes nested directories as a filtering option (unless you regex the ID by hand). One alternative could be to [mirror Contentlayer's approach](https://www.contentlayer.dev/docs/sources/files/mapping-document-types#resolving-document-type-with-filepathpattern), wiring schemas to wildcards of any shape:
@@ -555,10 +555,10 @@ The latter limits users to fetching a single collection at a time, and removes n
 // Snippet from Contentlayer documentation
 // <https://www.contentlayer.dev/docs/sources/files/mapping-document-types#resolving-document-type-with-filepathpattern>
 const Post = defineDocumentType(() => ({
-  name: 'Post',
+  name: "Post",
   filePathPattern: `posts/**/*.md`,
   // ...
-}))
+}));
 ```
 
 Still, we've chosen a flat `collection` + schema file approach to a) mirror Astro's file-based routing, and b) establish a familiar database table or headless CMS analogy.
@@ -572,13 +572,13 @@ Introducing a new reserved directory (`src/content/`) will be a breaking change 
 
 This should give us time to address all aspects and corner cases of content Collections.
 
-We intend `src/content/` to be the recommended way to store Markdown and MDX content in your Astro project. Documentation will be *very* important to guide adoption! So, we will speak with the docs team on the best information hierarchy. Not only should we surface the concept of a `src/content/` early for new users, but also guide existing users (who may visit the "Markdown & MDX" and Astro glob documentation) to `src/content/` naturally. A few initial ideas:
+We intend `src/content/` to be the recommended way to store Markdown and MDX content in your Astro project. Documentation will be _very_ important to guide adoption! So, we will speak with the docs team on the best information hierarchy. Not only should we surface the concept of a `src/content/` early for new users, but also guide existing users (who may visit the "Markdown & MDX" and Astro glob documentation) to `src/content/` naturally. A few initial ideas:
 
 - Expand [Project Structure](https://docs.astro.build/en/core-concepts/project-structure/) to explain `src/content/`
 - Update Markdown & MDX to reference the Project Structure docs, and expand [Importing Markdown](https://docs.astro.build/en/guides/markdown-content/#importing-markdown) to a more holistic "Using Markdown" section
 - Add a "local content" section to the [Data Fetching](https://docs.astro.build/en/guides/data-fetching/) page
 
-We can also ease migration for users that *already* have a `src/content/` directory used for other purposes. For instance, we can warn users with a `src/content/` that a) contains other file types or b) does not contain any `schema` files.
+We can also ease migration for users that _already_ have a `src/content/` directory used for other purposes. For instance, we can warn users with a `src/content/` that a) contains other file types or b) does not contain any `schema` files.
 
 # Unresolved questions
 

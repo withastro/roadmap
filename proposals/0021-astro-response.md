@@ -20,7 +20,7 @@ Astro.response.headers.set('Cache-Control', 'max-age=604800');
 
 When SSR was added to Astro we added the `Astro.request` object which is a [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request), allowing you to examine headers (such as cookies) to dynamically handle page renders.
 
-In order to modify the *response* you are able to return a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) within your frontmatter like so:
+In order to modify the _response_ you are able to return a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) within your frontmatter like so:
 
 ```astro
 ---
@@ -33,7 +33,7 @@ if(!Astro.request.headers.has('cookie')) {
 <h1>My page</h1>
 ```
 
-However, there are many cases where you do want to render your page and *also* modify something about the response such as:
+However, there are many cases where you do want to render your page and _also_ modify something about the response such as:
 
 - Cache headers such as `Cache-Control` and `ETag`.
 - Adding cookies via `Set-Cookie` headers.
@@ -86,8 +86,8 @@ The initial values of the `Astro.response` will be:
 ```js
 Astro.response = {
   status: 200,
-  statusText: 'OK',
-  headers: new Headers()
+  statusText: "OK",
+  headers: new Headers(),
 };
 ```
 
@@ -99,17 +99,17 @@ Astro currently supports returning a [Response](https://developer.mozilla.org/en
 
 # Drawbacks
 
-There are other proposals in discussion to add [cookie management](https://github.com/withastro/rfcs/discussions/182) and [cache control](https://github.com/withastro/rfcs/discussions/181) APIs, which are higher-level ways to modify the response.
+There are other proposals in discussion to add [cookie management](https://github.com/withastro/roadmap/discussions/182) and [cache control](https://github.com/withastro/roadmap/discussions/181) APIs, which are higher-level ways to modify the response.
 
 If those, or similar, proposals go through there will be much less of a use-case for `Astro.response`. However those proposals do not cover:
 
-- Setting *every* possible value of cache headers, for example `ETag` is not covered by the cache control proposal.
+- Setting _every_ possible value of cache headers, for example `ETag` is not covered by the cache control proposal.
 - Setting the `status` or `statusText`.
 - Setting other types of response headers, such as user-defined headers.
 
 # Alternatives
 
-As discussed in the __Drawbacks__ section, one alternative is to provide higher-level APIs for the common use-cases for modifying the response. However it will be impossible to anticipate every need, so providing a lower-level way to modify the response should unblock use-cases we haven't thought about.
+As discussed in the **Drawbacks** section, one alternative is to provide higher-level APIs for the common use-cases for modifying the response. However it will be impossible to anticipate every need, so providing a lower-level way to modify the response should unblock use-cases we haven't thought about.
 
 Additionally, `Astro.response` could be a [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) instead of an interface we define. The main reason this proposal doesn't do that is because most of the properties on [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) are readonly; you could not modify the `status` or `statusText`. This would be unintuitive to users.
 
