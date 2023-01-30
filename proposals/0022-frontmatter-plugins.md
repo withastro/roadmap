@@ -1,6 +1,9 @@
 - Start Date: 2022-05-20
-- Reference Issues: https://github.com/withastro/astro/pull/3411
-- Implementation PR: <!-- leave empty -->
+- Reference Issues:
+	- https://github.com/withastro/astro/pull/3411
+	- https://github.com/withastro/astro/issues/5099
+- Implementation PR: https://github.com/withastro/astro/pull/5687
+- Docs: https://docs.astro.build/en/guides/markdown-content/#modifying-frontmatter-programmatically ([permalink](https://github.com/withastro/docs/blob/3da9e4a/src/pages/en/guides/markdown-content.mdx#modifying-frontmatter-programmatically))
 
 # Summary
 
