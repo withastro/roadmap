@@ -84,7 +84,7 @@ If any script tag has an attribute (ex: `type="module"`, `type="text/partytown"`
 A few other attempts have been made at finalizing this API:
 
 - https://github.com/withastro/roadmap/discussions/65
-- https://github.com/withastro/roadmap/blob/style-script-rfc/active-rfcs/0000-style-script-behavior.md#script
+- https://github.com/withastro/roadmap/blob/main/proposals/0008-style-script-behavior.md#script
 - https://github.com/withastro/roadmap/blob/6015b4da8c95258b2136d61d6a6290c7ca989f5a/active-rfcs/0000-component-tag.md
 
 There is a clear need to address this inconsistency but we do not have a clear path forward yet.

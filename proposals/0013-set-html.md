@@ -256,4 +256,4 @@ However, the Astro documentation should push this as _the blessed approach_ for 
 
 # Unresolved questions
 
-See [**Scenario H**](https://github.com/withastro/roadmap/blob/set-innerhtml/active-rfcs/0000-set-html.md#scenario-h-element-sethtmlcontent---element) and [**Scenario J**](https://github.com/withastro/roadmap/blob/set-innerhtml/active-rfcs/0000-set-html.md#scenario-j-script-or-style-usage) in **Detailed Design**.
+See [**Scenario H**](https://github.com/withastro/roadmap/blob/main/proposals/0013-set-html.md#scenario-h-element-sethtmlcontent---element) and [**Scenario J**](https://github.com/withastro/roadmap/blob/main/proposals/0013-set-html.md#scenario-j-script-or-style-usage) in **Detailed Design**.

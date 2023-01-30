@@ -31,7 +31,7 @@ We also need to make sure that our CSS support works with static builds. CSS can
 - Must point to a file in `public/` or an external CSS URL. This will not be bundled/optimized.
 - Must be nested inside of a `<head>` element.
 
-Note: See the [local directive RFC](https://github.com/withastro/roadmap/blob/build-performance-rfc/active-rfcs/0000-build-performance.md#local-directive) for another alternative on referencing a `src/` file that would be processed/built/bundled.
+Note: See the [local directive RFC](https://github.com/withastro/roadmap/blob/aa1229026165709918cc732f2cee6a1d6adfa799/active-rfcs/0000-build-performance.md#local-directive) for another alternative on referencing a `src/` file that would be processed/built/bundled.
 
 #### 2. ❌ `<link rel="stylesheet" href={xUrl}> // import xUrl from './X.css?url';`
 
