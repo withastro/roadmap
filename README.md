@@ -18,9 +18,9 @@
 
 **Goal:** Unstructured, low-friction conversations on ideas and improvements to Astro. Useful for gathering early feedback and gauging interest with the community and maintainers.
 
-**Requirements:** None! To suggest an improvement, [create a new Discussion](https://github.com/withastro/rfcs/discussions) using our (completely optional) [proposal template](stage-1--discussion-template.md?plain=1).
+**Requirements:** None! To suggest an improvement, [create a new Discussion](https://github.com/withastro/roadmap/discussions) using our (completely optional) [proposal template](stage-1--discussion-template.md?plain=1).
 
-**Location:** GitHub Discussions [(see all open proposals).](https://github.com/withastro/rfcs/discussions) The Astro Discord channel `#feedback-ideas` can also be used to throw an idea out for quick initial feedback, but be warned that chat is short-lived and not designed for longer-lived discussion.
+**Location:** GitHub Discussions [(see all open proposals).](https://github.com/withastro/roadmap/discussions) The Astro Discord channel `#feedback-ideas` can also be used to throw an idea out for quick initial feedback, but be warned that chat is short-lived and not designed for longer-lived discussion.
 
 ## Stage 2: Accepted Proposal
 
@@ -28,7 +28,7 @@
 
 **Requirements:** An existing proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
 
-**Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/rfcs/issues)
+**Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/roadmap/issues)
 
 **What to Expect:** A proposal reaches this stage (aka "is accepted") during a meeting with Maintainers and TSC, following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
@@ -44,7 +44,7 @@ A stale, accepted proposal can be removed (rejected after a previous acceptance)
 
 **Requirements:** An accepted proposal (Stage 2) and a proposal champion to author and implement the RFC.
 
-**Location:** GitHub Pull Requests [(see all in-progress RFCs)](https://github.com/withastro/rfcs/pulls) [(see all finished RFCs)](https://github.com/withastro/rfcs/tree/main/rfcs)
+**Location:** GitHub Pull Requests [(see all in-progress RFCs)](https://github.com/withastro/roadmap/pulls) [(see all finished RFCs)](https://github.com/withastro/roadmap/tree/main/proposals)
 
 **What to Expect:** To create an RFC for an already-accepted proposal, the proposal champion must use our [`stage-3--rfc-template.md`](stage-3--rfc-template.md?plain=1) RFC template in the repo. The initial sections of the RFC template should be copy-pasted from the the accepted proposal (they match 1:1). All remaining sections are left for the champion to complete with the implementation and tradeoff details of the RFC.
 
@@ -62,4 +62,4 @@ Final RFC approval happens by vote, following our existing [RFC Proposal](https:
 
 **Prior Art / Special Thanks**
 
-This process is an amalgamation of [Remix's Open Development process](https://remix.run/blog/open-development) and our previous [RFC process](https://github.com/withastro/rfcs/blob/78b736c28fe487ad02ec76bb038ad1087c471057/README.md), which had been based on the RFC processeses of the Vue, React, Rust, and Ember projects.
+This process is an amalgamation of [Remix's Open Development process](https://remix.run/blog/open-development) and our previous [RFC process](https://github.com/withastro/roadmap/blob/78b736c28fe487ad02ec76bb038ad1087c471057/README.md), which had been based on the RFC processeses of the Vue, React, Rust, and Ember projects.
