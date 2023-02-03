@@ -1,14 +1,10 @@
 - Start Date: 2021-12-20
-- Reference Issues: [#46](https://github.com/withastro/rfcs/pull/46)
+- Reference Issues: [#46](https://github.com/withastro/roadmap/pull/46)
 - Implementation PR: <!-- leave this empty -->
-
-
 
 # Summary
 
 Astro should support source-relative URL resolution in the HTML block of Astro files.
-
-
 
 # Example
 
@@ -17,8 +13,6 @@ To resolve the source-relative URL of an image, use a `local:` prefixed attribut
 ```astro
 <img local:src="kitten.avif" alt="Kitten" />
 ```
-
-
 
 # Motivation
 
@@ -35,8 +29,6 @@ This ambiguity raises a need for:
 - An intuitive way to author URLs relative to a source file.
 - An intuitive way to author URLs within the HTML of an `.astro` file.
 
-
-
 # Detailed design
 
 A `local` prefix before an attribute instructs Astro to resolve the attribute value as a URL relative to the source file.
@@ -51,19 +43,13 @@ The attribute prefix treats the entire attribute value as the URL. This example 
 <img src={await import('./kitten.avif?url')} alt="Kitten" />
 ```
 
-
-
 # Drawbacks
 
 This does not fully replicate `Astro.resolve`, and it does not support attribute values whose value is only partially a URL.
 
 Attribute values with partial sources, like `srcset`, `style`, and and `data` attributes, are not handled. They could be handled in a separate, future RFC. While outside the scope of this proposal, a suggestion is a `local:` scheme.
 
-
-
 # Alternatives
-
-
 
 ### Use a `local:` [scheme](https://developer.mozilla.org/en-US/docs/Learn/Common_questions/What_is_a_URL#scheme)
 
@@ -72,8 +58,6 @@ Attribute values with partial sources, like `srcset`, `style`, and and `data` at
 ```
 
 This would support current uses, and allow additional references in `style`, `srcset`, or `data-` attributes, as well as support within wrappers like `url()`.
-
-
 
 ### Limit support to `import` statements and do not support source-relative URLs in the HTML of `.astro` files.
 
@@ -90,8 +74,6 @@ This is the current functionality and would require no change.
 - Requires all paths to be imported with a special directive (`?url`).
 - Requires authors to write more JS and less HTML.
 - Requires authors to name more things. <sup>[1](https://hilton.org.uk/blog/why-naming-things-is-hard)</sup>
-
-
 
 # Adoption strategy
 

@@ -1,7 +1,6 @@
 - Start Date: 12/09/2021
-- Reference Issues: https://github.com/withastro/astro/issues/1077, https://github.com/withastro/rfcs/discussions/1
-- Implementation PR: 
-
+- Reference Issues: https://github.com/withastro/astro/issues/1077, https://github.com/withastro/roadmap/discussions/1
+- Implementation PR:
 
 # Summary
 
@@ -9,11 +8,9 @@ Finalize the component styling & scripting behavior for v1.0.
 
 # Important Note for Reviewers
 
-This RFC proposes very little new behavior, and mainly exists to document current behavior and make sure we have a clear, shared understanding about how Astro should work as we head into a v1.0 release. 
+This RFC proposes very little new behavior, and mainly exists to document current behavior and make sure we have a clear, shared understanding about how Astro should work as we head into a v1.0 release.
 
 When reviewing, feel free to ask questions and give feedback on current behavior as well as new behavior. However, be aware that changes to current behavior may be out of scope of this RFC and may require their own RFC seperate from this one.
-
-
 
 # Example - UI Component
 
@@ -66,7 +63,6 @@ When reviewing, feel free to ask questions and give feedback on current behavior
 
 - Non-trivial changes to current behavior. See "Important Note for Reviewers" above.
 
-
 # Detailed design
 
 ## `<style>`
@@ -99,7 +95,6 @@ When reviewing, feel free to ask questions and give feedback on current behavior
 Even though `<style define:vars={...}>` is all about adding dynamic content, it should still continue to work with statically bundled CSS. This is because the CSS variable is referenced in the static `<style>` contents via `var(--foo)`, which can be safely bundled with the rest of your page CSS. Then, during the page render at runtime, the component will add a `<style>` tag to the page that defines the `--foo` variable.
 
 Note that this will continue to have issues with some use-cases. For example, if a component is used twice on the page, the dynamic value may change across different renders but would impact all components on the page. You can see an example of this here, where the last rendered component wins: https://stackblitz.com/edit/github-eww5sz?file=src%2Fcomponents%2FTour.astro&on=stackblitz
-
 
 ## `<style global>`
 
@@ -139,7 +134,6 @@ Note that this will continue to have issues with some use-cases. For example, if
 
 ## `<script hoist>`
 
-
 ```astro
 <!-- INPUT: -->
 <script hoist>
@@ -151,7 +145,6 @@ Note that this will continue to have issues with some use-cases. For example, if
 <!-- JS is bundled with the rest of your page JavaScript. -->
 ```
 
-
 ### Current Behavior
 
 - Script content is processed, ex: TypeScript could potentially be supported.
@@ -162,10 +155,9 @@ Note that this will continue to have issues with some use-cases. For example, if
 
 ### New RFC Behavior
 
-- `<script hoist>` contents must be static, therefore `define:vars` is not supported. Because the script is bundled ahead-of-time, dynamic values won't exist. This is currently easy to break in v0.21, so this RFC proposes removing the support entirely for `<script hoist>` (still available for `<script>` and `<style>`). 
+- `<script hoist>` contents must be static, therefore `define:vars` is not supported. Because the script is bundled ahead-of-time, dynamic values won't exist. This is currently easy to break in v0.21, so this RFC proposes removing the support entirely for `<script hoist>` (still available for `<script>` and `<style>`).
 - Cannot be nested within a template expression or conditional. Bundled scripts must be scanned by the compiler. This is currently easy to break in v0.21 with something like `{alwaysFalse && <script hoist>...` so this RFC moves to remove support for this. This change shouldn't impact many users.
 - Can only exist top-level in the template (best for components) or nested directly inside of `<head>` or `<body>` (best for pages/layouts). This is to guarentee that scanning and reading hoisted script content is straightforward and bug-free. This shouldn't affect many users.
-
 
 # Drawbacks
 
@@ -176,7 +168,6 @@ Note that this will continue to have issues with some use-cases. For example, if
 This RFC proposes very little new behavior, so this should have little impact on existing users.
 
 For the new restrictions that the RFC does propose, we will give clear warnings or errors for code that does not match these new restrictions. All new restrictions are meant to explicitly prevent you from writing buggy code, so impact of rolling this out should be overall positive.
-
 
 # Unresolved questions
 

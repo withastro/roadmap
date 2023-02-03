@@ -2,7 +2,7 @@
 <p align="center"><strong>⚠️⚠️⚠️ Legacy RFC Disclaimer ⚠️⚠️⚠️
 <br />This RFC does not meet the requirements of the current RFC process.
 <br />It was accepted before the current process was created.
-<br /><a href="https://github.com/withastro/rfcs#readme">Learn more about the RFC standards.</a>
+<br /><a href="https://github.com/withastro/roadmap#readme">Learn more about the RFC standards.</a>
 </strong></p>
 <!-- LEGACY RFC -->
 
@@ -18,9 +18,9 @@ Add `draft` support for Markdown posts.
 
 **What is Missing from Astro Today?**
 
-- `draft` as a top-level primitive for Markdown posts/files 
+- `draft` as a top-level primitive for Markdown posts/files
 - `buildOptions.drafts` as an option to ignore posts/files with `draft: true`
-- borrowed from: https://jekyllrb.com/docs/configuration/options/ 
+- borrowed from: https://jekyllrb.com/docs/configuration/options/
 
 **Proposed Solution**
 

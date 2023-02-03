@@ -2,7 +2,7 @@
 <p align="center"><strong>⚠️⚠️⚠️ Legacy RFC Disclaimer ⚠️⚠️⚠️
 <br />This RFC does not meet the requirements of the current RFC process.
 <br />It was accepted before the current process was created.
-<br /><a href="https://github.com/withastro/rfcs#readme">Learn more about the RFC standards.</a>
+<br /><a href="https://github.com/withastro/roadmap#readme">Learn more about the RFC standards.</a>
 </strong></p>
 <!-- LEGACY RFC -->
 
@@ -53,13 +53,13 @@ Phase 2: ✅
 - **requires:** a way to customize your markdown syntax highlighter of choice
 - Move Markdown code blocks to use `<Code>` instead of `<Prism>` (https://github.com/stefanprobst/remark-shiki)
 - Move our recommendation in docs to use `<Code>` over `<Prism>`, but keep references to `<Prism>`.
-- ~~Add warning when you use `<Prism>` to use `<Code>`  instead.~~ This would be jarring to users _intentionally_ sticking with Prism
+- ~~Add warning when you use `<Prism>` to use `<Code>` instead.~~ This would be jarring to users _intentionally_ sticking with Prism
 - **success metric to continue to phase 3:** docs site happy with the new Code component (usage in markdown)
 
 Phase 3: Soon
 
 - Remove `<Prism>` entirely.
-- Move it into a separate component, for anyone who still wants it. ex:`import Prism from '@astrojs/prism';` 
+- Move it into a separate component, for anyone who still wants it. ex:`import Prism from '@astrojs/prism';`
 
 **Detailed Design**:
 

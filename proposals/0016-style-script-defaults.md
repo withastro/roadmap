@@ -1,12 +1,12 @@
 - Start Date: 2022-03-15
-- Reference Issues: [RFC0008](https://github.com/withastro/rfcs/tree/main/proposals/0008-style-script-behavior.md), [#65](https://github.com/withastro/rfcs/discussions/65)
+- Reference Issues: [RFC0008](https://github.com/withastro/roadmap/tree/main/proposals/0008-style-script-behavior.md), [#65](https://github.com/withastro/roadmap/discussions/65)
 - Implementation PR: <!-- leave empty -->
 
 # Summary
 
-Astro is inconsist between `<style>` and `<script>` default behavior. Currently, `<style>` has opt-out processing, but `<script>` does not. This RFC aims to settle on a good, consistent default for both `<style>` and `<script>`. 
+Astro is inconsist between `<style>` and `<script>` default behavior. Currently, `<style>` has opt-out processing, but `<script>` does not. This RFC aims to settle on a good, consistent default for both `<style>` and `<script>`.
 
-**This RFC is intended to supercede [RFC0008](https://github.com/withastro/rfcs/tree/main/proposals/0008-style-script-behavior.md).**
+**This RFC is intended to supercede [RFC0008](https://github.com/withastro/roadmap/tree/main/proposals/0008-style-script-behavior.md).**
 
 - New `is:inline` directive to avoid bundling `style` or `script`
 - `<style>` => remains scoped, bundled by default. `is:scoped` directive supported for consistency
@@ -39,7 +39,7 @@ span { color: green; }
 
 # Motivation
 
-There have been [a few](https://github.com/withastro/rfcs/pull/12) [attempts](https://github.com/withastro/rfcs/discussions/65) to finalize this behavior and address these inconsistent APIs. This RFC aims to settle these questions prior to v1.0.
+There have been [a few](https://github.com/withastro/roadmap/pull/12) [attempts](https://github.com/withastro/roadmap/discussions/65) to finalize this behavior and address these inconsistent APIs. This RFC aims to settle these questions prior to v1.0.
 
 - Users are generally in favor of how we currently do scoped, processed, and optimized styles by default. It is logical to extend this feature to scripts.
 - Inlining scripts and styles can be useful for anything that must exist inlined into the page, like Google Analytics. Users currently cannot do this for styles.
@@ -50,7 +50,7 @@ There have been [a few](https://github.com/withastro/rfcs/pull/12) [attempts](ht
 
 ### `is:inline`
 
-A new directive, `is:inline`, will be introduced. This will opt both `<style>` and `<script>` tags out of _bundling_ behavior. 
+A new directive, `is:inline`, will be introduced. This will opt both `<style>` and `<script>` tags out of _bundling_ behavior.
 
 The `is:inline` directive means that `style` and `script` tags:
 
@@ -83,15 +83,16 @@ If any script tag has an attribute (ex: `type="module"`, `type="text/partytown"`
 
 A few other attempts have been made at finalizing this API:
 
-- https://github.com/withastro/rfcs/discussions/65
-- https://github.com/withastro/rfcs/blob/style-script-rfc/active-rfcs/0000-style-script-behavior.md#script
-- https://github.com/withastro/rfcs/blob/6015b4da8c95258b2136d61d6a6290c7ca989f5a/active-rfcs/0000-component-tag.md
+- https://github.com/withastro/roadmap/discussions/65
+- https://github.com/withastro/roadmap/blob/main/proposals/0008-style-script-behavior.md#script
+- https://github.com/withastro/roadmap/blob/6015b4da8c95258b2136d61d6a6290c7ca989f5a/active-rfcs/0000-component-tag.md
 
 There is a clear need to address this inconsistency but we do not have a clear path forward yet.
 
 ## `Script` and `Style` components
 
 One potential alternative would be to introduce magical `<Script>` and `<Style>` components. This was considered, but ultimately rejected because...
+
 - Whether these components are available on `globalThis` or must be imported could lead to confusion
 - These take Astro further away from similar frameworks like Vue and Svelte, which seem to have no problem with "magic by default" `script` and `style`.
 - These are not actual runtime components that can be renamed or inspected, but rather instructions for the Astro compiler

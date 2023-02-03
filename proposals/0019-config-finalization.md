@@ -1,5 +1,5 @@
 - Start Date: 2022-03-22
-- Reference Issues: [[Roadmap] Astro v1.0](https://github.com/withastro/rfcs/discussions/1)
+- Reference Issues: [[Roadmap] Astro v1.0](https://github.com/withastro/roadmap/discussions/1)
 - Implementation PR: <!-- leave empty -->
 
 # Summary
@@ -117,7 +117,7 @@ This RFC proposes:
 
 # Sitemap
 
-This RFC proposes that the `buildOptions.sitemap` and `buildOptions.sitemapFilter` options are removed entirely. 
+This RFC proposes that the `buildOptions.sitemap` and `buildOptions.sitemapFilter` options are removed entirely.
 
 This usecase is handled by the `@astrojs/sitemap` integration, so users should install and configure `@astrojs/sitemap` if they previously used `buildOptions.sitemap`.
 

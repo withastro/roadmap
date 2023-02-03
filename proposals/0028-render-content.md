@@ -1,6 +1,7 @@
 - Start Date: 2022-10-14
 - Reference Issues:
-	- https://github.com/withastro/astro/issues/3816
+
+  - https://github.com/withastro/astro/issues/3816
 
 - Implementation PR: https://github.com/withastro/astro/pull/5291
 
@@ -8,7 +9,7 @@
 
 <aside>
 
-💡 **This RFC compliments our [Content Collections RFC](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md).** We recommend reading that document first to understand the goals of “Content” as a concept, and where rendering content fits into that story.
+💡 **This RFC compliments our [Content Collections RFC](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0027-content-collections.md).** We recommend reading that document first to understand the goals of “Content” as a concept, and where rendering content fits into that story.
 
 </aside>
 
@@ -59,25 +60,26 @@ There are two major challenges Astro has addressed since the project’s early d
 Since migrating to Vite, Astro has leaned into its built-in concept for globbing directories of content: `import.meta.glob`. Here’s what that API will output, using both the default “lazy” option and the “eager” option:
 
 ```tsx
-const lazyPosts = await import.meta.glob('./blog/*.md');
+const lazyPosts = await import.meta.glob("./blog/*.md");
 /* {
 	'./blog/first.md': () => Promise(module),
 	'./blog/second.md': () => Promise(module),
 } */
 
-const eagerPosts = await import.meta.glob('./blog/*.md', { eager: true });
+const eagerPosts = await import.meta.glob("./blog/*.md", { eager: true });
 /* {
 	'./blog/first.md': { frontmatter: {...}, rawContent: '# First...',
 	'./blog/second.md': { frontmatter: {...}, rawContent: '# Second...',
 } */
 ```
 
-You’ll notice that lazily globbing only yields an object of file names. To access any other information about a given post (including frontmatter), you’ll need to call that `() => Promise(module)` function to import the file. You’ll likely call this function across *all* of your modules when tackling the landing page problem **(1)** or the dynamic routes problem **(2)**.
+You’ll notice that lazily globbing only yields an object of file names. To access any other information about a given post (including frontmatter), you’ll need to call that `() => Promise(module)` function to import the file. You’ll likely call this function across _all_ of your modules when tackling the landing page problem **(1)** or the dynamic routes problem **(2)**.
 
 To make these problems easier to tackle without learning Vite’s nuances, Astro created the `Astro.glob` abstraction. This abstraction is based on the eager example above, but mapping the object to an array of its values. In other words:
 
 ```tsx
-Astro.glob('stuff') === Object.values(import.meta.glob('stuff', { eager: true }))
+Astro.glob("stuff") ===
+  Object.values(import.meta.glob("stuff", { eager: true }));
 ```
 
 This makes landing pages and dynamic routes fairly trivial to build:
@@ -113,11 +115,11 @@ const { Post } = Astro.props;
 <Post />
 ```
 
-However, there’s a reason that Vite does *not* eagerly load by default, which brings us to…
+However, there’s a reason that Vite does _not_ eagerly load by default, which brings us to…
 
 ## Where this breaks down
 
-In short, eagerly loading information about every module makes it *tough* to know which resources are actually needed.
+In short, eagerly loading information about every module makes it _tough_ to know which resources are actually needed.
 
 Take our landing page example above. We’ll assume that none of the entries `blog/**` have style or component imports… well, except for one pesky file. We’ll call this `blog/comic-sans-is-great.mdx`:
 
@@ -135,13 +137,13 @@ body {
 }
 ```
 
-Now that MDX is supported for content authoring, it’s fairly common to pull in one-off styles or components for a given post that aren’t shared by other files. 
+Now that MDX is supported for content authoring, it’s fairly common to pull in one-off styles or components for a given post that aren’t shared by other files.
 
 However, this poses a problem for our landing page. As you may know, you’re free to render the content of a globbed post (styles, components and all) [using the `Content` component](https://docs.astro.build/en/guides/markdown-content/#content).
 
 This feature can be a double-edged sword though; Since `Astro.glob` eagerly loads every module, **it will also inject every module’s imports (namely styles) onto the page where it is globbed.**
 
-This means, when `index.astro` globs all of our `blog/**` posts, it will now inject `comic-sans-override.css` onto the page as well. This happens whether we *actually* use the Content component or not. Yikes!
+This means, when `index.astro` globs all of our `blog/**` posts, it will now inject `comic-sans-override.css` onto the page as well. This happens whether we _actually_ use the Content component or not. Yikes!
 
 This is more jarring in our dynamic routes example. Recall that we’re calling `Astro.glob` to get a list of all paths to generate:
 
@@ -204,9 +206,9 @@ As you might imagine, there’s a bit of trickery needed to selectively add styl
 ## `renderEntry` API reference
 
 - **Param:** `entry: ReturnType<getCollection> | ReturnType<getCollection>['id']`
-    - Either a complete `getCollection` return type, or the ID of the entry to render. The ID type is a union of all valid IDs in your `src/content` directory (not a generic string) for better type checking.
+  - Either a complete `getCollection` return type, or the ID of the entry to render. The ID type is a union of all valid IDs in your `src/content` directory (not a generic string) for better type checking.
 - **Returns: `{ Content: AstroComponentFactory }`**
-    - A `Content` component for use in Astro or MDX files
+  - A `Content` component for use in Astro or MDX files
 
 ## Usage breakdown
 
@@ -232,18 +234,19 @@ const { Content } = await renderEntry({ id, collection });
 
 In this example:
 
-1. We use `getEntry` or `getCollection` to get references to whatever we want to render ([see the Content Schema RFC example](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md#example))
+1. We use `getEntry` or `getCollection` to get references to whatever we want to render ([see the Content Schema RFC example](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0027-content-collections.md#example))
 2. We pass this fetched entry to `renderEntry`. This **imports** our entry processed through the Vite pipeline to retrieve a `Content` component, and **injects** all component resources (styles and nested island dependencies) onto the page.
 
 <aside>
 
-💡 For step 2 to work in production builds, we will lazy glob all `src/content/` entries using dynamic imports [via a manifest](#a-new-renderentrymap). This is because we won’t know which entries to bundle until SSR endpoints are run, so we need to prepare all entries in anticipation. Yes, this means build performance will *just* meet the status quo of `Astro.glob`, though it could be optimized in the future.
+💡 For step 2 to work in production builds, we will lazy glob all `src/content/` entries using dynamic imports [via a manifest](#a-new-renderentrymap). This is because we won’t know which entries to bundle until SSR endpoints are run, so we need to prepare all entries in anticipation. Yes, this means build performance will _just_ meet the status quo of `Astro.glob`, though it could be optimized in the future.
 
 </aside>
 
 ### Retrieve `headings` and `injectedFrontmatter`
 
 You may also need `renderEntry` to retrieve results from the remark or rehype pipelines. This includes:
+
 - generated headings - [see our existing `getHeadings` utility](https://docs.astro.build/en/guides/integrations-guide/mdx/#getheadings)
 - injected frontmatter - [see our frontmatter injection example for reading time](https://docs.astro.build/en/guides/markdown-content/#example-injecting-frontmatter)
 
@@ -262,7 +265,7 @@ const blogPosts = await getCollection('blog');
   } = await renderEntry(post);
   const { readingTime } = injectedFrontmatter;
   const h1 = headings.find(h => h.depth === 1);
-  
+
   return <p>{h1} - {readingTime} min read</p>
 })}
 ```
@@ -271,7 +274,7 @@ const blogPosts = await getCollection('blog');
 
 ## Flagging `src/content` resources
 
-Currently, we crawl **every** module imported by a given page to discover styles and component resources used, and dump all discovered resources into sets of `scripts`, `styles`, and `links`. 
+Currently, we crawl **every** module imported by a given page to discover styles and component resources used, and dump all discovered resources into sets of `scripts`, `styles`, and `links`.
 
 This approach is too naive for our style bleed problem. Instead, we want to flag which resources can be added normally, and which should be deferred until `renderEntry` is called.
 
@@ -281,16 +284,16 @@ Pseudo-code for how this may work:
 
 ```tsx
 function crawlCss(currentModule, discoveredStyles, discoveredSrcContentStyles) {
-	const { importedModules } = viteServer.getModuleInfo(currentModule);
-	for (const importedModule of importedModules) {
-		if (isStyle(currentModule)) {
-			if (currentModule.endsWith(SPECIAL_FLAG)) {
-				discoveredSrcContentStyles.add(currentModule);
-			} else {
-				discoveredStyles.add(currentModule);
-			}
-		}
-	}
+  const { importedModules } = viteServer.getModuleInfo(currentModule);
+  for (const importedModule of importedModules) {
+    if (isStyle(currentModule)) {
+      if (currentModule.endsWith(SPECIAL_FLAG)) {
+        discoveredSrcContentStyles.add(currentModule);
+      } else {
+        discoveredStyles.add(currentModule);
+      }
+    }
+  }
 }
 ```
 
@@ -302,7 +305,7 @@ Once we’ve pulled our `src/content` resources for later, we need to inject the
 // astro-head-inject
 
 export function renderEntry(/* ... */) {
-	// ...
+  // ...
 }
 ```
 
@@ -311,20 +314,20 @@ This tells the Astro renderer to look for and add propagated HTML into the docum
 The `createComponent` function takes an object where we can create a component that does head propagation. Pseudo-code for that will look like:
 
 ```js
-import { createComponent } from 'astro/runtime/server/index.js';
+import { createComponent } from "astro/runtime/server/index.js";
 
 export function renderEntry() {
-	return createComponent({
-		factory(result, props, slots) {
-			return createHeadAndContent(
-				renderUniqueStylesheet(result, {
-					href: '/path/to/these/styles.css'
-				}),
-				renderTemplate`${renderComponent(result, 'Other', Other, props, slots)}`
-			);
-		},
-		propagation: 'self'
-	});
+  return createComponent({
+    factory(result, props, slots) {
+      return createHeadAndContent(
+        renderUniqueStylesheet(result, {
+          href: "/path/to/these/styles.css",
+        }),
+        renderTemplate`${renderComponent(result, "Other", Other, props, slots)}`
+      );
+    },
+    propagation: "self",
+  });
 }
 ```
 
@@ -334,10 +337,12 @@ This means that this component can be used anywhere, such as in layout component
 
 ## A new `renderEntryMap`
 
-The Content Collections proposal [presented a new manifest](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md) generated from `src/content`, stored in a `.astro` directory as a cache. We expect `renderEntry` to add a lazy `import.meta.glob` call (see background) so we can avoid loading each module until used.
+The Content Collections proposal [presented a new manifest](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0027-content-collections.md) generated from `src/content`, stored in a `.astro` directory as a cache. We expect `renderEntry` to add a lazy `import.meta.glob` call (see background) so we can avoid loading each module until used.
 
 ```tsx
-export const renderEntryMap = import.meta.glob('src/content/**/*.{md,mdx}', { query: { SPECIAL_FLAG: true } });
+export const renderEntryMap = import.meta.glob("src/content/**/*.{md,mdx}", {
+  query: { SPECIAL_FLAG: true },
+});
 ```
 
 # Testing strategy
@@ -359,7 +364,7 @@ The main alternative to `renderEntry` would be modifying the internals of `Astro
 
 # Adoption strategy
 
-[See content Collections proposal](https://github.com/withastro/rfcs/blob/content-schemas/proposals/0027-content-collections.md#adoption-strategy)
+[See content Collections proposal](https://github.com/withastro/roadmap/blob/content-schemas/proposals/0027-content-collections.md#adoption-strategy)
 
 # Unresolved questions
 

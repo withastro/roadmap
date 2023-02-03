@@ -1,8 +1,8 @@
--   Start Date: Date: 2021-12-15
--   Reference Issues: https://github.com/withastro/rfcs/discussions/45
--   Implementation PR:
-    -   https://github.com/sgruenholz2/rfcs/blob/recursive-components-patch-1/active-rfcs/0000-recursive-components.md
-    -   https://github.com/withastro/compiler/pull/270
+- Start Date: Date: 2021-12-15
+- Reference Issues: https://github.com/withastro/roadmap/discussions/45
+- Implementation PR:
+  - https://github.com/sgruenholz2/rfcs/blob/recursive-components-patch-1/active-rfcs/0000-recursive-components.md
+  - https://github.com/withastro/compiler/pull/270
 
 # Summary
 
@@ -84,22 +84,21 @@ When the tree structure is UNKNOWN, and you want to support N levels deep, using
 Component/function is the ONLY approach that will work. This is often the case
 when fetching data from an API.
 
-Handling this use case lets .astro components do things that other component 
+Handling this use case lets .astro components do things that other component
 frameworks can do, making it a 1st class component framework in its own right.
 
-The Single File per Component (SFC) pattern that Astro uses is simple, but inflexible. 
-In other frameworks like React (and presumable Vue and SolidJs) you can create multiple 
-components within a single file. 
-This allows you to can create both a function/component to render an `<Item />` and another 
-function/component to render `<ItemChildren />` have them reference each other, and then expose 
-either/both as exports. You can't do this with SFC. And, if you try to create these as 
-2 separate files, you get circular dependencies. The only way for SFC to allow for recursion 
+The Single File per Component (SFC) pattern that Astro uses is simple, but inflexible.
+In other frameworks like React (and presumable Vue and SolidJs) you can create multiple
+components within a single file.
+This allows you to can create both a function/component to render an `<Item />` and another
+function/component to render `<ItemChildren />` have them reference each other, and then expose
+either/both as exports. You can't do this with SFC. And, if you try to create these as
+2 separate files, you get circular dependencies. The only way for SFC to allow for recursion
 is by allowing a component access to reference it's own render function.
 
 Svelte, which also uses SFC, has already
 encountered and solved for this issue by exposing the [svelte:self](https://svelte.dev/docs#svelte_self)
 attribute as part of their API.
-
 
 # Detailed design
 
@@ -150,8 +149,8 @@ This is just one more `Astro` property that becomes available there.
 - No backwards compatibility concerns
 - No potential for breaking changes
 - Worth noting that recursive rendering can be already achieved with any number of other
-platforms: React, Vue, Svelte, etc., so we can approach this at our leisure with
-the short term answer to this being: "Do that in your own platform for now".
+  platforms: React, Vue, Svelte, etc., so we can approach this at our leisure with
+  the short term answer to this being: "Do that in your own platform for now".
 - Need to update Documentation
 
 # Unresolved questions

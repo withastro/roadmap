@@ -1,5 +1,5 @@
 - Start Date: 04-29-2022
-- Reference Issues: https://github.com/withastro/rfcs/discussions/179
+- Reference Issues: https://github.com/withastro/roadmap/discussions/179
 - Implementation PR: <!-- leave empty -->
 
 # Summary
@@ -19,7 +19,6 @@ This is a very expensive feature to support and maintain. Unlike `<style>` and `
 We've stomached this high maintainence cost up to this point because as a team we really do love the feature.
 
 ## Why Now?
-
 
 Even with its high maintainance cost, our `<Markdown>` component continues to be buggy. This causes poor user experiences and taking effort away from other features and improvements that we'd like to ship.
 
@@ -45,10 +44,9 @@ None of these problems have simple answers, and some of these problems might eve
 
 Instead of shipping v1.0 with a broken experience, we are planning to remove the broken experience for now with the hope of revisiting and adding the feature back, post-v1.0. Potentially in a more standard, pluggable way, so that we could support injecting languages other than Markdown into your component.
 
-
 # Detailed design
 
-1. Disable the `<Markdown />` component *in SSR*. If you use the component with an adapter, it creates a runtime error telling you that this is not supported, and giving you advice on how to upgrade. SSR + `<Markdown />` is already poorly supported today, so this shouldn't impact many users.
+1. Disable the `<Markdown />` component _in SSR_. If you use the component with an adapter, it creates a runtime error telling you that this is not supported, and giving you advice on how to upgrade. SSR + `<Markdown />` is already poorly supported today, so this shouldn't impact many users.
 2. Before `v1.0.0-rc.1`, move the `<Markdown />` component out into its own package entirely. Call it `@astrojs/markdown`. In the readme of the package, give the SSG-only warning more clearly.
 3. Before `v1.0.0-rc.1`, replace references to the Markdown component in our docs with the new package.
 4. In `v1.0.0-rc.1`, disable the core `<Markdown />` component entirely. If a developer uses it, point them to the new package or suggest moving the Markdown snippet out into its own file.
@@ -58,6 +56,7 @@ The user-land Markdown component will also continue to exist for those who need 
 # Drawbacks & alternatives
 
 In practice we've seen the following pattern play out, which gives me hope that most users will be able to make this transition:
+
 1. **If a block of inline markdown is small,** it's trivial to migrate the Markdown snippet directly to HTML.
 2. **If a block of inline markdown is large,** we'd probably recommend anyway that you move it to a separate MD file, based on how unreliable Astro can be when handling it, and how much better your editor/IDE support will be.
 3. **If neither is acceptable,** use the new userland `<Markdown />` component.
