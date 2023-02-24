@@ -238,7 +238,7 @@ A new virtual module will be exported from a Vite plugin (similar to `astro:cont
 - `getImage` (see [JavaScript API](#javascript-api))
 - `getImageService` (see [Image Services](#image-services))
 
-We choose `astro:assets` over `astro:image` on purpose, as to make it intuitive that more things might get exposed from there over time. (maybe a crossover with a way to create generic assets for users?)
+We choose `astro:assets` over `astro:image` on purpose, as to make it intuitive that more things might get exposed from there over time.
 
 ## `src/assets`
 
