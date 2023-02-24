@@ -234,9 +234,9 @@ To be clear, we hope to tackle many of those points in the future, in separate, 
 
 A new virtual module will be exported from a Vite plugin (similar to `astro:content`) exposing the different tools the user can access.
 
-- `Image` (see [[#Image component]])
-- `getImage` (see [[#JavaScript API]])
-- `getImageService` (see [[#Image Services]])
+- `Image` (see [Image Component](#image-component-1))
+- `getImage` (see [JavaScript API](#javascript-api))
+- `getImageService` (see [Image Services](#image-services))
 
 We choose `astro:assets` over `astro:image` on purpose, as to make it intuitive that more things might get exposed from there over time. (maybe a crossover with a way to create generic assets for users?)
 
