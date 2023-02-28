@@ -270,19 +270,13 @@ Add integration tests for using Markdoc content collections in SSG and SSR acros
 
 # Drawbacks
 
-Why should we _not_ do this? Please consider:
-
-- Implementation cost, both in term of code size and complexity.
-- Whether the proposed feature can be implemented in user space.
-- Impact on teaching people Astro.
-- Integration of this feature with other existing and planned features
-- Cost of migrating existing Astro applications (_is it a breaking change?_)
-
-There are tradeoffs to choosing any path. Attempt to identify them here.
+- Introducing a new content format adds overhead to Astro core and (potentially) learning curve for new users. This should be addressed with clear messaging that Markdoc is experimental, and MDX is still our recommendation for component-rich content.
+- Adding performance benchmarks for Markdoc may add complexity to our CI pipeline. We should ensure automated test times remain reasonable across PRs when adding new test suites.
 
 # Alternatives
 
-What other designs have been considered? What is the impact of not doing this?
+- **Double down on MDX support**, investing more engineering resources into the format's performance, language tools, and featureset. We have already invested time into improving Rollup build times to accommodate higher memory usage. Still, there are certain aspects of MDX (coupling content to UI) that are unavoidable without proposing fundamental changes.
+- **Introduce a new Markdown format** specific to Astro. This has echoes in our former Astro-flavored Markdown format, and has been mentioned in [recent roadmap discussion posts](https://github.com/withastro/roadmap/discussions/503#discussioncomment-5125773). This has a higher maintenance cost attached that was deemed unsustainable during the Astro 1.0 Beta period. Even so, it would be the most optimal path for Astro to own the language tooling and performance story similar to the `.astro` format today.
 
 # Adoption strategy
 
