@@ -4,11 +4,13 @@
 
 # Summary
 
-A brief, one or two sentence explanation of the proposal.
+This RFC introduces Markdoc support to Astro Content Collections.
+
 
 # Example
 
 https://user-images.githubusercontent.com/51384119/218775296-86dd637d-586a-45f1-b374-e0c96be1a567.mp4
+
 
 
 Say you've authored a collection of blog posts using Markdoc. You can store these entries as a collection, identically to Markdown or MDX:
