@@ -280,14 +280,14 @@ Add integration tests for using Markdoc content collections in SSG and SSR acros
 
 # Adoption strategy
 
-Please consider:
+Our target audience will be existing Markdoc users excited for support in Astro, and members of the community curious to try the new format. To reach this audience, we will:
 
-- If we implement this proposal, how will existing Astro developers adopt it?
-- Is this a breaking change? Can we write a codemod?
-- Can we provide a runtime adapter library for the original API it replaces?
-- How will this affect other projects in the Astro ecosystem?
+1. Add a detailed README, discoverable from the "integrations" tag in the Astro docs.
+2. Add a `with-markdoc` starter project to astro.new.
+3. Market the integration via blog posts, social media, and a Discord community announcement.
+
+This also means we will _not_ update recommendations for authoring component-rich content. MDX should still be our go-to across all Astro documentations.
 
 # Unresolved Questions
 
-Optional, but suggested for first drafts.
-What parts of the design are still to be determined?
+- Can support for the client hydrated components be added to Markdoc with a compiler change? Today, we are limited to passing components as slots rather than props, making this support difficult.
