@@ -12,7 +12,7 @@ This RFC aims to simplify the usage, optimization and resizing of images in Astr
 
 # Example
 
-> Note: All the `src` paths in the exemples below represent the final paths at build. During development, those paths may be different due to implementations details.
+> Note: All the `src` paths in the examples below represent the final paths at build. During development, those paths may be different due to implementations details.
 
 > Note 2: All the results below, unless specified otherwise, are done using the default image services provided with Astro.
 
@@ -77,7 +77,7 @@ import { Image } from "astro:image";
 ## Image in Markdown
 
 ```markdown
-! [My article cover](./cover.png)
+![My article cover](./cover.png)
 ^ Image is 1280x720
 ```
 
