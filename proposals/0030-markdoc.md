@@ -227,7 +227,7 @@ export const markdoc: AstroIntegration = () => ({
 Let's break down each property of `addContentEntryType()` individually:
 
 - **`extensions`:** File extensions to add as supported Content Collection formats.
-- **`getEntryInfo()` A functionto convert raw file contents to separate `data` and `body` attributes. This example uses a frontmatter parser (ex. [gray-matter](https://github.com/jonschlinkert/gray-matter)) to retrieve a raw data object. Note this data will be passed to a Zod schema, and should not be validated within `getEntryInfo()`.
+- **`getEntryInfo()`** A functionto convert raw file contents to separate `data` and `body` attributes. This example uses a frontmatter parser (ex. [gray-matter](https://github.com/jonschlinkert/gray-matter)) to retrieve a raw data object. Note this data will be passed to a Zod schema, and should not be validated within `getEntryInfo()`.
 - **`contentModuleTypes`:** Any type definitions to be added to the generated `.astro/types.d.ts` file. For Markdoc, this includes overrides for the `<Content />` component type signature. This allows autocomplete for Markdoc-specific props like `config` and components when fetching a collection of `.mdoc` files.
 
 _**Note:** The `Content` component type signature is specific to the entry's file extension. This means, when a collection is of a single file extension (i.e. all `.mdoc` files), that type signature will apply without type guards. When a mix of file extensions are used, users will receive a union type for every `Content` component signature. It will be up to the user to type cast or narrow from here. This follows the behavior of our `Astro.glob(...)` type inference today._
