@@ -77,7 +77,8 @@ In absence of "stable" unit tests, I only see manual testing as an alternative.
 
 # Alternatives
 
-I don't think there's a valid alternative, other than running `astro check` at every change, manually.
+The user can use third party tools such as [wireit](https://github.com/google/wireit), although it would mean
+that the user wouldn't benefit of future improvements around `astro check --watch`.
 
 Not having such a feature will impact the overall DX of users.
 
@@ -89,7 +90,6 @@ This proposal will offer a new tool!
 # Adoption strategy
 
 - offer a new preview release
-- make a release with the flag called `--experimental-watch` and make semever-free
 
 # Unresolved Questions
 
