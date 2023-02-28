@@ -74,9 +74,7 @@ It can be useful to illustrate your RFC as a user problem in this section.
 
 - **Create an `@astrojs/markdoc` integration** that adds `.mdoc` support to content collections.
 - **Support Astro components and server-rendered UI components** (React, Vue, Svelte, etc) within Markdoc files. Note this leaves client-rendered UI components out-of-scope (see non-goals).
-- **Benchmark Markdoc performance against Markdown and MDX** at 1k and 10k documents. This addresses problem (1) from the previous section. Metrics to compare:
-  - SSG build time and memory usage when using plain text, Astro components, and UI framework components like React.
-  - SSR render time for the same use cases.
+- **Benchmark Markdoc performance against Markdown and MDX** at 1k and 10k documents. This addresses problem (1) from the previous section.
 
 # Non-goals
 
@@ -250,9 +248,25 @@ declare module 'astro:content' {
 
 # Testing Strategy
 
-How will this feature's implementation be tested? Explain if this can be tested with
-unit tests or integration tests or something else. If relevant, explain the test
-cases that will be added to cover all of the ways this feature might be used.
+Markdoc will have both functionality and performance tests.
+
+## Performance benchmark tests
+
+Write a content collection performance benchmark comparing Markdoc to our existing Markdown and MDX pipelines. The benchmark should compare the following metrics at 1k and 10k documents:
+
+- SSG build time and memory usage when using plain text, Astro components, and UI framework components like React.
+- SSR render time for the same use cases.
+
+Tests should also introduce a flag (ex. `ASTRO_PERFORMANCE_BENCHMARK`) to disable nonessential remark plugins for Markdown and MDX (GFM, Smartypants, Shiki, heading IDs). This ensures a level playing field comparing against Markdoc.
+
+These tests do not need to be tied to our CI pipeline. However, **a detailed summary of testing methods, results, and conclusions** should be drafted to present alongside the `@astrojs/markdoc` integration.
+
+## Integration tests
+
+Add integration tests for using Markdoc content collections in SSG and SSR across development and production. These tests should ensure:
+
+- `getCollection()` and `getEntryBySlug()` return expected properties.
+- rendered `<Content />` is correct for simple text, tags, and components.
 
 # Drawbacks
 
