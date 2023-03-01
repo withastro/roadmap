@@ -26,6 +26,7 @@ import { Image } from 'astro:assets';
 import myImage from "../assets/my_image.png"; // Image is 1600x900
 ---
 
+<!-- `alt` is mandatory on the Image component -->
 <Image src={myImage} alt="..." />
 ```
 
@@ -340,16 +341,16 @@ interface getImageResult {
 
 ## Image Services
 
-By default, Astro will ship with two services can users can choose to transform their images: Squoosh, and Sharp. Both services more or less offer the same results and mostly differ in where they can run. Squoosh will be the default, because albeit slower than Sharp, it supports more platforms.
+By default, Astro will ship with two services that users can choose from to transform their images. Those two services are powered by [Squoosh](https://github.com/GoogleChromeLabs/squoosh) and [Sharp](https://sharp.pixelplumbing.com/) respectively. Both more or less offer the same results and mostly differ in performance and where they can run. Squoosh will be the default, because albeit slower than Sharp, it supports more platforms due to its WASM nature.
 
-Keeping in line with how you can extend Astro in various ways (remark, rehype, integrations etc), it's possible for users to create their own services.
+Keeping in line with how you can extend Astro in various ways (remark and rehype plugins, integrations etc), it's possible for users to create their own services.
 
 Two types of services exists: Local and External.
 
 - Local services handle the image transformation directly at build in SSG / runtime in dev / SSR. You can think of those as wrapper around libraries like Sharp, ImageMagick or Squoosh.
 - External services point to URLs and can be used for adding support for services such as Cloudinary, Vercel or any RIAPI-compliant server.
 
-Services definitions take the shape of an exported default object with various methods ("hooks") used to create all the required properties. The major difference, API-wise, between Local and External services is the presence of a `transform` method doing the actual transformation.
+Services definitions take the shape of an exported default object with various required methods ("hooks") used to create all the required properties. The major difference, API-wise, between Local and External services is the presence of a `transform` method doing the actual transformation.
 
 The different methods available are the following:
 
@@ -365,9 +366,9 @@ The different methods available are the following:
 - `parseURL(url: URL): ImageTransform`
   - For SSR and dev, parses the generated URLs by `getURL` back into an ImageTransform to be used by `transform`.
 - `transform(buffer: Buffer, options: ImageTransform): { data: Buffer, format: OutputFormat }`
-  - Transform and return the image. It is necessary to return a `format` to ensure that the proper MIME type is served to users.
+  - Transform and return the image. It is necessary to return a `format` to ensure that the proper MIME type is served to users in development and SSR.
 
-Ultimately, it is up to the local endpoint (that `getURL` points to) to call both `parseURL` and `transform`. Those two methods are exposed as convention and used by the two base services, but your endpoint is free to achieve this in a different way if needed.
+Ultimately, in development and SSR, it is up to the local endpoint (that `getURL` points to) to call both `parseURL` and `transform` if wanted. `transform` however, is called during the build to create the final assets files.
 
 **Optional**
 
