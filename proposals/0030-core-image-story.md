@@ -47,7 +47,7 @@ import myImage from "../assets/my_image.png"; // Image is 1600x900
 
 ```astro
 ---
-import { Image } from "astro:image";
+import { Image } from "astro:assets";
 // Image is 1920x1080
 ---
 
@@ -95,7 +95,7 @@ import { Image } from "astro:image";
 />
 ```
 
-Remote images are handled as in vanilla Markdown and have no special behaviour.
+Remote images are handled as in vanilla Markdown and have no special behavior.
 
 ## JavaScript API for using optimized images
 
@@ -132,12 +132,12 @@ import { defineConfig } from "astro/config";
 // https://astro.build/config
 export default defineConfig({
   image: {
-    service: "your-entrypoint", // 'astro/image/services/squoosh' | astro/image/services/sharp | string
+    service: "your-entrypoint", // 'astro/image/services/squoosh' | 'astro/image/services/sharp' | string
   },
 });
 ```
 
-### Export for local services
+### Local services API
 
 ```ts
 import type { LocalImageService } from "astro";
@@ -164,7 +164,7 @@ const service: LocalImageService = {
 export default service;
 ```
 
-### Export for external services
+### External services API
 
 ```ts
 import type { ExternalImageService } from "astro";
@@ -224,6 +224,8 @@ In this RFC, we'd like to outline a plan / API for a core story for images. The 
 - Background generation
 - Picture component
 - Optimizing & resizing remote images
+- Ability to choose a different image service per image
+- Remote patterns for limiting the usage of remote images to specific domains
 - `.svg` support
 
 To be clear, we hope to tackle many of those points in the future, in separate, more precise RFCs. Images are hard.
@@ -344,7 +346,7 @@ Keeping in line with how you can extend Astro in various ways (remark, rehype, i
 
 Two types of services exists: Local and External.
 
-- Local services handle the image transformation directly at build in SSG / runtime in dev / SSR. You can think of those as wrapper around librairies like Sharp, ImageMagick or Squoosh.
+- Local services handle the image transformation directly at build in SSG / runtime in dev / SSR. You can think of those as wrapper around libraries like Sharp, ImageMagick or Squoosh.
 - External services point to URLs and can be used for adding support for services such as Cloudinary, Vercel or any RIAPI-compliant server.
 
 Services definitions take the shape of an exported default object with various methods ("hooks") used to create all the required properties. The major difference, API-wise, between Local and External services is the presence of a `transform` method doing the actual transformation.
@@ -372,7 +374,30 @@ Ultimately, it is up to the local endpoint (that `getURL` points to) to call bot
 - `getHTMLAttributes(options: ImageTransform): Record<string, any>`
   - Return all additional attributes needed to render the image in HTML. For instance, you might want to return a specific `class` or `style`, or `width` and `height`.
 
-Overall, it's important to remember that 99% of users won't create services, especially local ones. Adapters (think: Vercel's Image Optimization) and integrations (ex: A Cloudinary integration) will supply and configure services for the users.
+### User configuration
+
+User can choose the image service to use through their `astro.config.mjs` file. The config takes the following form:
+
+```ts
+import { defineConfig } from "astro/config";
+
+// https://astro.build/config
+export default defineConfig({
+  image: {
+    service: "your-entrypoint", // 'astro/image/services/squoosh' | 'astro/image/services/sharp' | string
+  },
+});
+```
+
+At this time, it is not possible to override this on a per-image basis (see [Non goals of this RFC](#non-goals-of-this-rfc)).
+
+The `image.service` shape was chosen on purpose, for the future situation where multiple settings will be available under `image`.
+
+### Note
+
+Overall, it's important to remember that 99% of users won't create services, especially local ones. In addition to the services directly provided with Astro, third party packages can supply services for the users.
+
+It's easy to imagine, for example, a `cloudinary-astro` package exposing a service. Or, the `@astrojs/vercel` adapter exposing a service using Vercel's Image Optimization API that user could use through `service: '@astrojs/vercel/image`.
 
 # Testing Strategy
 
@@ -389,7 +414,7 @@ Overall, I do not expect this feature to be particularly hard, as the `@astrojs/
 # Drawbacks
 
 - Images are complicated! We've had many attempts in the community to build a perfect image components, but none of the current offering solved everyone's use case. Some people are also (understandably) cautious of using a third-party integration for this.
-- Part of this is breaking! We'll offer flags and write migration guides. However, it's still possible that we'll get reports about behaviour changing unexpectedly / the experience being worse because it needs to be opt-in.
+- Part of this is breaking! We'll offer flags and write migration guides. However, it's still possible that we'll get reports about behavior changing unexpectedly / the experience being worse because it needs to be opt-in.
 
 # Alternatives
 
