@@ -390,9 +390,11 @@ export default defineConfig({
 });
 ```
 
-At this time, it is not possible to override this on a per-image basis (see [Non goals of this RFC](#non-goals-of-this-rfc)).
+#### Facts
 
-The `image.service` shape was chosen on purpose, for the future situation where multiple settings will be available under `image`.
+- At this time, it is not possible to override this on a per-image basis (see [Non goals of this RFC](#non-goals-of-this-rfc)).
+- The `image.service` shape was chosen on purpose, for the future situation where multiple settings will be available under `image`.
+- A different image service can be set depending on the current mode (dev or build) using traditional techniques such as `process.env.MODE`
 
 ### Note
 
