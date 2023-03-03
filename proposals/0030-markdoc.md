@@ -97,7 +97,7 @@ It can be useful to illustrate your RFC as a user problem in this section.
 - Non-goal: **ESM import and `src/pages/` support** for Markdoc files. [See discussion](https://github.com/withastro/roadmap/discussions/478#discussioncomment-4975072) for context.
 - Out-of-scope: **Allowing the `.md` extension.** This would mean overriding Astro's `.md` renderer, which is tightly coupled to remark and your `markdown` configuration options today. We agree using `.md` for Markdoc is a common use case, and deserves a separate proposal to make Astro's Markdown rendering flexible.
 - Future: **A solution for client-rendered UI components.** Unlike MDX, Markdoc doesn't have a concept of directives, and our compiler doesn't have a clear way to dynamically render client-side components ([see challenges](https://gist.github.com/bholmesdev/491fa440efa8bd73d410d66c0c2143c2)). We will recommend users wrap their components in an Astro component to apply the `client:` directive.
-- Future: **Full alignment with Markdown and MDX** rendered result. Namely, the computed `headings` property (which can be tackled in future releases) and frontmatter manipulation via remark (since remark is incompatible with Markdoc).
+- Future: **Full alignment with Markdown and MDX** rendered result. Namely, the computed `headings` property (which can be tackled in future releases) and frontmatter manipulation via remark.
 
 # Detailed Design
 
