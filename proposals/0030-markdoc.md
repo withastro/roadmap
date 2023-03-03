@@ -105,16 +105,50 @@ It can be useful to illustrate your RFC as a user problem in this section.
 
 Markdoc support will be specific to content collections. This means Markdoc files can be included alongside other content collection entries via the `.mdoc` extension. Entries can also be queried using the same `getCollection()` and `getEntryBySlug()` APIs for Markdown and MDX.
 
+### Markdoc configuration
+
+The Markdoc integration accepts [all Markdoc configuration options](https://markdoc.dev/docs/config).
+
+These options will be applied during [the Markdoc "transform" phase](https://markdoc.dev/docs/render#transform). Markdoc parsing and transforms are run **at build time** (rather than server request time) both for static and SSR Astro projects. This ensures all Markdoc validation is run _before_ your site is deployed, so you avoid shipping invalid Markdoc files and runtime errors to your users.
+
+You can pass these options from the `markdoc()` integration in your `astro.config`. This example declares a `countries` variable and an `includes` function for use across all Markdoc Content Collection entries:
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import markdoc from '@astrojs/markdoc';
+
+// https://astro.build/config
+export default defineConfig({
+  integrations: [
+    markdoc({
+      variables: {
+        // Declare a global list of countries
+        countries: ['EN', 'ES', 'JP'],
+      },
+      functions: {
+        // Check if array includes value
+        includes: {
+          transform(parameters) {
+            const [array, value] = Object.values(parameters);
+            return array.includes(value);
+          },
+        },
+      },
+    }),
+  ],
+});
+```
+
 ### Rendering Markdoc content
 
-Users can render contents and configure Markdoc via the `<Content />` component. This will be exposed from the `render()` result, and feature two props:
+Users can render Markdoc entry contents via the `<Content />` component. This feautres a `components` prop mapping configured Markdoc nodes and tags to Astro components or server-rendered UI components.
 
-- `config?: import('@markdoc/markdoc').Config`: An (optional) Markdoc config to be used [during the transformation step](https://markdoc.dev/docs/render#transform). This includes configuration for Markdoc tags and variables.
-- `components?: Record<string, ComponentRenderer>`: An (optional) mapping from Markdoc tags or elements to Astro components.
+Type: `components?: Record<string, ComponentInstance>`
 
-We expect users to share a common Markdoc `config` and `components` setup throughout their application. Because of this, we will recommend creating a utility component to encapsulate that config.
+We expect users to share a common Markdoc `components` setup throughout their application. Because of this, we will recommend creating a utility component to encapsulate that config.
 
-For example, say a user wants to share config specific to their `blog` collection. This `BlogContent` component will add support for an `{% aside %}` tag across blog entries:
+For example, say a user wants to to render their configured `aside` tag with an `Aside` component across their blog collection. This `BlogContent` component will configure a shared `components` prop:
 
 ```astro
 ---
@@ -131,17 +165,6 @@ const { Content } = await entry.render();
 ---
 
 <Content
-	config={{
-		tags: {
-			aside: {
-				render: 'Aside',
-				attributes: {
-					type: { type: String },
-					title: { type: String },
-				},
-			},
-		},
-	}}
 	components={{ Aside }}
 />
 ```
