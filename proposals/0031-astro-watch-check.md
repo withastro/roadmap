@@ -37,11 +37,10 @@ From the relevant issue:
 
 # Detailed Design
 
-The new feature will use the existing tools that `astro` has. `vite` exposes a [`watcher` option](https://vitejs.dev/config/server-options.html#server-watch)
-that allows users to watch files and react accordingly.
+The suggested solution will use [`chokidar`](https://www.npmjs.com/package/chokidar), a battle tested
+file watcher for Node.js.
 
-The suggested solution would be to be spawn a `vite` server instance, watch `.astro` files changes and
-check for diagnostics.
+The file watcher will ignore files inside `node_modules` by default and listen to changes to `.astro` files.
 
 The output emitted will be the same, compared to `astro check`.
 
@@ -59,9 +58,8 @@ The rest of the output will be the same as the command `astro check`.
 
 # Testing Strategy
 
-This feature can be unit tested. The plan is to launch a process and listen to its `stdout` and `stderr`.
-
-This will allow to us inspect the output of the process and test with the correct assertions.
+Override the default logger with one that is possible to inspect, listen to the stream of messages emitted by the watcher
+and make sure that the messages received are correct.
 
 Although, these kinds of tests are very brittle and unstable, because they require
 listening to the output of a command, and this command might take a different amount of time based on the OS.
@@ -81,9 +79,6 @@ The user can use third party tools such as [wireit](https://github.com/google/wi
 that the user wouldn't benefit of future improvements around `astro check --watch`.
 
 Not having such a feature will impact the overall DX of users.
-
-Astro already has its own LSP and VSCode extension, but there might be users who prefer other IDEs,
-but this means that users need to rely on IDEs and their LSP protocol.
 
 This proposal will offer a new tool!
 
