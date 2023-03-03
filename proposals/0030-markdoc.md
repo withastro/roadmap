@@ -76,7 +76,7 @@ const { Content } = await entry.render();
 />
 ```
 
-See [the detailed API section](#api) for information on supported Markdoc configuration and shared components config.
+See [the detailed API section](#api) for information on supported Markdoc configuration, shared components config, and manual rendering.
 
 # Background & Motivation
 
@@ -182,6 +182,30 @@ const mdocEntry = await getEntryBySlug('blog', 'test');
 <h1>{intro.data.title}</h1>
 <BlogContent entry={mdocEntry} />
 ```
+
+### Manual runtime configuration
+
+Users may need to override their global Markdoc configuration for a specific use case. This may be to pass SSR query params as Markdoc `variables` (a common use case for the Stripe team), or to create `tags` specific to a single entry.
+
+For this, we will require that users install the `@markdoc/markdoc` package to process their configuration manually. This example creates an inline config object, rendering the post via the base Astro Markdoc `Renderer` and the Content Collection `body` property:
+
+```astro
+---
+import Markdoc from '@markdoc/markdoc';
+import { Renderer } from '@astrojs/markdoc';
+import { getEntryBySlug } from 'astro:content';
+
+const { body } = await getEntryBySlug('collection', 'slug');
+const ast = Markdoc.parse(body);
+const content = Markdoc.transform({
+  variables: { abTestGroup: Astro.params.testGroup },
+}, ast);
+---
+
+<Renderer {content} components={...} />
+```
+
+Note this will transform and validate Markdoc at **runtime,** rather than build time, which can introduce runtime errors. Documentation should clearly call out this tradeoff.
 
 ## Internal implementation
 
