@@ -427,4 +427,4 @@ While I believe there may be alternatives in the technical sense, I think it is 
 
 For the `Image` component, the JS API and the Content Collection integration, adoption is completely opt-in. You don't use it, it's not included and your image are treated normally.
 
-The ESM shape change and Markdown integration are both breaking, as such both will have to be under a flag until Astro 3.0. The types will be configured automatically for the user similar to how Content Collections update your `env.d.ts` to avoid typing issues in the editor.
+The ESM shape change and Markdown integration are both breaking, as such both will have to be under a flag (`experimental.assets`) until Astro 3.0. The types will be configured automatically for the user similar to how Content Collections update your `env.d.ts` to avoid typing issues in the editor.
