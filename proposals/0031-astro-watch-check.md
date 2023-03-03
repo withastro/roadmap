@@ -16,7 +16,7 @@
 
 # Summary
 
-Add a `--watch` flag to `astro check` command.
+Add a `--watch` flag to the `astro check` command.
 
 # Background & Motivation
 
@@ -66,13 +66,13 @@ This will allow to us inspect the output of the process and test with the correc
 Although, these kinds of tests are very brittle and unstable, because they require
 listening to the output of a command, and this command might take a different amount of time based on the OS.
 
-In absence of "stable" unit tests, I only see manual testing as an alternative.
+In addition to unit tests, the feature will be manually tested with demo projects.
 
 # Drawbacks
 
-- this feature could be implemented in user-land, but it wouldn't offer the same DX to
+- This feature could be implemented in userland, but it wouldn't offer the same DX to
   developers;
-- the command is a long-lived process, which means the user needs to kill the command
+- The command is a long-lived process, which means the user needs to terminate the command
   manually;
 
 # Alternatives
@@ -89,7 +89,8 @@ This proposal will offer a new tool!
 
 # Adoption strategy
 
-- offer a new preview release
+- Create a preview release for user feedback.
+- Release the feature in as a `minor` without experimental flags since it is a small improvement without many questions.
 
 # Unresolved Questions
 
