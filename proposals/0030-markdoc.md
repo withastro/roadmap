@@ -80,11 +80,16 @@ See [the detailed API section](#api) for information on supported Markdoc config
 
 # Background & Motivation
 
-Include any useful background detail that that explains why this RFC is important.
-What are the problems that this RFC sets out to solve? Why now? Be brief!
+We've received multiple user requests for Markdoc support since its public launch. In fact, we've seen an early community project, [Blogster](https://github.com/flexdinesh/blogster), that brings Markdoc to robust project themes. This includes an [Astro Markdoc renderer](https://github.com/flexdinesh/blogster/tree/main/packages/astro-markdoc-renderer) that may inspire a first party integration.
 
-It can be useful to illustrate your RFC as a user problem in this section.
-(ex: "Users have reported that it is difficult to do X in Astro today.")
+Markdoc is also designed to solve existing limitations of MDX in Astro:
+
+1. **Performance suffers at scale.** Unlike plain Markdown that outputs a string of HTML, MDX outputs a JavaScript module of JSX components. This requires Astro and Babel preprocessing for even the simplest MDX documents. Notably, this required a bump to our maximum memory usage when building / deploying docs.astro.build after migrating to MDX.
+2. **Your content is tied to your UI.** MDX can import styles and components directly, which _is_ convenient from a developer standpoint. However, this causes issues when content needs to be reused in multiple contexts. A common example is RSS, where you may want a component-rich version from your blog and a simplified HTML output for your RSS feed.
+
+Markdoc is built to solve (2) by separating content from the components, styles, and assets you choose to render. You can use an Astro component renderer when using on your site, [Markdoc's own `html` renderer](https://markdoc.dev/docs/render#html) for RSS, and even write your own renderer to traverse Markdoc pages yourself. (1) Is something we're excited to test, requiring a thorough performance benchmark.
+
+The content collections API was built generically to support this future, choosing format-agnostic naming like `data` instead of `frontmatter` and `body` instead of `rawContent`. Because of this, introducing new authoring formats is possible without breaking changes.
 
 # Goals
 
