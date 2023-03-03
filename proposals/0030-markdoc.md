@@ -9,10 +9,6 @@ This RFC introduces Markdoc support to Astro Content Collections.
 
 # Example
 
-https://user-images.githubusercontent.com/51384119/218775296-86dd637d-586a-45f1-b374-e0c96be1a567.mp4
-
-
-
 Say you've authored a collection of blog posts using Markdoc. You can store these entries as a collection, identically to Markdown or MDX:
 
 ```bash
@@ -24,7 +20,7 @@ src/content/
 ...
 ```
 
-Then, users can query entry frontmatter with the same `getCollection()` and `getEntryBySlug()` APIs:
+Then, you can query entry frontmatter with the same `getCollection()` and `getEntryBySlug()` APIs:
 
 ```astro
 ---
@@ -35,34 +31,52 @@ const firstEntry = await getEntryBySlug('blog', 'post-1');
 ---
 ```
 
-Users are also free to render Markdoc contents using a `Content` component, configuring Markdoc tags and component mappings as props:
+You can also render Astro components from your Markdoc by configuring Markdoc [tags](https://markdoc.dev/docs/tags) and [nodes](https://markdoc.dev/docs/nodes). This example creates an `aside` tag for use in any Markdoc Content Collection entry:
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import markdoc from '@astrojs/markdoc';
+
+// https://astro.build/config
+export default defineConfig({
+	integrations: [
+		markdoc({
+			tags: {
+				aside: {
+					render: 'Aside',
+          attributes: {
+            // Component props as attribute definitions
+            // See Markdoc's documentation on defining attributes
+            // https://markdoc.dev/docs/attributes#defining-attributes
+            type: { type: String },
+          }
+				},
+			},
+		}),
+	],
+});
+```
+
+Then, you can map the string passed to `render` (`'Aside'` in this example) to a component import. This is configured from the `<Content />` component used to render your Markdoc using the `components` prop:
 
 ```astro
 ---
-import Title from '../components/Title.astro';
-import Marquee from '../components/Marquee.astro';
 import { getEntryBySlug } from 'astro:content';
+import Aside from '../components/Aside.astro';
 
-const mdocEntry = await getEntryBySlug('blog', 'test');
-const { Content } = await mdocEntry.render();
+const entry = await getEntryBySlug('blog', 'post-1');
+const { Content } = await entry.render();
 ---
 
-<html lang="en">
-	<body>
-		<Content
-			config={{
-				variables: { underlineTitle: true },
-			}}
-			components={{
-				h1: Title,
-				marquee: Marquee,
-			}}
-		/>
-	</body>
-</html>
+<Content
+  components={{
+    Aside: Aside,
+  }}
+/>
 ```
 
-See [the detailed API section](#api) for information on all supported props, shared config, and advanced component mapping.
+See [the detailed API section](#api) for information on supported Markdoc configuration, shared config, and advanced component mapping.
 
 # Background & Motivation
 
