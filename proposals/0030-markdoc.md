@@ -76,7 +76,7 @@ const { Content } = await entry.render();
 />
 ```
 
-See [the detailed API section](#api) for information on supported Markdoc configuration, shared config, and advanced component mapping.
+See [the detailed API section](#api) for information on supported Markdoc configuration and shared components config.
 
 # Background & Motivation
 
@@ -158,40 +158,6 @@ const mdocEntry = await getEntryBySlug('blog', 'test');
 
 <h1>{intro.data.title}</h1>
 <BlogContent entry={mdocEntry} />
-```
-
-### Advanced: mapping Markdoc nodes to component props
-
-Component renderers can also include a `props()` function to map Markdoc attributes and AST entries to component props. This is useful when:
-
-- computing props based on the Markdoc AST
-- mapping Markdoc's generated attributes to prop names
-
-This example maps Markdoc's generated `data-language` attribute for code blocks to the `lang` prop used by Astro's `Code` component, and stringifies the contents to HTML for use with Shiki:
-
-```astro
----
-import { Code } from 'astro/components';
-import { Title } from '../components/Title.astro';
-import Markdoc from '@markdoc/markdoc';
-...
----
-
-...
-<Content
-	components={{
-		h1: Title,
-		pre: {
-			component: Code,
-			props({ attributes, getTreeNode }) {
-				return {
-					lang: attributes['data-language'],
-					code: Markdoc.renderers.html(getTreeNode().children),
-				};
-			},
-		},
-	}}
-/>
 ```
 
 ## Internal implementation
