@@ -1,0 +1,5 @@
+# ignore top-level vscode settings
+.vscode/settings.json
+
+# ignore IDEA folders
+.idea
