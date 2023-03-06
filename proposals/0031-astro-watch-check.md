@@ -61,9 +61,6 @@ The rest of the output will be the same as the command `astro check`.
 Override the default logger with one that is possible to inspect, listen to the stream of messages emitted by the watcher
 and make sure that the messages received are correct.
 
-Although, these kinds of tests are very brittle and unstable, because they require
-listening to the output of a command, and this command might take a different amount of time based on the OS.
-
 In addition to unit tests, the feature will be manually tested with demo projects.
 
 # Drawbacks
