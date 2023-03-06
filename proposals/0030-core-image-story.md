@@ -256,17 +256,30 @@ It is fairly common for one of the property of a Markdown piece of content to ne
 In tandem with the `src/assets` folder, we'd like to introduce a way for users to specify that a specific property needs to refer to a valid asset from the `src/assets` folder:
 
 ```ts
-import { asset, defineCollection, z } from "astro:content";
+import { image, defineCollection, z } from "astro:content";
 
 const blogCollection = defineCollection({
   schema: z.object({
     title: z.string(),
-    image: asset({ width: 1120, height: 1120 }),
+    image: image(),
   }),
 });
 ```
 
-Additionally, assets referred this way will be transformed automatically to the same shape as if the image was imported (see section below.), so they're ready to be used optimally. However, optimization / resizing is left to the user to do using the JavaScript API if they desire to.
+Image assets referred this way will be transformed automatically to the same shape as if the image was imported (see section below), as such they can be checked using Zod's [`refine`](https://zod.dev/?id=refine) or [`superRefine`](https://zod.dev/?id=superrefine) methods, for example:
+
+```ts
+import { image, defineCollection, z } from "astro:content";
+
+const blogCollection = defineCollection({
+  schema: z.object({
+    title: z.string(),
+    image: image().refine((img) => img.width === 1080, {
+      message: "Image must be 1080px wide",
+    }),
+  }),
+});
+```
 
 ## New ESM shape for images imports
 
