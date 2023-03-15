@@ -24,17 +24,17 @@
 
 ## Stage 2: Accepted Proposal
 
-**Goal:** Confirm proposal feasibility with Astro Maintainers and TSC.
+**Goal:** Confirm proposal feasibility with Astro Maintainers and [Technical Steering Committee](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc).
 
 **Requirements:** An existing proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
 
 **Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/roadmap/issues)
 
-**What to Expect:** A proposal reaches this stage (aka "is accepted") during a meeting with Maintainers and TSC, following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
+**What to Expect:** A proposal reaches this stage (aka "is accepted") during a meeting with Maintainers and [Technical Steering Committee](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc), following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
-When a proposal is accepted, a TSC member will create a new GitHub Issue summarizing the original proposal using our official template. At this point, the proposal champion is free to move on to the next stage. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue.
+When a proposal is accepted, a [Technical Steering Committee](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc) member will create a new GitHub Issue summarizing the original proposal using our official template. At this point, the proposal champion is free to move on to the next stage. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue.
 
-In some cases, a proposal may be explicitly rejected by TSC if it is known to be infeasible, or go against some existing goals/mission of the project. In the event of an explicit rejection, a TSC member will comment on to the proposal explaining the reasoning for rejection.
+In some cases, a proposal may be explicitly rejected by [Technical Steering Committee](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc) if it is known to be infeasible, or go against some existing goals/mission of the project. In the event of an explicit rejection, a [Technical Steering Committee](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc) member will comment on to the proposal explaining the reasoning for rejection.
 
 A stale, accepted proposal can be removed (rejected after a previous acceptance) at any time following the same, existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
