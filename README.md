@@ -24,7 +24,7 @@
 
 ## Stage 2: Accepted Proposal
 
-**Goal:** Confirm proposal feasibility with Astro Maintainers and TSC.
+**Goal:** Confirm proposal feasibility with Astro Maintainers and the [Technical Steering Committee (TSC)](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc).
 
 **Requirements:** An existing proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
 
