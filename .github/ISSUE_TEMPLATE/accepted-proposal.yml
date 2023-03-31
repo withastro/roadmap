@@ -12,7 +12,7 @@ body:
   - type: textarea
     id: main
     attributes:
-      label: Body
+      label: Details
       value: |
         - Accepted Date: <!-- today's date, YYYY-MM-DD -->
         - Reference Issues/Discussions: <!-- related issues, otherwise leave empty -->
@@ -24,34 +24,29 @@ body:
 
         # Background & Motivation
 
-        Include any useful background detail that that explains why this RFC is important.
-        What are the problems that this RFC sets out to solve? Why now? Be brief!
-
-        It can be useful to illustrate your RFC as a user problem in this section.
-        (ex: "Users have reported that it is difficult to do X in Astro today.")
+        Include any useful detail that that explains the background of this problem 
+        at Astro and why this problem is worth solving. Why solve it now? Be brief!
 
         # Goals
 
-        A **concise, bulleted-list** outlining the intended goals of this RFC. 
+        A **concise, bulleted-list** outlining the intended goals. 
 
-        - What are the exact problems that you are trying to solve with this RFC?
-        - Separate these goals from the solution that you will outline below.
-        - If this RFC isn't approved, these goals can be used to develop alternative solutions.
+        - What are the exact problems that you are trying to solve?
+        - Avoid leading with a specific solution. Example: "Solve X" vs. "Solve X by doing Y"
+        - Well-defined goals can lead to many alternative solutions!
 
         # Non-Goals 
 
-        A **concise, bulleted-list** outlining anything intentionally left out of this RFC:
+        A **concise, bulleted-list** outlining anything intentionally left out as a goal:
 
-        - Non-goal: A goal that is intentionally not addressed in this RFC.
-        - Out-of-scope: A goal that is related, but intentionally avoided here.
+        - Non-goal: A goal that is related, but intentionally avoided.
+        - Out-of-scope: A goal that is related, but intentionally avoided due to scope.
         - Future: A goal that is related, but left to be addressed in the future.
-
-        This gives the reader the correct context on what is intentionally left out of scope.
-        It is okay to leave this section empty.
-
-        # Example
-
-        If the proposal involves a new or changed API, then include a basic code example.
-        Otherwise, omit this section if it's not applicable.
+        - It is okay to leave this section empty or N/A.
     validations:
       required: true
+  - type: markdown
+    attributes:
+      value: |
+        > **Reminder: Stage 1 & 2 Proposals are just for the problem to solve.**
+        > Want to discuss a specific solution? Comment after posting to kick off the convo!
