@@ -1,3 +1,11 @@
+---
+name: '[Maintainers Only] Stage 2 - Create an Accepted Proposal'
+about: 'This template is reserved for Astro maintainers only.'
+title: ''
+labels: ''
+assignees: ''
+---
+
 <!-- 
   **This template is reserved for Astro maintainers!**
   Any non-maintainer issues on this repo will be closed automatically.
