@@ -204,7 +204,7 @@ The currently available `@astrojs/image` is great, however, users ultimately fin
 - Missing documentation
 - Due to not being a core integration, it requires manual setup
 - Partly due to the previous points, but also for other reasons, it wasn't always clear for users how the integration behaved.
-- Hard to use in Markdown / MDX.
+- Hard to use in Markdown / MDX / Markdoc.
 
 In this RFC, we'd like to outline a plan / API for a core story for images. The main motivation is to create a story that feels fitting to the Astro core, in that it's easy to understand, intuitive to use, and extendable while also being kind and respectful of the user.
 
@@ -217,9 +217,9 @@ In this RFC, we'd like to outline a plan / API for a core story for images. The 
 
 # Non-Goals of this RFC
 
-- Advanced usage in Markdown (ability to set width, height, quality etc)
+- Advanced usage when using the standard Markdown syntax for images (ability to set width, height, quality etc)
 - Using optimized images inside client-side framework components
-- Automatic generation of `srcset` in the integrated services
+- Automatic generation of `srcset` and `sizes` in the integrated services
 - Automatic `loading="eager"` for above the fold images
 - Placeholders generation
 - Background generation
@@ -227,7 +227,7 @@ In this RFC, we'd like to outline a plan / API for a core story for images. The 
 - Optimizing & resizing remote images
 - Ability to choose a different image service per image
 - Remote patterns for limiting the usage of remote images to specific domains
-- `.svg` support
+- Optimizing `.svg` files
 
 To be clear, we hope to tackle many of those points in the future, in separate, more precise RFCs. Images are hard.
 
@@ -245,7 +245,7 @@ We choose `astro:assets` over `astro:image` on purpose, as to make it intuitive 
 
 ## `src/assets`
 
-A new reserved folders for assets. Assets do not have to live in this folder, however putting them in this folder will unlock several benefits. Notably, we consider this folder to be a safe place for git-based CMSes to put any uploaded assets in.
+A new reserved folders for assets. Assets do not have to live in this folder, but it'll be our recommended folder for assets from now on. Notably, we consider this folder to be a safe place for git-based CMSes to put any uploaded assets in.
 
 Through an included alias `~/assets` pointing to `src/assets`, it'll be easy for users to refer to any uploaded assets there.
 
@@ -253,31 +253,33 @@ Through an included alias `~/assets` pointing to `src/assets`, it'll be easy for
 
 It is fairly common for one of the property of a Markdown piece of content to need to be a reference to an asset (think, cover image for an article, picture for an author etc).
 
-In tandem with the `src/assets` folder, we'd like to introduce a way for users to specify that a specific property needs to refer to a valid asset from the `src/assets` folder:
+We'd like to introduce a way for users to specify that a specific property needs to refer to a valid asset:
 
 ```ts
-import { image, defineCollection, z } from "astro:content";
+import { defineCollection, z } from "astro:content";
 
 const blogCollection = defineCollection({
-  schema: z.object({
-    title: z.string(),
-    image: image(),
-  }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      image: image(),
+    }),
 });
 ```
 
 Image assets referred this way will be transformed automatically to the same shape as if the image was imported (see section below), as such they can be checked using Zod's [`refine`](https://zod.dev/?id=refine) or [`superRefine`](https://zod.dev/?id=superrefine) methods, for example:
 
 ```ts
-import { image, defineCollection, z } from "astro:content";
+import { defineCollection, z } from "astro:content";
 
 const blogCollection = defineCollection({
-  schema: z.object({
-    title: z.string(),
-    image: image().refine((img) => img.width === 1080, {
-      message: "Image must be 1080px wide",
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      image: image().refine((img) => img.width === 1080, {
+        message: "Image must be 1080px wide",
+      }),
     }),
-  }),
 });
 ```
 
@@ -334,13 +336,13 @@ Default is left to the services to choose. But for the services exposed by Astro
 
 ## JavaScript API
 
-A `getImage` function taking the same parameters as the image component is also supported, for use cases inside the frontmatter or outside `img` tag (ex: `background-image`)
+A `getImage` function taking the same parameters as the image component is also supported, for use cases such as inside the frontmatter or outside `img` tag (ex: `background-image`)
 
 This function returns an object with all the properties needed to use / show an image.
 
 ```ts
 // Example interface describing the content of `myImage`
-interface getImageResult {
+interface GetImageResult {
   // Contain the original options passed to `getImage`
   options: Record<string, any>;
   // Contain a path you can use to render the image
@@ -381,10 +383,12 @@ The different methods available are the following:
 - `transform(buffer: Buffer, options: ImageTransform): { data: Buffer, format: OutputFormat }`
   - Transform and return the image. It is necessary to return a `format` to ensure that the proper MIME type is served to users in development and SSR.
 
-Ultimately, in development and SSR, it is up to the local endpoint (that `getURL` points to) to call both `parseURL` and `transform` if wanted. `transform` however, is called during the build to create the final assets files.
+Ultimately, in development and SSR, it is up to the local endpoint (that `getURL` points to) to call both `parseURL` and `transform` if wanted. `transform` however, is called automatically during the build in SSG and for pre-rendered pages to create the final assets files.
 
 **Optional**
 
+- `validateOptions(options: ImageTransform): ImageTransform`
+  - Allows you to validate and augment the options passed by the user. This is useful for setting default options, or telling the user that a parameter is required.
 - `getHTMLAttributes(options: ImageTransform): Record<string, any>`
   - Return all additional attributes needed to render the image in HTML. For instance, you might want to return a specific `class` or `style`, or `width` and `height`.
 
