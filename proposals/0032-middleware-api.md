@@ -42,8 +42,8 @@ export const onRequest = (context, next) => {
 Or, set some logic to make redirects:
 ```js
 const redirects = new Map([
-    ["/old_1", "/new_1"],
-    ["/old_1", "/new_1"]
+    ["/old-1", "/new-1"],
+    ["/old-1", "/new-1"]
 ])
 
 export const onRequest = (context, next) => {
@@ -79,9 +79,23 @@ For me, it would make handling authentication much easier.
 
 # Detailed Design
 
-To define a middleware, a user would need to create a physical file under the `src/` folder, called `middleware.js`.
+## Changes from the Stage 2 proposal
 
-The resolution of the file follow the ECMA standards, which means that the following 
+- `resolve` has been renamed to `next`;
+- `next` doesn't accept an `APIContext` to work;
+- `locals` values need to be serializable to avoid the introduction of
+  non-user code from third-party libraries that can run scripts;
+- `middleware` export function has been renamed `onRequest`. This name change
+  has two benefits:
+  1. It shows intent and explains when this function is called;
+  2. It allows adding more functions with the `on*` prefix in the future, which could show the intent
+     of when the function is called in the Astro route life cycle;
+
+## Implementation instructions
+
+To define a middleware, a user must create a physical file under the `src/` folder, called `middleware.js`.
+
+The resolution of the file follows the ECMA standards, which means that the following
 alternatives are all valid in Astro:
 - `src/middleware.js`
 - `src/middleware.ts`
@@ -89,10 +103,7 @@ alternatives are all valid in Astro:
 - `src/middleware/index.ts`
 
 The file **must export** a function called `onRequest`. The exported function
-_must not be a **default** export_. 
-
-> **Note**: this part of the proposal differs from the [Stage 2](https://github.com/withastro/roadmap/issues/531) proposal. Read the 
-> [drawback section](#default-export) to understand why.
+_must not be a **default** export_.
 
 Eventually, the file system of the `src/` folder will look like this:
 
@@ -109,7 +120,7 @@ src
 
 Every time a page or endpoint is about to be rendered, the middleware is called.
 
-A middleware will look like this, in TypeScript:
+A middleware will look like this in TypeScript:
 
 ```ts
 import { MiddlewareRequestHandler, APIContext, MiddlewareNextResponse } from "astro"
@@ -129,7 +140,7 @@ export { onRequest }
 ```
 
 The `locals` object is a new API introduced by this RFC. The `locals` object is a new
-global object that can be manipulated inside the middleware, and then it can be
+Astro global object that can be manipulated inside the middleware, and then it can be
 accessed inside any `.astro` file:
 
 ```md
@@ -144,35 +155,35 @@ const user = Astro.locals.user;
 ```
 
 The RFC provides a way to make `locals` typed. The implementation will leverage the existing
-mechanism in place to type `Props`. The user will change the file `env.d.ts` and add the 
+mechanism to type `Props`. The user will change the file `env.d.ts` and add the
 following code:
 
 ```ts
-declare module "astro" {
-  interface Locals {
+/// <reference types="astro/client" />
+
+interface Locals {
     user: {
         handle: string
     }
-  }
 }
 ```
 
-Doing so, the user will be able to leverage the type-checking and auto-completion of TypeScript inside a file
+By doing so, the user can leverage the type-checking and auto-completion of TypeScript inside a file
 called `middleware.ts` or `middleware.js` using JSDoc.
 
 
 The `locals` object has the following restrictions:
-1. it can store only serializable information; 
+1. it can store only serializable information;
 2. it can't be overridden by other values that are different from objects;
 
 ## `locals` needs to be serializable
 
-The reason why the information must be serializable is that it's not safe to store
-information that can be evaluated at runtime. If, for example, we were able to store
-a JavaScript function, an attacker would be able to exploit the victim website
+The information must be serializable because storing
+information that evaluates at runtime is unsafe. If, for example, we were able to store
+With a JavaScript function, an attacker could exploit the victim's website
 and execute some unsafe code.
 
-In order avoid so, the new code will do a sanity check **in development mode**. 
+Astro will do a sanity check **in development mode**.
 Some code like this:
 
 ```js
@@ -188,15 +199,15 @@ export const onRequest = (contex, next) => {
 Storing unsafe information will result in an Astro error:
 
 > The information stored in Astro.locals are not serializable when visiting "/index" path.
-Make sure you store only data that are serializable.
+Make sure you store only serializable data.
 
-> **Note**: The content of the error is not final. The docs team will review it.  
+> **Note**: The content of the error is not final. The docs team will review it.
 
 
 ## `locals` can't be overridden
 
 The value of `locals` needs to be an object, and it can't be overridden at runtime. Doing
-so would risk to wipe out all the information stored by the user.
+so would risk wiping out all the information stored by the user.
 
 So, if there's some code like this:
 
@@ -212,31 +223,31 @@ Astro will emit an error like this:
 
 > **Note**: The content of the error is not final. The docs team will review it.
 
-### `context` and `next` 
+### `context` and `next`
 
 When defining a middleware, the function accepts two arguments: `context` and `next`
 
-The `next` function is a widely used function inside the middleware pattern. With the `next`
+The `next` function is widely used in the middleware pattern. With the `next`
 function, a user can retrieve the `Response` of a request.
 
-This is very useful in case, for example, a user needs to modify the HTML (the body) of the 
+Reading a response is very useful in case; for example, a user needs to modify the HTML (the body) of the
 response.
 
-Another usage of the `next` function, is to call the "next" middleware.
+Another usage of the `next` function is to call the "next" middleware.
 
-A user is not forced to call the `next` function, and there are various reasons to not to. 
-For example, a user might not need it, or they might want to stop the chain of middlewares
+Calling the `next` function is not mandatory, and there are various reasons not to.
+For example, a user might not need it, or they might want to stop the chain of middleware
 in case some validation fails.
 
-The next section will explain more in detail how `next` function can be used and how 
-a user can have multiple middleware.
+The next section will explain in more detail how `next` function can be used and how
+a user can have multiple middlewares.
 
 ## Multiple middlewares
 
-The RFC proposes a new API to combine multiple middlewares into one. The new API
-is exposed via the new `astro/middleware` module. The new API is called `sequence`.
+The RFC proposes a new API to combine multiple middleware into one. The new API
+is available via the new `astro/middleware` module. The new API is called `sequence`.
 
-Following an example of how a user can combine more than one middleware:
+Following is an example of how a user can combine more than one middleware:
 
 ```js
 import {sequence} from "astro/middleware";
@@ -246,8 +257,7 @@ function auth() {}
 
 export const onRequest = sequence(validation, auth);
 ```
-When working with many middlewares, it's important to understand the order of 
-how the code is executed.
+When working with many middlewares, it's important to understand the execution order.
 
 Let's take the following code:
 
@@ -277,7 +287,7 @@ async function greeting(_, next) {
 
 export const onRequest = sequence(validation, auth, greeting);
 ```
-Will result in the following console order:
+This will result in the following console order:
 
 ```
 validation request
@@ -288,60 +298,172 @@ auth response
 validation response
 ```
 
-When working with multiple middlewares, a middleware will always get the context of the previous
-middleware, from left to right. When the response has been resolved, then
-this response will travel from the right to left.
+When working with multiple middleware, a middleware will always get the context of the previous
+middleware, from left to right. When the response resolves, then
+this response will travel from right to left.
 
 ```block
               Context/Request           Context/Request
 validation --------------------> auth --------------------> greeting 
 
-Then
+
+                ===> Then the response is created <===
+                
+
                    Response                  Response
-validation <-------------------- auth <-------------------- greeting
+greeting ----------------------> auth --------------------> validation
 ```
 
-Eventually, `valiation` will be the **last** middleware to get the `Response` before being
+Eventually, `validation` will be the **last** middleware to get the `Response` before being
 handled to Astro and rendered by the browser.
 
 ## Middleware workflow and examples
 
+Following some use cases with some examples to understand how the middleware work and
+the expectation from the user's point of view.
 
+### Redirects
+
+It's an example provided before, but it's worth showing it again:
+
+```js
+const redirects = new Map([
+    ["/old-1", "/new-1"],
+    ["/old-2", "/new-2"]
+])
+
+export const onRequest = (context, next) => {
+    for (const [oldRoute, newRoute] of redirects) {
+        if (context.request.url.endsWith(oldRoute)) {
+            return context.redirect(newRoute);
+        }
+    }
+}
+```
+
+### HTML manipulation
+
+An example, could the to **redact** some sensible information from the HTML being emitted:
+
+```js
+export const onRequest = async (context, next) => {
+   const response = await next();
+   const html = response.text();
+   const redactedHtml = html.replace("PRIVATE INFO", "REDACTED");
+   
+   return new Response(redactedHtml, {
+     status: 200,
+     headers: response.headers
+   });
+}
+```
+
+### Validation and authentication
+
+```ts
+import { sequence } from "astro/middleware";
+import type { 
+  MiddlewareResponseHandler, 
+  MiddlewareNextResponse, 
+  APIContext 
+} from "astro";
+import { doAuth } from "some-auth-library";
+
+
+const validation: MiddlewareResponseHandler = async ({ request, locals }: APIContext, next: MiddlewareNextResponse) => {
+    const formData = await request.formData();
+    const userName = formData.get("username");
+    const password = formData.get("password");
+    // important information exist, let's continue to auth
+    if (typeof userName !== "undefined" && typeof userName !== "undefined") {
+        return await next();
+    } else {
+        // We don't call `next`. Doing the `auth` function is not executed.
+        // We store some information in `locals` so the UI can show an error message.
+        locals.validationMessage = "Important information are missing";
+    }
+}
+
+const auth: MiddlewareResponseHandler = async ({ request, redirect }: APIContext, next: MiddlewareNextResponse) => {
+  // The user expectation is that `validation` was already executed (check `sequence`).
+  // This means we don't need to check if `userName` or `password` exit.
+  // If they don't exist, it's an user error.
+  const formData = await request.formData();
+  const userName = formData.get("username");
+  const password = formData.get("password");
+  
+  // We run the authentication using a third-party service
+  const result = await doAuth({ userName, password });
+  if (result.status === "SUCCESS") {
+      return redirect("/secure-area");
+  } else {
+    locals.validationMessage = "User name and/or password are invalid";
+  }
+}
+
+
+export const onRequest = sequence(validation, auth);
+```
+
+It's important to note that `locals` is an object that **lives and dies within a single Astro route**;
+when your route page is rendered, `locals` won't exist anymore and a new one
+will be created.
+
+If a user needs to persist some information that lives among multiple pages
+requests, they will need to store that information somewhere else.
 
 # Testing Strategy
 
-How will this feature's implementation be tested? Explain if this can be tested with
-unit tests or integration tests or something else. If relevant, explain the test
-cases that will be added to cover all of the ways this feature might be used.
+This feature requires integration tests. We need to have tests for  
+multiple scenarios:
+- development server;
+- static build;
+- SSR build;
+- adapters (Node.js, deno, Cloudflare, etc.);
 
 # Drawbacks
 
-## Default export
+The RFC doesn't break any existing code. It's an additional feature that should
+not break the existing behaviour of an Astro application.
 
-Why should we _not_ do this? Please consider:
+Even though the middleware pattern is widely spread among backend frameworks, it's not
+always easy to explain how the pattern works and the user expectations.
 
-- Implementation cost, both in term of code size and complexity.
-- Whether the proposed feature can be implemented in user space.
-- Impact on teaching people Astro.
-- Integration of this feature with other existing and planned features
-- Cost of migrating existing Astro applications (_is it a breaking change?_)
+I would expect some reports about "why my code doesn't work" and find out that
+the issue was around the user code.
 
-There are tradeoffs to choosing any path. Attempt to identify them here.
+This feature will unlock new patterns inside an Astro application, and I would expect more work from the Documentation Team
+to frame the "most-used recipes" around the usage of middleware.
+
+Due to Astro code base architecture, the implementation of the feature will have to happen in
+three different places, risking having duplicated code or missing logic.
 
 # Alternatives
 
-What other designs have been considered? What is the impact of not doing this?
+I have considered implementing middleware using the configuration API.
+
+While this strategy is well-established in the Astro ecosystem, it could slow down
+the implementation of middleware logic in user-land because the user would be forced
+to create some boilerplate just to use the new logic.
+
+While Astro could have provided some API to reduce the boilerplate, this felt tedious. 
+Plus, this would have forced us to **crate another configuration field** where the user
+could specify the order of the middleware.
+
 
 # Adoption strategy
 
-Please consider:
+Considering how big the feature is, the API will be released under an experimental flag.
 
-- If we implement this proposal, how will existing Astro developers adopt it?
-- Is this a breaking change? Can we write a codemod?
-- Can we provide a runtime adapter library for the original API it replaces?
-- How will this affect other projects in the Astro ecosystem?
+Users can opt in via new flag:
 
-# Unresolved Questions
+```js
+export default defineConfig({
+  experimental: {
+      middleware: true
+  }
+})
+```
 
-Optional, but suggested for first drafts.
-What parts of the design are still to be determined?
+The team will seek feedback from the community and fix bugs if they arise.  
+After an arbitrary about of time, the experimental flag will be removed.
