@@ -68,14 +68,22 @@ For me, it would make handling authentication much easier.
 - Provide a way intercept requests and responses, allowing users to set cookies and headers
 - Works both in SSR and SSG mode
 - Allow users to use community-created middlewares (libraries)
-  - Make available via integrations API.
-- Provide an API for request-specific data
+
+
+# Out of Scope
+
+This is a list of requirements that won't be implemented as part of this RFC but 
+will be implemented in the second iteration of the middleware project:
+
 - Non-Node runtimes specific APIs. ie. Cloudflare Durable Objects.
-  - Add middleware from adapter.
+- Add middleware from adapter.
+- Type-safe payload. Being able infer types from the previous middleware.
 
 # Non-Goals
 
 - Route specific middleware, middlewares that are run **only on specific** routes
+
+
 
 # Detailed Design
 
@@ -93,7 +101,8 @@ For me, it would make handling authentication much easier.
 
 ## Implementation instructions
 
-To define a middleware, a user must create a physical file under the `src/` folder, called `middleware.js`.
+To define a middleware, a user must create a physical file under the [`config.srcDir`](https://docs.astro.build/en/reference/configuration-reference/#srcdir) 
+folder, called `middleware.js`.
 
 The resolution of the file follows the ECMA standards, which means that the following
 alternatives are all valid in Astro:
@@ -139,11 +148,22 @@ const onRequest: MiddlewareRequestHandler = async (context: APIContext, next: Mi
 export { onRequest }
 ```
 
+Alternatively, a user can use an utility API to type the middleware:
+
+```ts
+import {defineMiddleware} from "astro/middleware";
+
+
+const onRequest = defineMiddlware(async (context, next) => {
+    
+});
+```
+
 The `locals` object is a new API introduced by this RFC. The `locals` object is a new
 Astro global object that can be manipulated inside the middleware, and then it can be
 accessed inside any `.astro` file:
 
-```md
+```astro
 ---
 const user = Astro.locals.user;
 ---
@@ -464,6 +484,9 @@ export default defineConfig({
   }
 })
 ```
+
+Plus, a user can enable this experimental feature via CLI using a 
+new argument called `--experimental-middleware`.
 
 The team will seek feedback from the community and fix bugs if they arise.  
 After an arbitrary about of time, the experimental flag will be removed.
