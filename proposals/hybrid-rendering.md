@@ -62,7 +62,7 @@ The Astro config definition and types will need to be updated to allow the `'hyb
 
 In `packages/astro/src/core/routing/manifest/create.ts` each route is set up to be `prerender: false` by default. This should be changed to be based on the `output` config option. If `'server'` then it should remain false, if `'hybrid'` it should be interpreted as true.
 
-In `packages/astro/src/vite-plugin-scanner/scanner.ts` it currently throws for falsey values. Since in hybrid rendering users will set `export const prerender = false`, this code will need to be updated to allow the false value when the `output: 'hybrid'`.
+In `packages/astro/src/vite-plugin-scanner/scan.ts` it currently throws for falsey values. Since in hybrid rendering users will set `export const prerender = false`, this code will need to be updated to allow the false value when the `output: 'hybrid'`.
 
 Additionally there are a few places in the codebase that assume if `output !== 'static'` that it is server mode. Those might need to be changed, depending on what they are doing with that information. For example, in static mode you cannot access the `Astro.url.searchParams`. However, because this happens before we load a page component we cannot know at the time if the route is prerendered or not, so we cannot continue to enforce this restriction in hybrid rendering. For this reason, and for simplicity, in hybrid rendering these restrictions are lifted for all routes.
 
