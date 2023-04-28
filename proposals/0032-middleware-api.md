@@ -243,6 +243,25 @@ Astro will emit an error like this:
 
 > **Note**: The content of the error is not final. The docs team will review it.
 
+`locals` can be typed using the `env.d.ts` file. In order to do so, this RFC will 
+expose a new `namespace` called `App`. This will be the first `namespace` exposed
+by Astro:
+
+```ts
+/// <reference types="astro/client" />
+declare global {
+    namespace App {
+        interface Locals {
+            user: {
+                name: string
+            }
+        }
+    }
+}
+
+export {}
+```
+
 ### `context` and `next`
 
 When defining a middleware, the function accepts two arguments: `context` and `next`
