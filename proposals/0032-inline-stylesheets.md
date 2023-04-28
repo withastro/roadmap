@@ -20,7 +20,7 @@ export default defineConfig({
 ```ts
 export default defineConfig({
     build: {
-        // stylesheets smaller than `ViteConfig.build.assetsInlineLimit` (default: 4kb) are inlined
+        // stylesheets smaller than `ViteConfig.build.assetsInlineLimit` (or 4kb if not defined by the user) are inlined
         inlineStylesheets: "auto"
     }
 })
