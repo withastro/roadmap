@@ -44,7 +44,7 @@ A few of the use-cases collected when talking to users who have requested this f
 
 - A marketing site for an agency that contains a contact form. Most of the site can be static and served via CDN, but the endpoint to serve the contact form needs to be dynamic so that it can store the contact information in a database and alert the admin.
 - A SaaS product where the API is the main product. Dynamic parts of pages are built with client components, API endpoints are the only server routes needed.
-- A content site such as a recipe site that allows users to mark their favorite recipes. API routes would be dynamic, as would any pages that display the dynamic list sof favorites.
+- A content site such as a recipe site that allows users to mark their favorite recipes. API routes would be dynamic, as would any pages that display the dynamic list of favorites.
 
 # Goals
 
