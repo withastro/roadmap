@@ -60,7 +60,7 @@ A few of the use-cases collected when talking to users who have requested this f
 
 The Astro config definition and types will need to be updated to allow the `'hybrid'` value for `output`.
 
-In `packages/astro/src/core/routing/manifest/create.ts` each route is set up to be `prerender: false` by default. This should be changed to be based on the `output` config option. If `'server'` then it should remain false, if `'hybrid'` it should be interpreted as true.
+In `packages/astro/src/core/routing/manifest/create.ts` each route is set up to be `prerender: false` by default. This should be changed to be based on the `output` config option. If `'hybrid'` it should be interpreted as true, otherwise it should remain false
 
 In `packages/astro/src/vite-plugin-scanner/scan.ts` it currently throws for falsey values. Since in hybrid rendering users will set `export const prerender = false`, this code will need to be updated to allow the false value when the `output: 'hybrid'`.
 
