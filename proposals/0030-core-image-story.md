@@ -133,7 +133,9 @@ import { defineConfig } from "astro/config";
 // https://astro.build/config
 export default defineConfig({
   image: {
-    service: "your-entrypoint", // 'astro/image/services/squoosh' | 'astro/image/services/sharp' | string
+    service: {
+      entrypoint: "your-entrypoint", // 'astro/image/services/squoosh' | 'astro/image/services/sharp' | string
+    },
   },
 });
 ```
@@ -144,19 +146,23 @@ export default defineConfig({
 import type { LocalImageService } from "astro";
 
 const service: LocalImageService = {
-  getURL(options: ImageTransform) {
+  getURL(options: ImageTransform, serviceOptions: Record<string, any>) {
     return `/my_super_endpoint_that_transforms_images?w=${options.width}`;
   },
-  parseURL(url: URL) {
+  parseURL(url: URL, serviceOptions: Record<string, any>) {
     return {
       width: url.searchParams.get("w"),
     };
   },
-  transform(options: ImageTransform) {
-    const { buffer } = mySuperLibraryThatEncodesImages(options);
+  transform(
+    buffer: Buffer,
+    options: ImageTransform,
+    serviceOptions: Record<string, any>
+  ) {
+    const { result } = mySuperLibraryThatEncodesImages(buffer, options);
 
     return {
-      data: buffer,
+      data: result,
       format: options.format,
     };
   },
@@ -171,7 +177,7 @@ export default service;
 import type { ExternalImageService } from "astro";
 
 const service: ExternalImageService = {
-  getURL(options: ImageTransform) {
+  getURL(options: ImageTransform, serviceOptions: Record<string, any>) {
     return `https://mysupercdn.com/${options.src}?q=${options.quality}`;
   },
 };
@@ -181,10 +187,10 @@ export default service;
 
 The kind of service exposed is completely invisible to users, the user API is always the same: the `Image` component and `getImage`. Refer to previous examples for usage.
 
-### Additional method
+### Additional methods
 
 ```ts
-getHTMLAttributes(options: ImageTransform) {
+getHTMLAttributes(options: ImageTransform, serviceOptions: Record<string, any>) {
     return {
         width: options.width,
         height: options.height
@@ -193,7 +199,17 @@ getHTMLAttributes(options: ImageTransform) {
 }
 ```
 
-This method is available on both local and external services.
+```ts
+validateOptions(options: ImageTransform, serviceOptions: Record<string, any>) {
+	if (!options.width) {
+		throw new Error('Width is required!')
+	}
+
+	return options;
+}
+```
+
+These methods are available on both local and external services.
 
 # Background & Motivation
 
@@ -212,6 +228,7 @@ In this RFC, we'd like to outline a plan / API for a core story for images. The 
 
 - Make an image component that is easy to use and intuitive to understand.
 - Make it easy to use optimized images in Markdown, MDX and future formats.
+- Make it easy to extend
 - Good, core-worthy, DX with awesome error messages, good types, good documentation
 - No more integration to install!
 
@@ -239,7 +256,8 @@ A new virtual module will be exported from a Vite plugin (similar to `astro:cont
 
 - `Image` (see [Image Component](#image-component-1))
 - `getImage` (see [JavaScript API](#javascript-api))
-- `getImageService` (see [Image Services](#image-services))
+- `getConfiguredImageService` (see [Image Services](#image-services))
+- `imageServiceConfig` (see [Image Services](#image-services))
 
 We choose `astro:assets` over `astro:image` on purpose, as to make it intuitive that more things might get exposed from there over time.
 
@@ -371,25 +389,25 @@ The different methods available are the following:
 
 **Required methods**
 
-- `getURL(options: ImageTransform): string`
+- `getURL(options: ImageTransform, serviceOptions: Record<string, any>): string`
   - For local services, return the URL of the endpoint managing your transformation (in SSR and dev).
   - For external services, return the final URL of the image.
   - `options` contain the parameters passed by the user
 
 **Required for Local services only**
 
-- `parseURL(url: URL): ImageTransform`
+- `parseURL(url: URL, serviceOptions: Record<string, any>): ImageTransform`
   - For SSR and dev, parses the generated URLs by `getURL` back into an ImageTransform to be used by `transform`.
-- `transform(buffer: Buffer, options: ImageTransform): { data: Buffer, format: OutputFormat }`
+- `transform(buffer: Buffer, options: ImageTransform, serviceOptions: Record<string, any>): { data: Buffer, format: OutputFormat }`
   - Transform and return the image. It is necessary to return a `format` to ensure that the proper MIME type is served to users in development and SSR.
 
 Ultimately, in development and SSR, it is up to the local endpoint (that `getURL` points to) to call both `parseURL` and `transform` if wanted. `transform` however, is called automatically during the build in SSG and for pre-rendered pages to create the final assets files.
 
 **Optional**
 
-- `validateOptions(options: ImageTransform): ImageTransform`
+- `validateOptions(options: ImageTransform, serviceOptions: Record<string, any>): ImageTransform`
   - Allows you to validate and augment the options passed by the user. This is useful for setting default options, or telling the user that a parameter is required.
-- `getHTMLAttributes(options: ImageTransform): Record<string, any>`
+- `getHTMLAttributes(options: ImageTransform, serviceOptions: Record<string, any>): Record<string, any>`
   - Return all additional attributes needed to render the image in HTML. For instance, you might want to return a specific `class` or `style`, or `width` and `height`.
 
 ### User configuration
@@ -402,22 +420,28 @@ import { defineConfig } from "astro/config";
 // https://astro.build/config
 export default defineConfig({
   image: {
-    service: "your-entrypoint", // 'astro/image/services/squoosh' | 'astro/image/services/sharp' | string
+    service: {
+      entrypoint: "your-entrypoint", // 'astro/image/services/squoosh' | 'astro/image/services/sharp' | string
+      config: {},
+    },
   },
 });
 ```
+
+A config can additionally be passed to the service and will be passed to every hooks available. This can be useful if you want to allow the user to set a list of possible widths or only allow images from certain remote sources.
 
 #### Facts
 
 - At this time, it is not possible to override this on a per-image basis (see [Non goals of this RFC](#non-goals-of-this-rfc)).
 - The `image.service` shape was chosen on purpose, for the future situation where multiple settings will be available under `image`.
 - A different image service can be set depending on the current mode (dev or build) using traditional techniques such as `process.env.MODE`
+- Integrations can set the image service for the user
 
 ### Note
 
 Overall, it's important to remember that 99% of users won't create services, especially local ones. In addition to the services directly provided with Astro, third party packages can supply services for the users.
 
-It's easy to imagine, for example, a `cloudinary-astro` package exposing a service. Or, the `@astrojs/vercel` adapter exposing a service using Vercel's Image Optimization API that user could use through `service: '@astrojs/vercel/image`.
+It's easy to imagine, for example, a `cloudinary-astro` package exposing a service. Or, the `@astrojs/vercel` adapter exposing a service using Vercel's Image Optimization API that user could use through a `service: vercelImageService()` function.
 
 # Testing Strategy
 
@@ -429,7 +453,7 @@ Much like the current `@astrojs/image` integration, this can be tested in many w
 
 Certain parts can be hard to fully E2E tests, such as "Was this image really generated with a quality of 47?", nonetheless, we can test that we at least provided the correct parameters down the chain.
 
-Overall, I do not expect this feature to be particularly hard, as the `@astrojs/image` testing suite has already proven to work correctly.
+Overall, I do not expect this feature to be particularly hard to test, as the `@astrojs/image` testing suite has already proven to work correctly.
 
 # Drawbacks
 
