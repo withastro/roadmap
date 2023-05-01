@@ -3,3 +3,6 @@
 
 # ignore IDEA folders
 .idea
+
+# MacOS
+.DS_Store
