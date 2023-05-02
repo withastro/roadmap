@@ -67,7 +67,7 @@ The content collections API was built generically to support this future, choosi
 
 # Non-Goals
 
-- **Separate RFC:** Referencing data collection entries from existing content collections. This unlocks referencing, say, an author from your blog post frontmatter. See the related RFC for details: [TODO: link]
+- **Separate RFC:** Referencing data collection entries from existing content collections. This unlocks referencing, say, an author from your blog post frontmatter. See the [related collection references RFC](https://github.com/withastro/roadmap/blob/d89e2a4c28379108501aa6bf40d2f8d93d81ad02/proposals/0034-collection-references.md) for details.
 
 # Detailed Design
 
@@ -145,7 +145,7 @@ const english = await getEntry({ collection: 'i18n', id: 'en' });
 <p>{english.data.homePage.tagline}</p>
 ```
 
-> Note: the object keys approach is primarily meant for resolving references. See the [collection references RFC](TODO: link) for more.
+> Note: the object keys approach is primarily meant for resolving references. See the [collection references RFC](https://github.com/withastro/roadmap/blob/d89e2a4c28379108501aa6bf40d2f8d93d81ad02/proposals/0034-collection-references.md) for more.
 
 Thanks to the generic function name, this can be used as a replacement for `getEntryBySlug()` as well. When querying a content collection, `getEntry()` uses `slug` as the identifier:
 
@@ -167,7 +167,7 @@ const Content = await welcomePost.render();
 
 You may have noticed two competing identifiers depending on the collection type: `id` for data, and `slug` for content. This is an inconsistency we'd like to address in a future RFC, with `id` becoming the new standard for identifying collection entries. For now, `slug` will remain on content collections to make the introduction of data collections non-breaking.
 
-**Full background:** `slug` was originally introduced alongside the content `id` to have a URL-friendly version of the file path, which can be passed to `getStaticPaths()` for route generation. Data collections are not intended to be used as routes, so we don't want to perpetuate this pattern. `slug` also "slugifies" the file path by removing capitalization and replacing spaces with dashes. If we added this processing to data collection IDs, [collection references](TODO: link) will be less intuitive to use (i.e. "do I include spaces in the referenced ID here?").
+**Full background:** `slug` was originally introduced alongside the content `id` to have a URL-friendly version of the file path, which can be passed to `getStaticPaths()` for route generation. Data collections are not intended to be used as routes, so we don't want to perpetuate this pattern. `slug` also "slugifies" the file path by removing capitalization and replacing spaces with dashes. If we added this processing to data collection IDs, [collection references](https://github.com/withastro/roadmap/blob/d89e2a4c28379108501aa6bf40d2f8d93d81ad02/proposals/0034-collection-references.md) will be less intuitive to use (i.e. "do I include spaces in the referenced ID here?").
 
 ## Implementation
 
