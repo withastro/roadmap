@@ -8,7 +8,7 @@ Introduce a standard to store data separately from your content (ex. JSON files)
 
 # Example
 
-Like content collections, data collections are created in the `src/content/` directory. These collections should include only JSON files:
+Like content collections, data collections are created in the `src/content/` directory. These collections should include only JSON or YAML files:
 
 ```
 src/content/
@@ -54,7 +54,7 @@ const ben = await getEntry('authors', 'ben');
 
 # Background & Motivation
 
-Content collections are restricted to supporting `.md`, `.mdx`, and `.mdoc` files. This is limiting for other forms of data you may need to store, namely raw data formats like JSON.
+Content collections are restricted to supporting `.md`, `.mdx`, and `.mdoc` files. This is limiting for other forms of data you may need to store, namely raw data formats like JSON or YAML.
 
 Taking a blog post as the example, there will likely be author information thats reused across multiple blog posts. To standardize updates when, say, updating an author's profile picture, it's best to store authors in a standalone data entry.
 
@@ -62,7 +62,7 @@ The content collections API was built generically to support this future, choosi
 
 # Goals
 
-- **Introduce JSON collection support,** configurable and queryable with similar APIs to content collections.
+- **Introduce JSON and YAML collection support,** configurable and queryable with similar APIs to content collections.
 - **Determine where data collections are stored.** We may allow data collections within `src/content/`, or introduce a new reserved directory.
 
 # Non-Goals
@@ -71,7 +71,7 @@ The content collections API was built generically to support this future, choosi
 
 # Detailed Design
 
-Data collections are created with the `defineCollection()` utility, and **must** include `type: 'data'` to store JSON files. This means "mixed" collections containing both content and data entries are not supported, and should raise a helpful error to correct.
+Data collections are created with the `defineCollection()` utility, and **must** include `type: 'data'` to store JSON or YAML files. This means "mixed" collections containing both content and data entries are not supported, and should raise a helpful error to correct.
 
 ```ts
 // src/content/config.ts
@@ -105,7 +105,7 @@ Data collection entries include the same `id`, `data`, and `collection` properti
 
 This also means content-specific fields like `slug`, `body`, and `render()` properties are **not** included. This is due to the following:
 
-- `render()`: this function is used by content collections to parse the post body into a usable Content component. Data collections do not have HTML to render, so the function is removed.
+- `render()`: This function is used by content collections to parse the post body into a usable Content component. Data collections do not have HTML to render, so the function is removed.
 - `slug`: This is provided by content collections as a URL-friendly version of the file `id` for use as pages. Since data collections are not meant to be used as pages, this is omitted.
 - `body`: Unlike content collections, which feature a post body separate from frontmatter, data collections are just... data. This field could be returned as the raw JSON body, though this would give `body` a double meaning depending on the context: non-data information for content collections, and the "raw" data itself for data collections. We avoid returning the body to avoid this confusion.
 
@@ -169,9 +169,9 @@ You may have noticed two competing identifiers depending on the collection type:
 
 **Full background:** `slug` was originally introduced alongside the content `id` to have a URL-friendly version of the file path, which can be passed to `getStaticPaths()` for route generation. Data collections are not intended to be used as routes, so we don't want to perpetuate this pattern. `slug` also "slugifies" the file path by removing capitalization and replacing spaces with dashes. If we added this processing to data collection IDs, [collection references](https://github.com/withastro/roadmap/blob/d89e2a4c28379108501aa6bf40d2f8d93d81ad02/proposals/0034-collection-references.md) will be less intuitive to use (i.e. "do I include spaces in the referenced ID here?").
 
-## Implementation
+## Internals
 
-Data collections should following the API design of content collections with a stripped-down featureset. To wire up data collections, we will introduce an internal utility that mirrors our `addContentEntryType()` integration function. This example registers a new `dataEntryType` for `.json` files, with necessary logic to parse data as a JS object:
+Data collections should following the API design of content collections with a stripped-down featureset. To wire up data collections, we will introduce an internal utility that mirrors our `addContentEntryType()` integration function. JSON and YAML will be preconfigured by Astro, as a way to dogfood a generic API for wiring up any data collection type in the future. This example shows an internal implementation for `.json` files:
 
 ```ts
 addDataEntryType({
@@ -201,7 +201,7 @@ The `astro:content` runtime module should also be updated to glob these file ext
 
 # Drawbacks
 
-- JSON could be considered added complexity, when users can create `.md` files storing all data via frontmatter instead. Though true for trivial content, this is restrictive for use cases like i18n lookup files (which are typically JSON).
+- Data collections could be considered added complexity, when users can create `.md` files storing all data via frontmatter instead. Though true for trivial content, this is restrictive for use cases like i18n lookup files (which are typically JSON).
 
 # Alternatives
 
@@ -231,7 +231,7 @@ Early proposals considered moving data collections to a separate directory from 
 
 - [Follows Nuxt content's pattern](https://content.nuxtjs.org/guide/writing/json#json) for storing data in a `content/` directory
 - Avoids a new reserved directory. This could mean a simpler learning curve, i.e. I already know collections live in `src/content/`, so I'll add my new "data" collection in this directory too. From user testing with the core team, this expectation arose a few times.
-- Allows switching from JSON to MD and back again more easily, without moving the directory. Example: you find a need for landing pages and bios for your `authors` data collection, so you move `json -> md` while retaining your schema.
+- Allows switching from data to Markdown and back again more easily, without moving the directory. Example: you find a need for landing pages and bios for your `authors` data collection, so you move `json -> md` while retaining your schema.
 - Avoids the need for [moving the collection config to your project root](https://github.com/withastro/roadmap/discussions/551). With `src/data/`, requiring the `config` to live in a `src/content/config.ts` is confusing. This is amplified when you do not have any content collections.
 
 # Adoption strategy
