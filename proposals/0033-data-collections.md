@@ -207,7 +207,7 @@ The `astro:content` runtime module should also be updated to glob these file ext
 
 ## Using multi-file vs. single-file
 
-Early proposals supported single0file data collections. This allows storing _all_ data collection entries as an array in one `.json` file, instead of splitting up entries per-file as we do content collections today. For example, a single `src/content/authors.json` file instead of a few `src/content/authors/[name].json` files.
+Early proposals supported single file data collections. This allows storing _all_ data collection entries as an array in one `.json` file, instead of splitting up entries per-file as we do content collections today. For example, a single `src/content/authors.json` file instead of a few `src/content/authors/[name].json` files.
 
 We want to stick with a single API design for an experimental release. Unlike multi-file, there are some prohibitive reasons against single-file collections: 
 
