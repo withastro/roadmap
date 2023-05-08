@@ -98,7 +98,7 @@ export const collections = { authors };
 
 Data collection entries include the same `id`, `data`, and `collection` properties as content collections:
 
-- `id (string)` - The entry file name with the extension omitted. Spaces and capitalization are preserved.
+- `id (string)` - The entry file name with the extension omitted. Spaces and capitalization are preserved. This means data collection files of the same name but different extensions ('ben.json' and 'ben.yaml') **should raise an error.**
 - `collection (string)` - The collection name
 - `data (object)` - The entry data as a JS object, parsed by the configured collection schema (if any).
 
