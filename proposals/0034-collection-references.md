@@ -190,18 +190,21 @@ These entries are intentionally unresolved for a few reasons:
 - To prevent circular type dependencies in your Zod schemas. This is especially true for self references like `relatedPosts`, which causes TypeScript issues when using tools like Zod for type inference.
 - To prevent infinite resolution loops for nested references. Again, this is a risk for self references.
 
-To retrieve entry data, pass a given reference to the `getEntry()` helper. This returns a type-safe result based on the id and collection name:
+To retrieve entry data, pass a given reference to the new `getEntry()` and `getEntries()` helpers. The former is used for resolving a single reference, and the latter is used for arrays of references belonging to the same collection. These return a type-safe result based on the id and collection name. Some example cases are shown here:
 
 ```astro
 ---
-import { getEntry, getCollection } from 'astro:content';
+import { getEntry, getEntries, getCollection } from 'astro:content';
 import { Image } from 'astro:asset';
 
+// Get a blog post using positional arguments
 const { data } = await getEntry('blog', 'welcome');
 
+// Resolve singular reference
 const banner = await getEntry(data.banner);
-const authors = await getEntry(data.authors);
-const relatedPosts = await getEntry(data.relatedPosts);
+// Resolve arrays of references
+const authors = await getEntries(data.authors);
+const relatedPosts = await getEntries(data.relatedPosts);
 const { Content } = await blogPost.render();
 ---
 
