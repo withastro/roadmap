@@ -63,7 +63,6 @@ The content collections API was built generically to support this future, choosi
 # Goals
 
 - **Introduce JSON and YAML collection support,** configurable and queryable with similar APIs to content collections.
-- **Determine where data collections are stored.** We may allow data collections within `src/content/`, or introduce a new reserved directory.
 
 # Non-Goals
 
