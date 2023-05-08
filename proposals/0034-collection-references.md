@@ -225,16 +225,40 @@ const { Content } = await blogPost.render();
 
 # Drawbacks
 
-TODO
+- Adding references is a slippery slope down the "Astro is building its own ORM" rabbithole. Future features including many-to-many relations could bring complexity that hurts Astro's beginner friendliness.
 
 # Alternatives
 
-TODO
+## `collection.reference()` vs. `reference('collection-name')`
+
+An early implementation made references an extension function on each collection, rather than an imported function that accepts collection names as strings. This avoids confusion about where `reference()` is imported from. It also discourages infinite reference loops by relying on the ordering of variables in your config. An example implementation:
+
+```ts
+import { defineCollection } from 'astro:content';
+
+const authors = defineCollection({
+  type: 'data',
+  schema: z.object({...})
+});
+
+const blog = defineCollection({
+  schema: z.object({
+    authors: z.array(authors.reference()),
+  })
+})
+```
+
+However, this has a few implementation drawbacks:
+- **Self-references get more complicated.** Since a variable can't refer to itself, we'd need to [suggest `z.lazy()`](https://github.com/colinhacks/zod#recursive-types) for recursion.
+- **Schemas do not have access to their collection.** Recall that collection names are defined not on the `defineCollection()` call, but the `export const collections = {...}` object. This requires code generation to tie references back to their collection name.
+
+These ultimately complicate our docs and source code more than the suggested implementation, so we've decided against this design.
 
 # Adoption strategy
 
-TODO
+- Release behind the proposed data collections experimental flag
+- Document references alongside our existing content collections documentation
 
 # Unresolved Questions
 
-TODO
+N/A
