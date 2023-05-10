@@ -89,27 +89,15 @@ These use cases span data collection -> content collection references, content -
 
 # Detailed Design
 
-The `reference()` utility receives the collection name as a string, and validates this string at build-time using a Zod transform. This transform does _not_ attempt to import the referenced object directly, instead returning the referenced identifier and collection name after validating.
-
-This utility can be imported either as a top-level import, or as a function parameter on the collection schema. The latter mirrors our existing `image()` helper. Allowing both should make the experience simpler for users reliant on experimental assets, and familiar to those that prefer top-level imports instead.
+The `reference()` utility receives the collection name as a string, and validates this string at build-time using a Zod transform. This transform does _not_ attempt to import the referenced object directly, instead returning the referenced identifier and collection name after validating. This utility can be imported as a top-level import like so:
 
 ```ts
-// Option 1: top-level import
 import { reference } from 'astro:content';
 
 const blog = defineCollection({
   schema: z.object({
     title: z.string(),
     authors: z.array(reference('authors')),
-  })
-});
-
-// Option 2: schema function parameter
-const banners = defineCollection({
-  type: 'data',
-  schema: ({ image, reference }) => z.object({
-    src: image(),
-    artist: reference('artists'),
   })
 });
 ```
