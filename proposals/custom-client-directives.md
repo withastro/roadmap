@@ -34,6 +34,19 @@ export default function onClickDirective() {
 }
 ```
 
+```ts
+import type { ClientDirective } from 'astro'
+
+const clickDirective: ClientDirective = (load, opts, el) => {
+  window.addEventListener('click', async () => {
+    const hydrate = await load()
+    await hydrate()
+  }, { once: true })
+}
+
+export default clickDirective
+```
+
 # Background & Motivation
 
 The last client directive added to core was the `client:only` directive in [August 2021](https://github.com/withastro/astro/issues/751). Since that time the core team has been hesitant to add new client directives despite the community asking about them.
