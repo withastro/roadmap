@@ -15,7 +15,10 @@ import { defineConfig } from 'astro/config';
 import onClickDirective from '@matthewp/astro-click-directive';
 
 export default defineConfig({
-  integrations: [onClickDirective()]
+  integrations: [onClickDirective()],
+  experimental: {
+    customClientDirectives: true
+  }
 });
 ```
 
@@ -26,7 +29,7 @@ export default function onClickDirective() {
       'astro:config:setup': ({ addClientDirective }) => {
         addClientDirective({
           name: 'click',
-          entrypoint: fileUrlToPath(new URL('./click.js', import.meta.url))
+          entrypoint: 'astro-click-directive/click.js'
         });
       },
     }
