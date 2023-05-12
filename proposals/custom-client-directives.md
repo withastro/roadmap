@@ -84,7 +84,7 @@ Previously goals in Stage 2:
 
 # Detailed Design
 
-When loading the Astro config and running the integrations, those that add new client directives are kept in a `Map` together with Astro's default set of client directives.
+When loading the Astro config and running the integrations, added new client directives are kept in a `Map` together with Astro's default set of client directives.
 
 Each client directive entrypoint will be bundled with esbuild before starting the dev server or build. This method is chosen as:
 
