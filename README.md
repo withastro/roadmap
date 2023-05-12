@@ -54,9 +54,9 @@ The proposal champion can request feedback on their RFC at any point, either asy
 
 ## Stage 4: Ship it!
 
-An RFC is ready to be approved and finalized once it's Pull Request is ready for its final review. RFC approval can happen asynchronously, or in-person during one of our weekly community calls.
+An RFC is ready to be approved and finalized once it's Pull Request is ready for its final review. When a champion thinks the RFC is ready he can ask for a call for consensus.
 
-Final RFC approval happens by vote, following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
+At this time, some member of the core team will motion for a final comment period (FCP). This follows our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process. Once the final comment period has elapsed the RFC will be merged if there are no objections.
 
 ---
 
