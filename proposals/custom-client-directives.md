@@ -76,6 +76,7 @@ Some examples of custom directives that people have wanted in the past:
 - Allowing overriding builtin directives.
 - Allowing for additional customization via new types of directives outside of `client:`.
 - Allowing multiple directives to run at the same time.
+- Replay interaction on hydrate, e.g. if a `client:click` directive hydrates on clicking the button, Astro doesn't replay the click event to trigger some reaction after it hydrates. The user has to click the (now hydrated) button again to trigger a reaction.
 
 Previously goals in Stage 2:
 - Refactor the implementation of `client:` loading to get rid of the precompile step (this is a core repo refactor / improvement).
@@ -113,6 +114,7 @@ An e2e test will be setup to make sure the client directive API works and loaded
 - Opens up partial hydration code pattern
 - Future builtin client directives are breaking changes
 - Third-party Astro libraries could rely on non-standard client directives
+- Users could bring in large dependencies, causing big file sizes for a client directive
 
 # Alternatives
 
