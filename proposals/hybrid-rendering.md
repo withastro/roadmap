@@ -1,6 +1,6 @@
 - Start Date: 2023-04-27
 - Reference Issues: https://github.com/withastro/roadmap/issues/539
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/6991
 
 # Summary
 
