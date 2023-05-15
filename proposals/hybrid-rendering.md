@@ -12,13 +12,15 @@ An existing static site can be changed to hybrid rendering, allowing some specif
 
 __astro.config.mjs__
 
-```js
+```diff
 import { defineConfig } from 'astro/config';
+import vercel from "@astrojs/vercel"
 
 export default defineConfig({
-  output: 'hybrid'
+-  output: 'static',
++  output: 'hybrid',
++  adapter: vercel()
 });
-```
 
 __pages/api/form.ts__
 
