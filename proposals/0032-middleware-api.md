@@ -453,13 +453,9 @@ requests, they will need to store that information somewhere else.
 
 ## Restrictions and expectations
 
-In order to set user expectations, the Astro middleware have the following restrictions:
-- a middleware needs to return a `Response`;
-- a middleware needs to call `next`;
+In order to set user expectations, the Astro middleware **must** return a `Response`.
 
-If the user doesn't do any of these two, Astro will throw an error. Plus,
-the user is required to return exactly a `Response`. Failing to do so will result in
-Astro throwing an error.
+If the user doesn't do that, Astro will throw an error.
 
 # Testing Strategy
 
