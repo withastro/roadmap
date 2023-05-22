@@ -72,7 +72,7 @@ Additionally there are a few places in the codebase that assume if `output !== '
 
 Prerendering is currently tested via fixture testing, due to the fact that the build artifacts is what changes. This same strategy will be used to test hybrid rendering as well, only testing for the opposite effect. 
 
-Likely we can use the same test fixtures, but only swap out the `output` when testing `'hybrid'`, which eliminates the need for new fixtures.
+Likely we can use most of the prerendering test fixtures, and only swap out the `output` when testing `'hybrid'`, which reduces the need for new fixtures.
 
 # Drawbacks
 
