@@ -88,7 +88,7 @@ export interface RouteData {
 
 Our core rendering handles routing and will detect this type of route and return a `Response` with a status code in the 3xx range with the `Location` header set to the value of the route's `redirect` property.
 
-When using the object notation `{ destination: string; status: number; }`
+When using the object notation `{ destination: string; status: number; }` the status code specified there will be used. Otherwise the default is `301` for `GET` requests and `308` for any other method.
 
 ## Dynamic routes
 
