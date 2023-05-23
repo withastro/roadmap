@@ -91,8 +91,6 @@ will be implemented in the second iteration of the middleware project:
 
 - `resolve` has been renamed to `next`;
 - `next` doesn't accept an `APIContext` to work;
-- `locals` values need to be serializable to avoid the introduction of
-  non-user code from third-party libraries that can run scripts;
 - `middleware` export function has been renamed `onRequest`. This name change
   has two benefits:
   1. It shows intent and explains when this function is called;
@@ -192,37 +190,7 @@ By doing so, the user can leverage the type-checking and auto-completion of Type
 called `middleware.ts` or `middleware.js` using JSDoc.
 
 
-The `locals` object has the following restrictions:
-1. it can store only serializable information;
-2. it can't be overridden by other values that are different from objects;
-
-## `locals` needs to be serializable
-
-The information must be serializable because storing
-information that evaluates at runtime is unsafe. If, for example, we were able to store
-With a JavaScript function, an attacker could exploit the victim's website
-and execute some unsafe code.
-
-Astro will do a sanity check **in development mode**.
-Some code like this:
-
-```js
-export const onRequest = (contex, next) => {
-    context.locals.someInfo = {
-        f() {
-            alert("Hello!!")
-        }
-    }
-} 
-```
-
-Storing unsafe information will result in an Astro error:
-
-> The information stored in Astro.locals are not serializable when visiting "/index" path.
-Make sure you store only serializable data.
-
-> **Note**: The content of the error is not final. The docs team will review it.
-
+The `locals` object can't be overridden by other values that are different from objects;
 
 ## `locals` can't be overridden
 
