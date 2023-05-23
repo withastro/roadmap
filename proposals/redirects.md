@@ -32,6 +32,21 @@ export default defineConfig({
 });
 ```
 
+You can also specify the status code by using an object notation:
+
+```js
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  redirects: {
+    '/other': {
+      status: 302,
+      destination: '/place'
+    }
+  }
+});
+```
+
 # Background & Motivation
 
 This was original proposed as a stage 1 discussion [here](https://github.com/withastro/roadmap/discussions/319) and was one of the top voted proposals.
@@ -49,26 +64,51 @@ Having a redirects configuration within Astro itself allows a single place to de
 
 # Non-Goals
 
-- Specifying temporary redirects. These are best done at runtime, so SSR is a more appropriate way to do those.
-    - In the future we could expand this API to give more control over what status code is used, once use-cases are known.
+- Dynamic behavior that goes beyond the capabilities of the file-based routing system. So nothing based on the properties of the request, user session, etc. Regular routes still should be used for this scenario.
+- Redirects to pages that do not exist in the Astro project.
+- External redirects.
 
 # Detailed Design
 
 This will be implemented as a feature of the internal routing. The `RouteData` type will be extended to include:
 
 ```js
+interface RedirectConfig = string | {
+  status: 300 | 301 | 302 | 303 | 304 | 307 | 308;
+  destination: string;
+}
+
 export interface RouteData {
   type: 'redirect';
   // ...
-  redirect?: string;
+  redirect?: RedirectConfig;
+  redirectRoute?: RouteData;
 }
 ```
 
-Our core rendering handles routing and will detect this type of route and return a `Response` with a status code of `301` with the `Location` header set to the value of the route's `redirect` property.
+Our core rendering handles routing and will detect this type of route and return a `Response` with a status code in the 3xx range with the `Location` header set to the value of the route's `redirect` property.
+
+When using the object notation `{ destination: string; status: number; }`
+
+## Dynamic routes
+
+Dynamic routes are supported through the same syntax as in the file-based routing system. For example, if a site moved its blog it might set up a redirect like so:
+
+```js
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  redirects: {
+    '/blog/[...slug]': '/team/articles/[..slug]'
+  }
+});
+```
+
+In SSG mode this will call the destinations `getStaticPaths` method to get valid static paths. Those paths will be used to generate the HTML files for the redirects.
 
 ## Static generation
 
-Currently the static generation code throws for any non-200 response. With this change it will now accept `301` as a valid response code. It will generate an HTML doc that looks like:
+Currently the static generation code throws for any non-200 response. With this change it will now accept any 3xx as a valid response codes. It will generate an HTML doc that looks like:
 
 ```html
 `<!doctype html>
