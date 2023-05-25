@@ -106,6 +106,10 @@ export default defineConfig({
 
 In SSG mode this will call the destinations `getStaticPaths` method to get valid static paths. Those paths will be used to generate the HTML files for the redirects.
 
+## Routing priority
+
+Redirects will be given the same priority as file-system routing. This means that if there are conflicts, the same rules applies as with the file-system routes. For example, you could have a file system route `/src/pages/blog/contributing.astro` and a redirect route `/blog/[...slug]`. If these were both filesystem routes you would expect `contributing.astro` to be prioritized over the spread route. This is the case with redirects a well.
+
 ## Static generation
 
 Currently the static generation code throws for any non-200 response. With this change it will now accept any 3xx as a valid response codes. It will generate an HTML doc that looks like:
