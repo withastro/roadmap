@@ -122,7 +122,7 @@ Currently the static generation code throws for any non-200 response. With this 
 
 ## Adapters
 
-Adapters can integration with this new route type through the `astro:build:done` hook which includes the `routes` property. This is an array of route datas that were built. Redirects will be part of this array.
+Adapters can integrate with this new route type through the `astro:build:done` hook which includes the `routes` property. This is an array of route datas that were built. Redirects will be part of this array.
 
 # Testing Strategy
 
