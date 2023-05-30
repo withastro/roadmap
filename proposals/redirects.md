@@ -108,7 +108,9 @@ In SSG mode this will call the destinations `getStaticPaths` method to get valid
 
 ## Routing priority
 
-Redirects will be given the same priority as file-system routing. This means that if there are conflicts, the same rules applies as with the file-system routes. For example, you could have a file system route `/src/pages/blog/contributing.astro` and a redirect route `/blog/[...slug]`. If these were both filesystem routes you would expect `contributing.astro` to be prioritized over the spread route. This is the case with redirects a well.
+Redirects will use the priority assignment algorithm as file-system routing. For example, you could have a file system route `/src/pages/blog/contributing.astro` and a redirect route `/blog/[...slug]`. If these were both filesystem routes you would expect `contributing.astro` to be prioritized over the spread route. This is the case with redirects a well.
+
+In the case of exact matches, the file-system route will be prioritized (by being ordered first in the list). This is meant to match the behavior of host systems (such as Netlify).
 
 ## Static generation
 
