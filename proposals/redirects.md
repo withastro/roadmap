@@ -124,6 +124,24 @@ Currently the static generation code throws for any non-200 response. With this 
 
 Adapters can integrate with this new route type through the `astro:build:done` hook which includes the `routes` property. This is an array of route datas that were built. Redirects will be part of this array.
 
+Additionally adapters can disable the HTML generation via a new configuration value `build.redirects` which can be set to `false`. Users can also set this value, but it is more likely to come from an integration via the `astro:config:setup` hook:
+
+```js
+export default {
+  hooks: {
+    'astro:config:setup': ({ updateConfig }) => {
+      updateConfig({
+        build: {
+          redirects: false
+        }
+      });
+    }
+  }
+}
+```
+
+Adapters who have their own configuration files, such as the Netlify and Cloudflare `_redirects` file, will disable HTML generation because the host serves HTML before it checks configuration.
+
 # Testing Strategy
 
 - We have existing redirect tests for SSR. These will be updated to test SSG redirect behavior for:
