@@ -30,7 +30,7 @@ Adding this meta tag to the head will enable the built-in support for MPA view t
 
 ```diff
 + ---
-+ import { ViewTransitions } from 'astro/components';
++ import { ViewTransitions } from 'astro:transitions';
 + ---
 <html>
   <head>
@@ -51,7 +51,7 @@ You can use our built-in animations by using the `transition:animate` directive 
 
 ```astro
 ---
-import { ViewTransitions } from 'astro/components';
+import { ViewTransitions } from 'astro:transitions';
 ---
 <html>
   <head>
@@ -224,13 +224,32 @@ import { slide } from "astro:transitions";
 This allows users to define their own animations. The API for what these functions returns is:
 
 ```ts
-interface TransitionAnimation {
+export interface TransitionAnimation {
   name: string; // The name of the keyframe
   delay?: number | string;
   duration?: number | string;
   easing?: string;
-};
+	fillMode?: string;
+	direction?: string;
+}
+
+export interface TransitionAnimationPair {
+	old: TransitionAnimation | TransitionAnimation[];
+	new: TransitionAnimation | TransitionAnimation[];
+}
+
+export interface TransitionDirectionalAnimations {
+	forwards: TransitionAnimationPair;
+	backwards: TransitionAnimationPair;
+}
 ```
+
+This defines:
+
+- `forwards` and `backwards` transitions to handle the case where you want the animation to go in the reverse direction when the user hits the Back button.
+- `old` and `new` so that you can control the old and new pages separately.
+
+Note here that you still need to define a [keyframe](https://developer.mozilla.org/en-US/docs/Web/CSS/@keyframes) some where else, such as imported CSS.
 
 ## Persistent islands
 
@@ -246,6 +265,33 @@ Astro will give this island an id using the same algorithm used to calculate the
 
 When the next page loads Astro will pull the island's root `<astro-island>` from the old page and have it replace the same element on the next page.
 
+## Fallback
+
+In order to support browsers that do not support native view transition APIs, Astro will simulate the behavior using regular CSS and DOM manipulation. On a transition Astro will:
+
+- Add the `data-astro-transition-fallback="old"` attribute to the outgoing page.
+- Wait for animations to end.
+- Add the `data-astro-transition-fallback="new"` to the incoming page.
+- Replace the `document.documentElement` with the incoming page.
+- Wait for animations to end.
+- Remove the `data-astro-transition-fallback` attribute.
+
+Internally Astro will enable these animations to work in both environments by using selectors in the inserted CSS. A user can control fallback behavior with the `fallback` prop on the `ViewTransitions` component.
+
+```astro
+---
+import { ViewTransitions } from 'astro:transitions';
+---
+
+<ViewTransitions fallback="none">
+```
+
+The possible values are:
+
+- `animate`: The default, perform a fallback with simulated animations.
+- `swap`: A fallback where the DOM is swapped without animations.
+- `none`: Do not fallback for non-supporting browsers, allow MPA navigation.
+
 # Testing Strategy
 
 This feature is mostly client-side so it will be tested via the Playwright e2e test suite.
@@ -253,7 +299,7 @@ This feature is mostly client-side so it will be tested via the Playwright e2e t
 # Drawbacks
 
 - This feature is primarily about taking advantage of cutting edge features. Currently it is Chromium browsers only. There is some risk that other browsers will not adopt these APIs and we'll be left having to do a fallback for a long time.
-- This approach is not the best for apps. We would probably need a whole separate API if we wanted to support that better.
+- Full apps that never navigate to different pages are still likely better served by client-side routers. This router is targeting multi-page sites where you want to make transitions appear more smooth and integrated.
 
 # Alternatives
 
