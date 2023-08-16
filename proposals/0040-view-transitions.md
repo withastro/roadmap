@@ -292,6 +292,43 @@ The possible values are:
 - `swap`: A fallback where the DOM is swapped without animations.
 - `none`: Do not fallback for non-supporting browsers, allow MPA navigation.
 
+## Events
+
+These are some initial events that are dispatched on the `document`:
+
+### `astro:afterswap`
+
+This event occurs during a transition, immediately after the new page has been swapped in for the old page. This gives you a chance to update the DOM before it is painted by the browser.
+
+A use-case is to restore dark mode:
+
+```html
+<script>
+  function setDarkMode() {
+    if(localStorage.darkMode) {
+      document.documentElement.classList.add('dark-mode');
+    }
+  }
+
+  document.addEventListener('astro:afterswap', setDarkMode);
+  setDarkMode();
+</script>
+```
+
+### `astro:navigationsuccess`
+
+This event occurs after a navigation has occured, the DOM is swapped, and all resources have been loaded. This event happens both on initial page load and on any transitions, so it is a good place to do any sort of page setup logic:
+
+```html
+<script>
+  function setupPage() {
+    /** ... */
+  }
+
+  document.addEventListener('astro:navigationsuccess', setupPage);
+</script>
+```
+
 # Testing Strategy
 
 This feature is mostly client-side so it will be tested via the Playwright e2e test suite.
