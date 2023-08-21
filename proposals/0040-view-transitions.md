@@ -296,7 +296,9 @@ The possible values are:
 
 These are some initial events that are dispatched on the `document`:
 
-### `astro:afterswap`
+### After swap
+
+> Tentatively shown as `astro:afterswap` here, but the name is subject to bikeshedding before released.
 
 This event occurs during a transition, immediately after the new page has been swapped in for the old page. This gives you a chance to update the DOM before it is painted by the browser.
 
@@ -315,7 +317,9 @@ A use-case is to restore dark mode:
 </script>
 ```
 
-### `astro:navigationsuccess`
+### Page load
+
+> Tentatively shown as `astro:pageload` here, but the name is subject to bikeshedding before released.
 
 This event occurs after a navigation has occured, the DOM is swapped, and all resources have been loaded. This event happens both on initial page load and on any transitions, so it is a good place to do any sort of page setup logic:
 
@@ -325,7 +329,7 @@ This event occurs after a navigation has occured, the DOM is swapped, and all re
     /** ... */
   }
 
-  document.addEventListener('astro:navigationsuccess', setupPage);
+  document.addEventListener('astro:pageload', setupPage);
 </script>
 ```
 
