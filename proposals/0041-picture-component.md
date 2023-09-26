@@ -88,7 +88,17 @@ import myImage from "../something.png";
 
 ```html
 <picture>
-  <source srcset="..., ... 2x, ... 3x" />
+  <source srcset="..., ... 2x, ... 3x" type="image/avif" />
+  <source srcset="..., ... 2x, ... 3x" type="image/webp" />
+  <img
+    src="..."
+    srcset="... 2x, ... 3x"
+    alt="My image available in 3 formats and 3 densities"
+    width="700"
+    height="525"
+    loading="lazy"
+    decoding="async"
+  />
 </picture>
 ```
 
