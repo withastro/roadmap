@@ -4,18 +4,18 @@
 
 # Summary
 
-Provide a configuration flag for page components to opt-in to *fragment* behavior, preventing head injection of scripts and styles, and the doctype.
+Provide a configuration flag for page components to opt-in to *partial* behavior, preventing head injection of scripts and styles, and the doctype.
 
 # Example
 
-In any component inside of the __pages__ directory set the `fragment` option:
+In any component inside of the __pages__ directory set the `partial` option:
 
 ```astro
 ---
-export const fragment = true;
+export const partial = true;
 ---
 
-<div>This is a fragment!</div>
+<div>This is a partial!</div>
 ```
 
 # Background & Motivation
@@ -37,11 +37,11 @@ Recently the popularity of projects like [htmx](https://htmx.org/) and [Unpoly](
 
 # Detailed Design
 
-Fragments are opted into on a per-page basis. Any page within the `pages` directory can become a fragment through this config:
+partials are opted into on a per-page basis. Any page within the `pages` directory can become a partial through this config:
 
 ```astro
 ---
-export const fragment = true;
+export const partial = true;
 ---
 ```
 
@@ -52,23 +52,23 @@ This value must be either:
 
     ```astro
     ---
-    export const fragment = import.meta.env.USE_FRAGMENTS;
+    export const partial = import.meta.env.USE_partialS;
     ---
     ```
 
-The value *must* be identified statically. This means that a page can't be both a full page and a fragment. If you want to share the same logic and template for a partial and fragment you can do so by putting the common code into a component.
+The value *must* be identified statically. This means that a page can't be both a full page and a partial. If you want to share the same logic and template for a partial and partial you can do so by putting the common code into a component.
 
 ## Implementation
 
-This is a very small change. Internally Astro uses an object known as a `result` that stores intoformation about a request. That result object will add a `fragment` property:
+This is a very small change. Internally Astro uses an object known as a `result` that stores intoformation about a request. That result object will add a `partial` property:
 
 ```ts
 interface AstroResult {
-  fragment: boolean;
+  partial: boolean;
 }
 ```
 
-When rendering the fragment value is taken from the __component module__ and placed on the result object.
+When rendering the partial value is taken from the __component module__ and placed on the result object.
 
 This boolean is then used in two places:
 
@@ -79,7 +79,7 @@ These are the only changes needed.
 
 # Testing Strategy
 
-We want to verify that fragments do not include head content with tests for:
+We want to verify that partials do not include head content with tests for:
 
 - A component that contains `<style>` and `<script>` elements.
 - The `doctype`
@@ -89,12 +89,20 @@ Additionally we should test both dev mode and the static build, to ensure that t
 # Drawbacks
 
 - It could be unexpected that a component styles are not included.
-- Fragments need to be styled with global styles. This could mean using `<style is:global>`, or imported CSS, or an atomic CSS library like Tailwind.
-- Use-cases where you want both a page and a fragment in the same file are not possible.
+- partials need to be styled with global styles. This could mean using `<style is:global>`, or imported CSS, or an atomic CSS library like Tailwind.
+- Use-cases where you want both a page and a partial in the same file are not possible.
 
 # Alternatives
 
-The other major alternative considered was a file-naming convention such as `todo.fragment.astro`. The `.fragment` would be used to know that the page is for a fragment. This would add extra work to routing, where as the `export const fragment` solution contains the problem to the runtime and build plugin (which already exists).
+The other major alternative API considered was a file-naming convention such as `todo.partial.astro`. The `.partial` would be used to know that the page is for a partial. This would add extra work to routing, where as the `export const partial` solution contains the problem to the runtime and build plugin (which already exists).
+
+## Including head content but not doctype
+
+One piece of feedback on this RFC has been to include scripts and styles, but not the doctype. This way a partial can still include things like scoped component styles.
+
+However this idea doesn't add up to scrutinity. If you include scripts/styles then you run the risk of FOUC as the styles are loaded asynchronously. You also run into issues of the scripts/styles being added every time the partial is used. For global scripts in particular, this will produce unexpected results.
+
+The conclusion here is that you *must* have client-side code that manages scripts/styles, diffing them into the head, and waiting on them to load before inserting the rest of the partial. And if you have code for this, then the doctype isn't a problem either.
 
 # Adoption strategy
 
