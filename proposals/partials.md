@@ -18,6 +18,14 @@ export const partial = true;
 <div>This is a partial!</div>
 ```
 
+This will produce this exactly HTML output:
+
+```html
+<div>This is a partial!</div>
+```
+
+Both head content and the `<doctype>` are omitted, unlike in non-partial pages.
+
 # Background & Motivation
 
 Partials are a technique that has been used by web applications for decades, popularized in frameworks such as Ruby on Rails. Frontend oriented JavaScript frameworks have typically not used partials, but instead use JSON APIs and front-end templating in order to dynamically change parts of the page. Nevertheless, partials have remained a niche feature, and with Astro's backend focus we have had interest in support for a long time.
