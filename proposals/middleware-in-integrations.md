@@ -115,7 +115,7 @@ And verify that things run and in the right order.
 
 # Alternatives
 
-There have not been any other designs brought up at this point.
+- The `order` property could also be named `enforce`. Vite uses [`enforce`](https://vitejs.dev/guide/api-plugin.html#plugin-ordering) whereas Rollup uses [`order`](https://rollupjs.org/plugin-development/#build-hooks).
 
 # Adoption strategy
 
