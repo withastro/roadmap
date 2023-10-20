@@ -128,10 +128,7 @@ export default defineConfig({
     base: '/docs',
     i18n: {
         defaultLocaLe: 'en',
-        locales: ['en', 'es', 'pt', 'fr'],
-        domains: {
-            pt: "https://example.pt"
-        }
+        locales: ['en', 'es', 'pt', 'fr']
     }
 })
 ```
@@ -139,7 +136,7 @@ export default defineConfig({
 ```astro
 ---
 // src/pages/index.astro
-import { getAbsoluteLocaleUrl } from "astro:18";
+import { getRelativeLocaleUrl } from "astro:18";
 console.log(getRelativeLocaleUrl('es')) // will log "/docs/es"
 ---
 ```
@@ -152,7 +149,7 @@ Given a locale, the function will return the **absolute** URL, taking into accou
 ---
 // src/pages/index.astro
 import { getAbsoluteLocaleUrl } from "astro:18";
-console.log(getRelativeLocaleUrl('es')) // will log "http://localhost:4321/es"
+console.log(getAbsoluteLocaleUrl('es')) // will log "http://localhost:4321/es"
 ---
 ```
 
@@ -176,7 +173,7 @@ export default defineConfig({
 ---
 // src/pages/index.astro
 import { getAbsoluteLocaleUrl } from "astro:18";
-console.log(getRelativeLocaleUrl('pt')) // will log "https://example.pt/"
+console.log(getAbsoluteLocaleUrl('pt')) // will log "https://example.pt/"
 ---
 ```
 
@@ -196,6 +193,9 @@ The option `fallbackControl` is a string that can have two values:
 
 - `none`, the **default** Astro should not do anything, and a 404 is rendered;
 - [`redirect`](#redirect), Astro should use a redirect when re-routing to the destination locale; when `defaultLocale` is set, Astro will create a redirect to `defaultLocale` 
+
+The logic is triggered **only** when the path `/` is visited.
+
 
 ### Fallback system
 
@@ -256,29 +256,6 @@ The logic is triggered **only** when the path `/` is visited. When the logic is 
 - the `/<LOCALE>` path, where `<LOCALE>` is the locale matched in `locales` list;
 - the [sub-domain/domain](#domain-support) of `<LOCALE>`, if there's a match;
 
-The adapter needs to have the capabilities to read the `Accept-Language` cookie. An adapter can signal the support of this feature using the new Astro feature:
-
-```js
-export default function createIntegration() {
-  return {
-    name: '@ema/my-adapter',
-    hooks: {
-      'astro:config:done': ({ setAdapter }) => {
-        setAdapter({
-          name: '@ema/my-adapter',
-          serverEntrypoint: '@ema/my-adapter/server.js',
-          supportedAstroFeatures: {
-            i81n: {
-              languageDetection: "experimental",
-            }
-          }
-        });
-      },
-    },
-  };
-}
-```
-
 ### Domain support
 
 > [!NOTE]
@@ -295,7 +272,7 @@ export default defineConfig({
     i18n: {
         defaultLocaLe: 'en',
         locales: ['en', 'es', 'pt_BR', 'pt', 'fr'],
-        domain: {
+        domains: {
             fr: "fr.example.com",
             pt: "example.pt"
         }
@@ -303,17 +280,11 @@ export default defineConfig({
 })
 ```
 
-The following APIs will behave as follow:
+The following APIs will behave as follows:
 - [`getRelativeLocaleUrl`](#getrelativelocaleurllocale-string-string): it won't prefix the locale to the URL. From `/en` to `/`;
 - [`getAbsoluteLocaleUrl`](#getabsolutelocaleurllocale-string-string): it won't have the locale in the URL: From `example.com/fr` to `fr.example.com/`;
 
 Adapters must have the capabilities to redirect a user from one domain to another based on the domains configured.
-
-For example, using the Netlify redirects:
-
-```
-/fr/* /fr.example.com 200
-```
 
 An adapter can signal Astro the feature support using the relative configuration:
 
@@ -391,18 +362,5 @@ Once all the features are deemed stable, the whole i18n routing will be out from
 
 # Unresolved Questions
 
-Optional, but suggested for first drafts.
-What parts of the design are still to be determined?
-
-- language detection
-- domains
-
-For those features that require adapter support (language detection, domains), it's possible that adapters are going to be shipped **after** the feature is implemented in core. And they are, they will be shipped with an `experimental` support until they are stable.
-
-Once all the features are deemed stable, the whole i18n routing will be out from the experimental phase.
-
-
-# Unresolved Questions
-
-Optional, but suggested for first drafts.
-What parts of the design are still to be determined?
+- We are looking at a way to type the APIs of `astro:i18n`, but we don't know if we have the infrastructure to do so;
+- Do we need a configuration to tell Astro **where** the locale folders are? Or, should we enforce that somehow (root folder)?
