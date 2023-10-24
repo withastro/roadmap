@@ -107,7 +107,7 @@ A virtual module called `astro:i18n` will be available to retrieve important inf
 
 Here's a list of APIs available to users to retrieve information:
 
-#### `getRelativeLocaleUrl(locale: string): string`
+#### `getRelativeLocaleUrl(locale: string, options?: Options): string`
 
 Given a locale, the function will return the **relative** URL, without the website at the beginning. The function respects the configurations `base`, `trailingSlash` and `build.format`.
 
@@ -141,7 +141,7 @@ console.log(getRelativeLocaleUrl('es')) // will log "/docs/es"
 ---
 ```
 
-#### `getAbsoluteLocaleUrl(locale: string): string`
+#### `getAbsoluteLocaleUrl(locale: string, options: Options): string`
 
 Given a locale, the function will return the **absolute** URL, taking into account the [domain](#domain-support) supported. The function respects the configurations `base`, `site`, `trailingSlash` and `build.format`.
 
@@ -177,13 +177,21 @@ console.log(getAbsoluteLocaleUrl('pt')) // will log "https://example.pt/"
 ---
 ```
 
-#### `getRelativeLocaleUrlList(locale: string): string[]`
+#### `getRelativeLocaleUrlList(options?: Options): string[]`
 
 Same as `getRelativeLocaleUrl`, but it will return all the locales supported.
 
-#### `getAbsoluteLocaleUrlList(locale: string): string[]`
+#### `getAbsoluteLocaleUrlList(options?: Options): string[]`
 
 Same as `getAbsoluteLocaleUrl`, but it will return all the locales supported.
+
+#### `Options`
+
+The options allow to customise the behaviour of the APIs:
+
+- `path?: string`: a path that to append to `locale`
+- `prependWith?: string`: a path to prepend to `locale`
+- `normalizeLocale?: boolean`: when `true`, the locale is transformed in lower case and the underscore (`_`) is replaced with dash (`-`) 
 
 ### Fallback control
 
