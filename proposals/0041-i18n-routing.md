@@ -236,7 +236,7 @@ Let's suppose a user navigates to `/pt-br/welcome`, and the developer **didn't**
 > [!NOTE]
 > This feature requires adapter support using an Astro feature
 
-An opt-in feature that allows to detect the `Accept-Langauge` cookie sent by the browser, and redirect users the corresponding locale. If a locale isn't supported - AKA isn't present in the `locales` list - Astro won't execute any redirect.
+An opt-in feature that allows to detect the `Accept-Langauge` header sent by the browser, and redirect users the corresponding locale. If a locale isn't supported - AKA isn't present in the `locales` list - Astro won't execute any redirect.
 
 The user can enable the feature using the `detectBrowserLanguage` configuration:
 
