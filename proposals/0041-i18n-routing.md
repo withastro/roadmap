@@ -39,6 +39,11 @@ It is okay to leave this section empty.
 
 # Detailed Design
 
+## Terminology
+
+- Locale: a code that represents a language
+- Localized folder/directory: a folder/directory named after a locale
+
 ## Opt-in configuration
 
 The feature is opt-in, to avoid disrupting existing websites. To enable the feature, a new configuration called `i18n` is available:
@@ -70,9 +75,7 @@ Astro will throw an error if the `defaultLocale` value is not present in the lis
 
 ## File system based
 
-The feature is file system based and doesn't force users to have `/en`, `/es`, etc. directories. Astro doesn't force users to have these directories in a certain folder, other than being at least in the `/pages` directory.
-
-Missing translated pages will render a 404 by default.
+The localized directories must inside the `pages/` directory. Other than this restriction, the user is free to place the localized folders anywhere. 
 
 ## Logic via middleware
 
@@ -107,7 +110,7 @@ A virtual module called `astro:i18n` will be available to retrieve important inf
 
 Here's a list of APIs available to users to retrieve information:
 
-#### `getRelativeLocaleUrl(locale: string, options?: Options): string`
+#### `getRelativeLocaleUrl(locale: string, path: string, options?: Options): string`
 
 Given a locale, the function will return the **relative** URL, without the website at the beginning. The function respects the configurations `base`, `trailingSlash` and `build.format`.
 
@@ -115,7 +118,7 @@ Given a locale, the function will return the **relative** URL, without the websi
 ---
 // src/pages/index.astro
 import { getRelativeLocaleUrl } from "astro:18";
-console.log(getRelativeLocaleUrl('es')) // will log "/es"
+console.log(getRelativeLocaleUrl('es', "")) // will log "/es"
 ---
 ```
 
@@ -137,11 +140,11 @@ export default defineConfig({
 ---
 // src/pages/index.astro
 import { getRelativeLocaleUrl } from "astro:18";
-console.log(getRelativeLocaleUrl('es')) // will log "/docs/es"
+console.log(getRelativeLocaleUrl('es', "")) // will log "/docs/es"
 ---
 ```
 
-#### `getAbsoluteLocaleUrl(locale: string, options: Options): string`
+#### `getAbsoluteLocaleUrl(locale: string, path: string, options: Options): string`
 
 Given a locale, the function will return the **absolute** URL, taking into account the [domain](#domain-support) supported. The function respects the configurations `base`, `site`, `trailingSlash` and `build.format`.
 
@@ -173,15 +176,15 @@ export default defineConfig({
 ---
 // src/pages/index.astro
 import { getAbsoluteLocaleUrl } from "astro:18";
-console.log(getAbsoluteLocaleUrl('pt')) // will log "https://example.pt/"
+console.log(getAbsoluteLocaleUrl('pt', "")) // will log "https://example.pt/"
 ---
 ```
 
-#### `getRelativeLocaleUrlList(options?: Options): string[]`
+#### `getRelativeLocaleUrlList(path: string, options?: Options): string[]`
 
 Same as `getRelativeLocaleUrl`, but it will return all the locales supported.
 
-#### `getAbsoluteLocaleUrlList(options?: Options): string[]`
+#### `getAbsoluteLocaleUrlList(path: string, options?: Options): string[]`
 
 Same as `getAbsoluteLocaleUrl`, but it will return all the locales supported.
 
