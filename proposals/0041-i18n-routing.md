@@ -85,7 +85,7 @@ If a user has a `middleware.ts` file when the i18n routing is enabled, Astro wil
 
 ```js
 pipeline.setMiddlewareFunction(
-    sequence(userMiddleware.onRequest, createI18nMiddleware(config))
+    sequence(createI18nMiddleware(config), userMiddleware.onRequest)
 )
 ```
 
@@ -192,21 +192,17 @@ Same as `getAbsoluteLocaleUrl`, but it will return all the locales supported.
 
 The options allow to customise the behaviour of the APIs:
 
-- `path?: string`: a path that to append to `locale`
 - `prependWith?: string`: a path to prepend to `locale`
 - `normalizeLocale?: boolean`: when `true`, the locale is transformed in lower case and the underscore (`_`) is replaced with dash (`-`) 
 
-### Fallback control
+### Routing strategy
 
-An option that tells Astro what to do in case it doesn't find a page that belongs to one of the `locales` configured.
+An option called `routingStrategy` that allows to change the behaviour of the routing. The option accepts the following values:
 
-The option `fallbackControl` is a string that can have two values:
-
-- `none`, the **default** Astro should not do anything, and a 404 is rendered;
-- [`redirect`](#redirect), Astro should use a redirect when re-routing to the destination locale; when `defaultLocale` is set, Astro will create a redirect to `defaultLocale` 
-
-The logic is triggered **only** when the path `/` is visited.
-
+- `prefix-always`: all URLs of the website must have a locale prefix. Astro will return a 404 for any route that doesn't fulfill the requirements.
+  Use `example.com/[lang]/content/` for every locale.
+- `prefix-other-locales`: the URLs of the default locale must not have a prefix, while the rest of locales must have a locale prefix. 
+  Use `example.com/content/` for the default locale. Use `example.com/[lang]/content/` for other locales.
 
 ### Fallback system
 
@@ -221,51 +217,29 @@ The key is the locale that should benefit from the fallback system and the value
 Astro will throw an error if any locale in `fallback` (keys and values) isn't present in the `locales` list.
 
 
-#### Redirect
+### Browser locales detection 
 
-In the example below, we introduce a `pt_BR` in the `locales` list, and we tell Astro via the `fallback` key that `pt_BR` should fall back to the `pt` locale.  We use the `fallbackControl` option to tell Astro that it must apply a redirect for missing pages that belong to the `pt_BR` locale.
+In SSR, Astro is able to parse the `Accept-Language` header and provide a list of preferred locales by the user **and** supported by the application.
 
-```js
-// astro.config.mjs
-import {defineConfig} from "astro/config"
-export default defineConfig({
-    i18n: {
-        defaultLocaLe: 'en',
-        locales: ['en', 'es', 'pt_BR', 'pt', 'fr'],
-        fallback: {
-            pt_BR: 'pt'
-        },
-        fallbackControl: "redirect"
-    }
-})
-```
+This list is sorted by the highest to the lowest using the [quality value](https://developer.mozilla.org/en-US/docs/Glossary/Quality_values).
 
-Let's suppose a user navigates to `/pt-br/welcome`, and the developer **didn't** create the route `src/pages/pt_BR/welcome.*`, Astro will attempt to **redirect** said user to the `/pt/welcome` URL. If the developer **does** have `src/pages/pt/welcome.*` in their file system, the user will see the page correctly, **otherwise** the user will see the 404 page.
+This information is available through the global object `Astro`: 
+- `Astro.preferredLocaleList: string[] | undefined`
+    
+  For example, if `i18n.locals` contains `['pt', 'fr', 'de']`, and the value of the `Accept-Header` value is `en, fr;q=0.2, de;q=0.8, *;q=0.5`, then 
+  `Astro.preferredLocaleList` will be `['de', 'fr']` because `pt` isn't inside the header, and `en` isn't supported by the website. `de` comes first because it has a highest quality value.
+  
+  The property might be `undefined` if the developer isn't using their site in SSR. When `Accept-Header` is `*`, the list contained in `i18n.locales` is returned. `*` means that no preferences have been set, so all the original locales are supported and preferred. 
 
-### Browser detection
+- `Astro.preferredLocale`
+
+  For example, if `i18n.locals` contains `['pt', 'fr', 'de']`, and the value of the `Accept-Header` value is `en, fr;q=0.2, de;q=0.8, *;q=0.5`, then
+  `Astro.preferredLocale` will be `de` because it has a highest quality value.
+
+  The property might be `undefined` if the developer isn't using their site in SSR, or the highest value of `Accept-Header` is `*`. 
 
 > [!NOTE]
-> This feature requires adapter support using an Astro feature
-
-An opt-in feature that allows to detect the `Accept-Langauge` header sent by the browser, and redirect users the corresponding locale. If a locale isn't supported - AKA isn't present in the `locales` list - Astro won't execute any redirect.
-
-The user can enable the feature using the `detectBrowserLanguage` configuration:
-
-```js
-// astro.config.mjs
-import {defineConfig} from "astro/config"
-export default defineConfig({
-    i18n: {
-        defaultLocaLe: 'en',
-        locales: ['en', 'es', 'pt_BR', 'pt', 'fr'],
-        detectBrowserLangauge: true
-    }
-})
-```
-
-The logic is triggered **only** when the path `/` is visited. When the logic is triggered, Astro attempts to redirect the user to:
-- the `/<LOCALE>` path, where `<LOCALE>` is the locale matched in `locales` list;
-- the [sub-domain/domain](#domain-support) of `<LOCALE>`, if there's a match;
+> This feature is only available in **SSR**
 
 ### Domain support
 
