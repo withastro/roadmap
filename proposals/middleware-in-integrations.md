@@ -98,6 +98,12 @@ export const onRequest = sequence(
 );
 ```
 
+### Runtime debugging
+
+Existing middleware users might find integrations hooking into their pipeline to be unexpected, therefore we will add a runtime debugging logging when we detect that both integrations and the application developer have added middleware.
+
+The debugging logging will include which other the integration was added to help with debugging unexpected behavior.
+
 # Testing Strategy
 
 The existing middleware tests, which are mostly fixture based, can be reused here. We test other integrations in this way and it works well. Just create some integrations for different scenarios such as:
