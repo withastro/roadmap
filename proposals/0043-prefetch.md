@@ -124,7 +124,7 @@ This module can only be imported if the `prefetch` config is enabled.
 
 # Testing Strategy
 
-End-to-end tests, make sure user tap/hover/viewport all workks.
+End-to-end tests, make sure user tap/hover/viewport all works. And the `prefetch` programmatic API works.
 
 # Drawbacks
 
