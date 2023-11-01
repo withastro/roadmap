@@ -1,0 +1,142 @@
+- Start Date: 2023-11-01
+- Reference Issues: https://github.com/withastro/roadmap/issues/754
+- Implementation PR: https://github.com/withastro/astro/pull/8951
+
+# Summary
+
+Deprecate `@astrojs/prefetch` and provide first-class prefetch support in Astro.
+
+# Example
+
+```html
+<!-- prefetch defaults to hover -->
+<a href="/foo" data-astro-prefetch>foo</a>
+
+<!-- prefetch on tap (touchstart, mousedown events) -->
+<a href="/foo" data-astro-prefetch="tap">foo</a>
+
+<!-- prefetch on hover (focusin, focusout, mouseenter, mouseleave events) -->
+<a href="/foo" data-astro-prefetch="hover">foo</a>
+
+<!-- prefetch on enter viewport (IntersectionObserver) -->
+<a href="/foo" data-astro-prefetch="viewport">foo</a>
+
+<!-- disable prefetch if prefetch all by default -->
+<a href="/foo" data-astro-prefetch="false">foo</a>
+```
+You can also configure options in `astro.config.js`:
+
+```js
+prefetch: {
+  // Whether to prefetch all links by default. same as adding `data-astro-prefetch` to all links.
+  // Default false, but true if view transitions is used. User can explicitly set this to false
+  // to disable for view transitions. (I tried coming up a better name)
+  prefetchAll: true,
+  // Default prefetch strategy for `data-astro-prefetch` (no value specified).
+  defaultStrategy: 'hover' // accepts 'tap' and 'viewport' too
+}
+```
+
+Different prefetch strategies have different behaviours and opinions:
+- `tap`: Calls `fetch()` on `touchstart` or `mousedown` events (they are called before `click` event)
+- `hover`: Calls `fetch()` on `focusin`+`focusout` or `mouseenter`+`mouseleave` events. Hover detection kicks in after 80ms delay.
+- `viewport`: Creates a `<link rel="prefetch">` on enter viewport. It has lower priority than `fetch()` to not clog up the request. Intersection detection kicks in after 300ms.
+
+Notes: `hover` and `viewport` only works on `<a />` tags on initial page load (and view transition page load) due to limitations of the events. Unless we watch the entire DOM with MutationObserver but it's not performant.
+
+---
+
+For programmatic usage:
+
+```js
+import { prefetch } from 'astro:prefetch'
+
+prefetch('http://...', { with: 'link' }) // second parameter optional, can specify link/fetch for prefetch priority
+```
+
+# Background & Motivation
+
+With the introduction of View Transitions, it includes partial prefetching code for snappy navigation between pages. We can take this opportunity to support prefetching in core, and share the prefetch behaviour with View Transitions. 
+
+I've started an implementation before an RFC as the initial plan was to simply move `@astrojs/prefetch` to core. However, it would also be a good time to polish up and extend the API.
+
+# Goals
+
+- An option to enable prefetching
+- Enable prefetching via an attribute/hint
+- Enable prefetching for all links by default (required by View transitions)
+- Disable prefetching if all links are enabled by default
+- Different prefetching strategies (click, hover, viewport, etc)
+- Only add JS if using prefetching
+
+# Non-Goals
+
+- Prefetch cache invalidation (Browser relies on cache control)
+- Prefetch external links
+
+# Detailed Design
+
+A prefetch script for client-side is required. It should only be included if `prefetch` is truthy. The script can be injected through the `injectScript` integration API.
+
+### Config
+
+The prefetch configuration is a top-level Astro config:
+
+```js
+// default value if `prefetch: true` (prefetch is not enabled by default)
+prefetch: {
+  // Whether to prefetch all links by default
+  prefetchAll: false,
+  // Default prefetch strategy for `data-astro-prefetch` (no value specified).
+  defaultStrategy: 'hover' // accepts 'tap' and 'viewport' too
+}
+```
+
+If View Transitions is used in Astro, the default value of `prefetch` (if user not configured) is `{ prefetchAll: true }`. The user can configure `false`, `{ prefetchAll: false }`, etc if they want to override this default.
+
+### Client script
+
+The script should attach listeners on initialization for different prefetch strategies:
+
+- `tap`: Calls `fetch()` on `touchstart` or `mousedown` events
+- `hover`: Calls `fetch()` on `focusin`+`focusout` or `mouseenter`+`mouseleave` events. Hover detection kicks in after 80ms delay.
+- `viewport`: Creates a `<link rel="prefetch">` on enter viewport. It has lower priority than `fetch()` to not clog up the request. Intersection detection kicks in after 300ms.
+
+Additional rules:
+
+- Prefetched links should not be fetched again (e.g. hovering on a link twice)
+- The strategy should only apply when `data-astro-prefetch`'s value matches
+- If `data-astro-prefetch` has no value, use the configured `defaultStrategy`
+- If `prefetchAll` is enabled, apply `defaultStrategy` for all links
+
+### Programmatic API
+
+The client script would have an internal `prefetch` function that we can expose to the `astro:prefetch` module:
+
+```ts
+export declare function prefetch(url: string, opts?: { with?: 'link' | 'fetch' }): void
+```
+
+# Testing Strategy
+
+End-to-end tests, make sure user tap/hover/viewport all workks.
+
+# Drawbacks
+
+- Users have limited prefetch features with `@astrojs/prefetch`
+- Users have to use external prefetching solutions
+- Double prefetching could happen as View Transitions prefetches too
+
+# Alternatives
+
+Continue supporting `@astrojs/prefetch`
+
+# Adoption strategy
+
+We should document a migration path for `@astrojs/prefetch` users to use the new `prefetch` option.
+
+Existing `@astrojs/prefetch` users could of course keep using it if needed, so an immediate switch isn't required. After the release of `prefetch` feature, we can deprecate the `@astrojs/prefetch` integration to nudge towards the new API.
+
+# Unresolved Questions
+
+n/a
