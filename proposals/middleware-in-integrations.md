@@ -85,10 +85,10 @@ Once the `settings` object contains the ordered list of middleware, a Vite plugi
 import { sequence } from 'astro:middleware';
 import { onRequest as userOnRequest } from '/src/middleware';
 
-import { onRequest as _pre_0 } from 'one';
-import { onRequest as _pre_1 } from 'two';
+import { onRequest as _pre_0 } from '@example/one';
+import { onRequest as _pre_1 } from '@example/two';
 
-import { onRequest as _post_0 } from 'one';
+import { onRequest as _post_0 } from '@example/three';
 
 export const onRequest = sequence(
   _pre_0,
