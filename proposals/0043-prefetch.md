@@ -46,7 +46,7 @@ Notes: `hover` and `viewport` only works on `<a />` tags on initial page load (a
 
 ---
 
-For programmatic usage:
+For programmatic usage (only if `prefetch` config is enabled):
 
 ```js
 import { prefetch } from 'astro:prefetch'
@@ -76,7 +76,7 @@ I've started an implementation before an RFC as the initial plan was to simply m
 
 # Detailed Design
 
-A prefetch script for client-side is required. It should only be included if `prefetch` is truthy. The script can be injected through the `injectScript` integration API.
+A prefetch script for client-side is required. It should only be included if the `prefetch` config is truthy. The script can be injected through the `injectScript` integration API.
 
 ### Config
 
@@ -92,7 +92,7 @@ prefetch: {
 }
 ```
 
-If View Transitions is used in Astro, the default value of `prefetch` (if user not configured) is `{ prefetchAll: true }`. The user can configure `false`, `{ prefetchAll: false }`, etc if they want to override this default.
+If View Transitions is used in Astro, the default value of the `prefetch` config (if user not configured) is `{ prefetchAll: true }`. The user can configure `false`, `{ prefetchAll: false }`, etc if they want to override this default.
 
 ### Client script
 
@@ -109,6 +109,9 @@ Additional rules:
 - If `data-astro-prefetch` has no value, use the configured `defaultStrategy`
 - If `prefetchAll` is enabled, apply `defaultStrategy` for all links
 
+Notes:
+- `fetch()` has higher priority than `<link rel="prefetch">` when prefetching
+
 ### Programmatic API
 
 The client script would have an internal `prefetch` function that we can expose to the `astro:prefetch` module:
@@ -116,6 +119,8 @@ The client script would have an internal `prefetch` function that we can expose 
 ```ts
 export declare function prefetch(url: string, opts?: { with?: 'link' | 'fetch' }): void
 ```
+
+This module can only be imported if the `prefetch` config is enabled.
 
 # Testing Strategy
 
