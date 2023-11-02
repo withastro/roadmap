@@ -46,7 +46,7 @@ Notes: `hover` and `viewport` only works on `<a />` tags on initial page load (a
 
 ---
 
-For programmatic usage (only if `prefetch` config is enabled):
+For programmatic usage (only if `prefetch` config is explicitly enabled regardless of View Transitions, otherwise report an error):
 
 ```js
 import { prefetch } from 'astro:prefetch'
@@ -77,6 +77,8 @@ I've started an implementation before an RFC as the initial plan was to simply m
 # Detailed Design
 
 A prefetch script for client-side is required. It should only be included if the `prefetch` config is truthy. The script can be injected through the `injectScript` integration API.
+
+> NOTE: The details below works very differently to what `@astrojs/prefetch` has today. One feature `@astrojs/prefetch` has which I didn't implement is fetching HTMLs on viewport enter, parsing it for CSS links, and fetching them again. I think it's a little aggresive to support.
 
 ### Config
 
@@ -120,7 +122,13 @@ The client script would have an internal `prefetch` function that we can expose 
 export declare function prefetch(url: string, opts?: { with?: 'link' | 'fetch' }): void
 ```
 
-This module can only be imported if the `prefetch` config is enabled.
+This module can only be imported if the `prefetch` config is explicitly enabled, even with View Transitions enabled.
+
+- `url`: A URL string that can be a full `http://` path, or simply start with `/` or `./`. Internally it will construct as `new URL(url, window.location.href)`.
+   Prefetch will only run if the URL is not external and have not already been prefetched, otherwise it's a noop.
+- `with`: The prefetch strategy used. (Not using the word `strategy` because it already refers to `tap/hover/viewport` etc).
+  - `'link'`: use `<link rel="prefetch">`, which has a lower loading priority. The browser will schedule when to prefetch it itself.
+  - `'fetch'`: use `fetch()`, has a higher loading priority. The browser will immediately fetch and cache it.
 
 # Testing Strategy
 
