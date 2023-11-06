@@ -192,8 +192,8 @@ Same as `getAbsoluteLocaleUrl`, but it will return all the locales supported.
 
 The options allow to customise the behaviour of the APIs:
 
-- `prependWith?: string`: a path to prepend to `locale`
-- `normalizeLocale?: boolean`: when `true`, the locale is transformed in lower case and the underscore (`_`) is replaced with dash (`-`) 
+- `prependWith?: string`: a path to prepend to `locale`;
+- `normalizeLocale?: boolean`: defaults to `true`; when `true`, the locale is transformed in lower case and the underscore (`_`) is replaced with dash (`-`); 
 
 ### Routing strategy
 
@@ -201,6 +201,7 @@ An option called `routingStrategy` that allows to change the behaviour of the ro
 
 - `prefix-always`: all URLs of the website must have a locale prefix. Astro will return a 404 for any route that doesn't fulfill the requirements.
   Use `example.com/[lang]/content/` for every locale.
+  The index `example.com/` will **redirect** to `example.com/<defaultLocale>`.
 - `prefix-other-locales`: the URLs of the default locale must not have a prefix, while the rest of locales must have a locale prefix. 
   Use `example.com/content/` for the default locale. Use `example.com/[lang]/content/` for other locales. 
   Trying to access to use `example.com/[defaultLocale]/content/` will result into a 404.
