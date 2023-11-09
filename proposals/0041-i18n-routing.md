@@ -65,7 +65,7 @@ The feature requires **two required** fields, where the user needs to store the 
 import {defineConfig} from "astro/config"
 export default defineConfig({
     i18n: {
-        defaultLocaLe: 'en',
+        defaultLocale: 'en',
         locales: ['en', 'es', 'pt', 'fr']
     }
 })
