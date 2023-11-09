@@ -285,7 +285,7 @@ export default function createIntegration() {
           name: '@ema/my-adapter',
           serverEntrypoint: '@ema/my-adapter/server.js',
           supportedAstroFeatures: {
-            i81n: {
+            i18n: {
               domains: "experimental",
             }
           }
