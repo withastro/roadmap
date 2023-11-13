@@ -202,6 +202,10 @@ An option called `routingStrategy` that allows to change the behaviour of the ro
 - `prefix-always`: all URLs of the website must have a locale prefix. Astro will return a 404 for any route that doesn't fulfill the requirements.
   Use `example.com/[lang]/content/` for every locale.
   The index `example.com/` will **redirect** to `example.com/<defaultLocale>`.
+  
+  > ![!IMPORTANT]
+  > The routing strategy applies its logic only to pages. Endpoints are excluded by default.
+
 - `prefix-other-locales`: the URLs of the default locale must not have a prefix, while the rest of locales must have a locale prefix. 
   Use `example.com/content/` for the default locale. Use `example.com/[lang]/content/` for other locales. 
   Trying to access to use `example.com/[defaultLocale]/content/` will result into a 404.
