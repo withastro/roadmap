@@ -247,6 +247,12 @@ This information is available through the global object `Astro`:
 > [!NOTE]
 > This feature is only available in **SSR**
 
+### `Astro.currentLocale: string | undefined`
+
+A new API that allows to retrieve the current locale, computed from the `URL` of the current request.
+
+It's `undefined` if the URL doesn't contain a locale that is defined in `i18n.locales`. Although, if `routingStrategy` is set to `prefix-other-locales`, it's assumed that the `Astro.currentLocale` is the `i18n.defaultLocale`.
+
 ### Domain support
 
 > [!NOTE]
