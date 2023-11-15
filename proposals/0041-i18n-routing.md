@@ -213,6 +213,10 @@ An option called `routingStrategy` that allows to change the behaviour of the ro
   Use `example.com/content/` for the default locale. Use `example.com/[lang]/content/` for other locales. 
   Trying to access to use `example.com/[defaultLocale]/content/` will result into a 404.
 
+- `domain`: SSR only, it enables support for different domains. When a locale is mapped to domain, all the URLs won't have the language prefix.
+  You map `fr` to `fr.example.com`, if you want a to have a blog page to look like `fr.example.com/blog` instead of `example.com/fr/blog`.
+  The localised folders be must in the `src/pages/` folder.
+
 ### Fallback system
 
 The fallback system is a feature that allows users to re-route users from one locale to another in case a page is missing.
@@ -275,9 +279,10 @@ export default defineConfig({
         defaultLocaLe: 'en',
         locales: ['en', 'es', 'pt_BR', 'pt', 'fr'],
         domains: {
-            fr: "fr.example.com",
-            pt: "example.pt"
-        }
+            fr: "https://fr.example.com",
+            pt: "https://example.pt"
+        },
+        routingStrategy: "domain"
     }
 })
 ```
