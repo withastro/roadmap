@@ -103,7 +103,8 @@ Below the list of additional features that Astro will be provided with the i18n 
 
 ### A new virtual module called `astro:i18n`
 
-> [!NOTE]
+> **Note**:
+> 
 > This feature doesn't require the adapter help
 
 A virtual module called `astro:i18n` will be available to retrieve important information useful to frontend and backed.
@@ -199,12 +200,14 @@ The options allow to customise the behaviour of the APIs:
 
 An option called `routingStrategy` that allows to change the behaviour of the routing. The option accepts the following values:
 
+> **Important**:
+>
+> The routing strategies are only applied to pages. Endpoints and redirects are exonerated.
+
+
 - `prefix-always`: all URLs of the website must have a locale prefix. Astro will return a 404 for any route that doesn't fulfill the requirements.
   Use `example.com/[lang]/content/` for every locale.
   The index `example.com/` will **redirect** to `example.com/<defaultLocale>`.
-  
-  > ![!IMPORTANT]
-  > The routing strategy applies its logic only to pages. Endpoints are excluded by default.
 
 - `prefix-other-locales`: the URLs of the default locale must not have a prefix, while the rest of locales must have a locale prefix. 
   Use `example.com/content/` for the default locale. Use `example.com/[lang]/content/` for other locales. 
@@ -244,7 +247,8 @@ This information is available through the global object `Astro`:
 
   The property might be `undefined` if the developer isn't using their site in SSR, or the highest value of `Accept-Header` is `*`. 
 
-> [!NOTE]
+> **Note**:
+> 
 > This feature is only available in **SSR**
 
 ### `Astro.currentLocale: string | undefined`
@@ -255,7 +259,8 @@ It's `undefined` if the URL doesn't contain a locale that is defined in `i18n.lo
 
 ### Domain support
 
-> [!NOTE]
+> **Note**:
+> 
 > This feature requires adapter support using an Astro feature
 
 A feature that allows to support different domains for certain locales.
