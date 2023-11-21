@@ -316,6 +316,11 @@ export default function createIntegration() {
 }
 ```
 
+In order to support this feature, Astro needs to know the origin of the server (the domain where the server is hosted). To achieve this, Astro will rely on the following headers:
+- [`X-Forwarded-Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) and [`Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host). Astro will use the former, and if not present will try the latter.
+- [`X-Forwarded-Proto`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto) and [`URL#protocol`](https://developer.mozilla.org/en-US/docs/Web/API/URL/protocol) of the server request.
+
+If any of this information is missing, Astro won't be able to map the route. This will result in a 404.
 
 # Testing Strategy
 
