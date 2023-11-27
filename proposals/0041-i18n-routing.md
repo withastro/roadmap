@@ -73,6 +73,25 @@ export default defineConfig({
 
 Astro will throw an error if the `defaultLocale` value is not present in the list of `locales`.
 
+Alternatively, locales can be configured with more granular configuration, where a user can specify a particular **path** and map this path to an array of country codes:
+
+```js
+// astro.config.mjs
+import {defineConfig} from "astro/config"
+export default defineConfig({
+    i18n: {
+        defaultLocale: 'en',
+        locales: ['en', 'es', 'fr', {
+            path: "portugues",
+            codes: ["pt", "pt-BR", "pt-AO"]
+        }]
+    }
+})
+```
+
+- `path` will be used in the URLs, so users will have to put their translated content in the `portugues/` folder;
+- `codes` will be used to match a locale against the values of `Accept-Language` header, so it's **highly** advised to use codes that are used in that header. 
+
 ## File system based
 
 The localized directories must inside the `pages/` directory. Other than this restriction, the user is free to place the localized folders anywhere. 
@@ -188,6 +207,60 @@ Same as `getRelativeLocaleUrl`, but it will return all the locales supported.
 #### `getAbsoluteLocaleUrlList(path: string, options?: Options): string[]`
 
 Same as `getAbsoluteLocaleUrl`, but it will return all the locales supported.
+
+
+#### `getPathByLocale(locale: string): string`
+
+Given a locale, it returns the associated path:
+
+```js
+// astro.config.mjs
+import {defineConfig} from "astro/config"
+export default defineConfig({
+    i18n: {
+        defaultLocale: 'en',
+        locales: ['en', 'es', 'fr', {
+            path: "portugues",
+            codes: ["pt", "pt-BR", "pt-AO"]
+        }]
+    }
+})
+```
+
+```astro
+---
+// src/pages/index.astro
+import { getPathByLocale } from "astro:18";
+console.log(getPathByLocale('pt-BR')) // will log "portugues"
+---
+```
+
+#### `getLocaleByPath(locale: string): string`
+
+Given a path, it returns the preferred locale configured by the user. This is particularly useful when using the `codes` property. The function will return the **first** code configured:
+
+```js
+// astro.config.mjs
+import {defineConfig} from "astro/config"
+export default defineConfig({
+    i18n: {
+        defaultLocale: 'en',
+        locales: ['en', 'es', 'fr', {
+            path: "portugues",
+            codes: ["pt-AO", "pt", "pt-BR"]
+        }]
+    }
+})
+```
+
+```astro
+---
+// src/pages/index.astro
+import { getLocaleByPath } from "astro:18";
+console.log(getLocaleByPath('portugues')) // will log "pt-AO"
+---
+```
+
 
 #### `Options`
 
