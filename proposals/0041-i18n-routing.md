@@ -271,24 +271,23 @@ The options allow to customise the behaviour of the APIs:
 
 ### Routing strategy
 
-An option called `routingStrategy` that allows to change the behaviour of the routing. The option accepts the following values:
+An option called `routing` that allows to change the behaviour of the routing. This option is an object that accept the following fields:
 
 > **Important**:
 >
 > The routing strategies are only applied to pages. Endpoints and redirects are exonerated.
 
-
-- `prefix-always`: all URLs of the website must have a locale prefix. Astro will return a 404 for any route that doesn't fulfill the requirements.
+- `routing.prefixDefaultLocale`:
+  When `false`, all URLs of the website must have a locale prefix. Astro will return a 404 for any route that doesn't fulfill the requirements.
   Use `example.com/[lang]/content/` for every locale.
   The index `example.com/` will **redirect** to `example.com/<defaultLocale>`.
 
-- `prefix-other-locales`: the URLs of the default locale must not have a prefix, while the rest of locales must have a locale prefix. 
+  When `true`, the URLs of the default locale must not have a prefix, while the rest of locales must have a locale prefix. 
   Use `example.com/content/` for the default locale. Use `example.com/[lang]/content/` for other locales. 
   Trying to access to use `example.com/[defaultLocale]/content/` will result into a 404.
 
-- `domain`: SSR only, it enables support for different domains. When a locale is mapped to domain, all the URLs won't have the language prefix.
-  You map `fr` to `fr.example.com`, if you want a to have a blog page to look like `fr.example.com/blog` instead of `example.com/fr/blog`.
-  The localised folders be must in the `src/pages/` folder.
+- `routing.strategy`: tells Astro where the locales should handled inside a URL 
+  - "pathname": the locales are expected to be in the `pathname` of a URL, meaning after the domain.
 
 ### Fallback system
 
