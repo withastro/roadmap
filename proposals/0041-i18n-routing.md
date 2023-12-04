@@ -137,7 +137,7 @@ Given a locale, the function will return the **relative** URL, without the websi
 ```astro
 ---
 // src/pages/index.astro
-import { getRelativeLocaleUrl } from "astro:18";
+import { getRelativeLocaleUrl } from "astro:18n";
 console.log(getRelativeLocaleUrl('es', "")) // will log "/es"
 ---
 ```
@@ -159,19 +159,19 @@ export default defineConfig({
 ```astro
 ---
 // src/pages/index.astro
-import { getRelativeLocaleUrl } from "astro:18";
+import { getRelativeLocaleUrl } from "astro:18n";
 console.log(getRelativeLocaleUrl('es', "")) // will log "/docs/es"
 ---
 ```
 
 #### `getAbsoluteLocaleUrl(locale: string, path: string, options: Options): string`
 
-Given a locale, the function will return the **absolute** URL, taking into account the do supported. The function respects the configurations `base`, `site`, `trailingSlash` and `build.format`.
+Given a locale, the function will return the **absolute** URL. The function respects the configurations `base`, `site`, `trailingSlash` and `build.format`.
 
 ```astro
 ---
 // src/pages/index.astro
-import { getAbsoluteLocaleUrl } from "astro:18";
+import { getAbsoluteLocaleUrl } from "astro:18n";
 console.log(getAbsoluteLocaleUrl('es')) // will log "http://localhost:4321/es"
 ---
 ```
@@ -195,7 +195,7 @@ export default defineConfig({
 ```astro
 ---
 // src/pages/index.astro
-import { getAbsoluteLocaleUrl } from "astro:18";
+import { getAbsoluteLocaleUrl } from "astro:18n";
 console.log(getAbsoluteLocaleUrl('pt', "")) // will log "https://example.pt/"
 ---
 ```
@@ -230,7 +230,7 @@ export default defineConfig({
 ```astro
 ---
 // src/pages/index.astro
-import { getPathByLocale } from "astro:18";
+import { getPathByLocale } from "astro:18n";
 console.log(getPathByLocale('pt-BR')) // will log "portugues"
 ---
 ```
@@ -256,7 +256,7 @@ export default defineConfig({
 ```astro
 ---
 // src/pages/index.astro
-import { getLocaleByPath } from "astro:18";
+import { getLocaleByPath } from "astro:18n";
 console.log(getLocaleByPath('portugues')) // will log "pt-AO"
 ---
 ```
