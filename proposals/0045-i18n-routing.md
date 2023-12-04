@@ -100,7 +100,7 @@ The localized directories must inside the `pages/` directory. Other than this re
 
 Most of the logic will leverage the [middleware](https://docs.astro.build/en/guides/middleware/) system.
 
-If a user has a `middleware.ts` file when the i18n routing is enabled, Astro will place its i18n middleware right after the one of the user:
+If a user has a `middleware.ts` file when the i18n routing is enabled, Astro will place its i18n middleware right before the one of the user:
 
 ```js
 pipeline.setMiddlewareFunction(
@@ -108,7 +108,7 @@ pipeline.setMiddlewareFunction(
 )
 ```
 
-By placing the middleware **after** the one of the user, Astro allows users to apply their business logic to the emitted `Response` of the i18n middleware.
+The middleware is placed **before** the one of the user.
 
 ## Adapters and Astro features
 
@@ -312,7 +312,7 @@ This information is available through the global object `Astro`:
 - `Astro.preferredLocaleList: string[] | undefined`
     
   For example, if `i18n.locales` contains `['pt', 'fr', 'de']`, and the value of the `Accept-Header` value is `en, fr;q=0.2, de;q=0.8, *;q=0.5`, then 
-  `Astro.preferredLocaleList` will be `['de', 'fr']` because `pt` isn't inside the header, and `en` isn't supported by the website. `de` comes first because it has a highest quality value.
+  `Astro.preferredLocaleList` will be `['de', 'fr']` because `pt` isn't part of `Accept-Language` header even though it's configured, and `en` isn't supported by the website even though it is part of the `Accept-Langauge` header. `de` comes first because it has a highest quality value.
   
   The property might be `undefined` if the developer isn't using their site in SSR. When `Accept-Header` is `*`, the list contained in `i18n.locales` is returned. `*` means that no preferences have been set, so all the original locales are supported and preferred. 
 
