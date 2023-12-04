@@ -100,7 +100,7 @@ The localized directories must inside the `pages/` directory. Other than this re
 
 Most of the logic will leverage the [middleware](https://docs.astro.build/en/guides/middleware/) system.
 
-If a user has a `middleware.ts` file when the i18n routing is enabled, Astro will place its i18n middleware right after the one of the user:
+If a user has a `middleware.ts` file when the i18n routing is enabled, Astro will place its i18n middleware right before the one of the user:
 
 ```js
 pipeline.setMiddlewareFunction(
