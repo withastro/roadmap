@@ -20,7 +20,7 @@ have localised content under different subdomains or domains.
 
 # Non-Goals
 
-- Force a redirect to users
+- Redirect users from a path website to a domain website 
 - Change website/domain based on the language of the user's browser  
 
 
@@ -51,9 +51,26 @@ The following APIs will behave as follows:
 - [`getRelativeLocaleUrl`](#getrelativelocaleurllocale-string-string): it won't prefix the locale to the URL. From `/en` to `/`;
 - [`getAbsoluteLocaleUrl`](#getabsolutelocaleurllocale-string-string): it won't have the locale in the URL: From `example.com/fr` to `fr.example.com/`;
 
-Adapters must have the capabilities to redirect a user from one domain to another based on the domains configured.
+An adapter can signal Astro what kind of support has for this new feature:
 
-An adapter can signal Astro the feature support using the relative configuration:
+```js
+export default function createIntegration() {
+  return {
+    name: '@matthewp/my-adapter',
+    hooks: {
+      'astro:config:done': ({ setAdapter }) => {
+        setAdapter({
+          name: '@matthewp/my-adapter',
+          serverEntrypoint: '@matthewp/my-adapter/server.js',
+          supportedAstroFeatures: {
+            domains: 'experimental' // 'unsupported' | 'stable' | 'experimental' | 'deprecated'
+          }
+        });
+      },
+    },
+  };
+}
+```
 
 In order to support this feature, Astro needs to know the origin of the server (the domain where the server is hosted). To achieve this, Astro will rely on the following headers:
 - [`X-Forwarded-Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host) and [`Host`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host). Astro will use the former, and if not present will try the latter.
