@@ -16,16 +16,24 @@ have localised content under different subdomains or domains.
 # Goals
 
 - Support different domains, all driven by the same Astro project;
+- Configure some locales to use only path prefixes and some locales to use domains;
 - Mix locales that require a different domain, with locales that don't require a different domain;
 
 # Non-Goals
 
 - Redirect users from a path website to a domain website 
-- Change website/domain based on the language of the user's browser  
+- Change website/domain based on the language of the user's browser 
+- Support for static/hybrid output
+- Offer the means to configure multiple domains for serverless hosts (Vercel, Netlify, etc.)
 
 
 # Detailed Design
 
+There are some restrictions about how the feature will initially work:
+- the feature works only with `output: "server"`, hence only in SSR;
+- the presence of at least one pre-rendered route will cause a failure in the build;
+- the option `base` is required, because Astro needs to know how to create absolute URLs for locales that aren't mapped to a domain;
+- `functionPerRoute` isn't supported
 
 A feature that allows to support different domains for certain locales.
 
