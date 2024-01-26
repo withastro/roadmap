@@ -32,7 +32,7 @@ have localised content under different subdomains or domains.
 There are some restrictions about how the feature will initially work:
 - the feature works only with `output: "server"`, hence only in SSR;
 - the presence of at least one pre-rendered route will cause a failure in the build;
-- the option `base` is required, because Astro needs to know how to create absolute URLs for locales that aren't mapped to a domain;
+- the option `site` is required, because Astro needs to know how to create absolute URLs for locales that aren't mapped to a domain;
 - `functionPerRoute` isn't supported
 
 A feature that allows to support different domains for certain locales.
@@ -43,6 +43,8 @@ Using the configuration `domains`, a user can specify which locales should benef
 // astro.config.mjs
 import {defineConfig} from "astro/config"
 export default defineConfig({
+    site: "https://example.com",
+    output: "server",
     i18n: {
         defaultLocaLe: 'en',
         locales: ['en', 'es', 'pt_BR', 'pt', 'fr'],
@@ -55,9 +57,7 @@ export default defineConfig({
 })
 ```
 
-The following APIs will behave as follows:
-- [`getRelativeLocaleUrl`](#getrelativelocaleurllocale-string-string): it won't prefix the locale to the URL. From `/en` to `/`;
-- [`getAbsoluteLocaleUrl`](#getabsolutelocaleurllocale-string-string): it won't have the locale in the URL: From `example.com/fr` to `fr.example.com/`;
+The functions [`getAbsoluteLocaleUrl`](#https://docs.astro.build/en/guides/internationalization/#getabsolutelocaleurl) and [getAbsoluteLocaleUrlList](https://docs.astro.build/en/guides/internationalization/#getabsolutelocaleurllist) - when building the Astro project - will generate URLs using the configured domains. For example, the URL `example.com/fr` will become `fr.example.com/`.
 
 An adapter can signal Astro what kind of support has for this new feature:
 
