@@ -41,7 +41,9 @@ Using the configuration `domains`, a user can specify which locales should benef
 
 ```js
 // astro.config.mjs
-import {defineConfig} from "astro/config"
+import {defineConfig} from "astro/config";
+import node from "@astrojs/node";
+
 export default defineConfig({
     site: "https://example.com",
     output: "server",
@@ -51,9 +53,11 @@ export default defineConfig({
         domains: {
             fr: "https://fr.example.com",
             pt: "https://example.pt"
-        },
-        routingStrategy: "domain"
-    }
+        }
+    },
+    adapter: node({
+        mode: "standalone"
+    })
 })
 ```
 
