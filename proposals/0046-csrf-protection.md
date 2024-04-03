@@ -24,11 +24,12 @@ Astro should provide some level of security to users.
 
 # Goals
 
-- Add the required checks to prevent CSRF, probably via an option
+- Add the required checks to prevent CSRF, by checking the routes that can be called via `POST`, `PUT`, `PATCH`, or `DELETE` requests.
+- Add the required checks to prevent CSRF in case the application behind a reverse proxy.
 
 # Non-Goals
 
-- Give the users the possibility to customise the implementation of the protection
+- Give the users the possibility to customise the implementation of the protection at route level.
 
 # Detailed Design
 
