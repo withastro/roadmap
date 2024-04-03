@@ -53,7 +53,9 @@ This solution should fit most websites.
 
 The cookie solution is an alternative way to provide CSRF protection. It will be heavily inspired from [Angular](https://angular.io/guide/http-security-xsrf-protection).
 
-When the first `GET` request to the application is sent, Astro will create a token that will be saved inside a cookie named `Astro-csrf-token`. This token will be read in the **known requests**.
+When the **first** `GET` request is sent to the application, Astro will create a token that will be saved inside a cookie named `Astro-csrf-token`. This token will be read in the **known requests** and it doesn't match the expected value, it means that the request isn't genuine.
+
+The token must be unique for each user and must be verifiable by the server; his prevents the client from making up its own tokens.
 
 This solution should fit more esoteric scenarios, where applications are behind reverse proxies.
 
