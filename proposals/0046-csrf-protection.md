@@ -33,6 +33,8 @@ Astro should provide some level of security to users.
 
 # Detailed Design
 
+The solution should work only on on-demand applications (SSR), and applications with `server: "hybrid"` for routes that opt-out prerendering. 
+
 The solutions proposed should work only on request meant to **modify** data: `POST`, `PUT`, `PATCH`, or `DELETE`. Other requests should be exempt from the CSRF check.
 
 We will call these requests as **known requests**.
