@@ -11,7 +11,12 @@ Provide the infrastructure to protect Astro websites from CSRF attacks
 ```js
 // astro.config.mjs
 export default defineConfig({
-  csrfProtection: ["origin", "cookie"]
+    security: {
+        csrfProtection: {
+            origin: true,
+            cookie: true
+        }
+    }
 })
 ```
 
@@ -58,6 +63,21 @@ When the **first** `GET` request is sent to the application, Astro will create a
 The token must be unique for each user and must be verifiable by the server; his prevents the client from making up its own tokens.
 
 This solution should fit more esoteric scenarios, where applications are behind reverse proxies.
+
+A user can provide options to configure the name of the cookie and the name of the token:
+
+```js
+// astro.config.mjs
+export default defineConfig({
+    security: {
+        csrfProtection: {
+            cookie: ["cookie-name", "token-name"]
+        }
+    }
+})
+```
+
+Having the option to change the name of the cookie and the token would allow to have the feature working with multiple Astro applications that are hosted in the same domain/subdomain.
 
 # Testing Strategy
 
