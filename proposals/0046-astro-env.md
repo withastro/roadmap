@@ -133,23 +133,10 @@ Since there are various combinations possible that can make choosing confusing, 
 ```ts
 import { envField } from "astro/config"
 
-/*
-{
-  scope: "static",
-  access: "public",
-  type: "number",
-  default: 4321
-}
-*/
+// { scope: "static", access: "public", type: "number", default: 4321 }
 envField.static().public().number({ default: 4321 })
 
-/*
-{
-  scope: "dynamic",
-  access: "private",
-  type: "string"
-}
-*/
+// { scope: "dynamic", access: "private", type: "string" }
 envField.dynamic().private().string()
 ```
 
