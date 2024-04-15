@@ -304,7 +304,7 @@ It was too restrictive and caused 2 issues:
 
 Note using such convention is still possible using the current proposal:
 
-```
+```ts
 // env.ts
 import { envField } from "astro/config"
 
