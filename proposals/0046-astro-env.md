@@ -44,11 +44,18 @@ const stripeKey = getEnv("STRIPE_KEY")
 
 # Background & Motivation
 
-Include any useful background detail that that explains why this RFC is important.
-What are the problems that this RFC sets out to solve? Why now? Be brief!
+Env variables are an important part of any web application. You need to store sensitive data (think API secrets, tokens etc) without being leaked inside your git repo. But that's only the 1st part of the story. It's easy to leak this data by importing in the wrong place, eg. the frontend like [Resend a few weeks ago](https://resend.com/blog/incident-report-for-january-10-2024).
 
-It can be useful to illustrate your RFC as a user problem in this section.
-(ex: "Users have reported that it is difficult to do X in Astro today.")
+Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dynamic-private)) are handling env pretty well. From my understanding, the env story is currently a bit tricky in Astro. According to the [docs](https://docs.astro.build/en/guides/environment-variables/), here is how env variables are currently handled:
+
+- Astro uses Vite’s built-in support for environment variables
+- Static variables (ie. replaced statically at build time) are accessible via `import.meta.env`
+- `import.meta.env` includes some [default variables](https://docs.astro.build/en/guides/environment-variables/#default-environment-variables) like `SSR`, `BASE_URL`...
+- A public variable key has to be prefixed by `PUBLIC_`
+- A non public variable accessed using `import.meta.env` on the client side will be `undefined` (value will be accessible server side)
+- Env variables can be loaded through `.env` (or `.env.production`, `.env.development`) and CLI
+- Any non built-in variable can be [manually typed]([.env.production](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript))
+- Runtime variables should be access using `process.env`, or following the used runtime (eg. `Deno.env.get()` for the deno adapter)
 
 # Goals
 
