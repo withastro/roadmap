@@ -166,6 +166,26 @@ const integration = {
 
 ## Static variables
 
+Static variables are checked at some point between `astro:config:setup` and `astro:server:setup`. Since we don't/won't support many data structures, custom validators are used for the validation. They will also be used for dynamic variables at runtime.
+
+The `astro:env/static` virtual module is generated like so:
+
+```ts
+export const FOO = import.meta.env["FOO"]
+export const PUBLIC_BAR = import.meta.env["PUBLIC_BAR"] ?? true
+```
+
+Types are generated via codegen, likely at `.astro/types.d.ts`:
+
+```ts
+declare module "astro:env/static" {
+  export const FOO: string
+  export const PUBLIC_BAR: boolean
+} 
+```
+
+There's no protection to put in place regarding client-side usage, since `import.meta.env` already handles it.
+
 ## Dynamic variables
 
 # Testing Strategy
