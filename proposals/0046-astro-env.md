@@ -10,18 +10,37 @@
   of the accepted proposal.
 -->
 
-- Start Date: <!-- today's date, YYYY-MM-DD -->
-- Reference Issues: <!-- related issues, otherwise leave empty -->
+- Start Date: 2024-04-15
+- Reference Issues: https://github.com/withastro/roadmap/issues/837
 - Implementation PR: <!-- leave empty -->
 
 # Summary
 
-A brief, one or two sentence explanation of the proposal.
+Improve DX and security around environment variables in Astro.
 
 # Example
 
-If the proposal involves a new or changed API, then include a basic code example.
-Otherwise, omit this section if it's not applicable.
+```js
+// astro.config.mjs
+import { defineConfig, envField } from "astro/config"
+
+export default defineConfig({
+  env: {
+    schema: {
+      API_URL: z.static().private().string(),
+      PUBLIC_FOO: z.static().public().string({ default: "bar" }),
+      STRIPE_KEY: z.dynamic().private().string()
+    }
+  }
+})
+```
+
+```ts
+import { API_URL, PUBLIC_FOO } from "astro:env/static"
+import { getEnv } from "astro:env/dynamic"
+
+const stripeKey = getEnv("STRIPE_KEY")
+```
 
 # Background & Motivation
 
