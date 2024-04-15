@@ -59,22 +59,16 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 # Goals
 
-A **concise, bulleted-list** outlining the intended goals of this RFC.
-
-- What are the exact problems that you are trying to solve with this RFC?
-- Separate these goals from the solution that you will outline below.
-- If this RFC isn't approved, these goals can be used to develop alternative solutions.
+- Provide a fully type-safe experience for environment variables, without [manual type definitions](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript)
+- Reduce user confusion between inlined, static variables and dynamic, runtime variables
+- Allow adapters to specify how runtime env variables should be handled
+- Allow integrations to define environment variable constraints
+- Simple type casting and validation (strings/numbers/booleans, required/optional)
 
 # Non-Goals
 
-A **concise, bulleted-list** outlining anything intentionally left out of this RFC:
-
-- Non-goal: A goal that is intentionally not addressed in this RFC.
-- Out-of-scope: A goal that is related, but intentionally avoided here.
-- Future: A goal that is related, but left to be addressed in the future.
-
-This gives the reader the correct context on what is intentionally left out of scope.
-It is okay to leave this section empty.
+- Complex validation or type casting of env variables. We might want to enable this at some point, but there is likely a performance cost for this at runtime. We should punt on this if possible!
+- Future: allow adapters to customize build-time variable handling. Better runtime handling is the most important problem this proposal aims to solve, but if we find an API that enables this as well, that's great.
 
 # Detailed Design
 
