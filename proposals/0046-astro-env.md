@@ -140,6 +140,30 @@ envField.static().public().number({ default: 4321 })
 envField.dynamic().private().string()
 ```
 
+## Integrations
+
+The above way of declaring the schema allows integrations to declare their own constraints from inside `astro:config:setup`:
+
+```ts
+import { envField } from "astro/config"
+import type { AstroIntegration } from "astro"
+
+const integration = {
+  name: "supabase-integration",
+  hooks: {
+    "astro:config:setup": (params) => {
+      params.updateConfig({
+        env: {
+          schema: {
+            PUBLIC_SUPABASE_URL: envField.static().public().string()
+          }
+        }
+      })
+    }
+  }
+} satisfies AstroIntegration
+```
+
 ## Static variables
 
 ## Dynamic variables
