@@ -217,9 +217,29 @@ declare module "astro:env/dynamic" {
 
 # Testing Strategy
 
-How will this feature's implementation be tested? Explain if this can be tested with
-unit tests or integration tests or something else. If relevant, explain the test
-cases that will be added to cover all of the ways this feature might be used.
+Unit tests will be made for:
+- Custom validators
+
+E2e test will be made for:
+- Testing public/private
+- Testing static/dynamic
+- Integrations
+
+Features will be implemented incrementally using feature flags:
+
+```ts
+export default defineConfig({
+  experimental: {
+    env: {
+      schema: {},
+      // then
+      staticVariables: true,
+      // then
+      dynamicVariables: true
+    }
+  }
+})
+```
 
 # Drawbacks
 
