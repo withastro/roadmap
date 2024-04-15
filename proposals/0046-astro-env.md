@@ -27,9 +27,9 @@ import { defineConfig, envField } from "astro/config"
 export default defineConfig({
   env: {
     schema: {
-      API_URL: z.static().private().string(),
-      PUBLIC_FOO: z.static().public().string({ default: "bar" }),
-      STRIPE_KEY: z.dynamic().private().string()
+      API_URL: envField.static().private().string(),
+      PUBLIC_FOO: envField.static().public().string({ default: "bar" }),
+      STRIPE_KEY: envField.dynamic().private().string()
     }
   }
 })
