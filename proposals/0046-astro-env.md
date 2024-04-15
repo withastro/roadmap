@@ -74,7 +74,24 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Terminology
 
+- `Static variable`: variable replaced by its value at build time. Uses `import.meta.env` under the hood
+- `Dynamic variable`: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
+
 ## Astro config
+
+A new `env.schema` property is added to `AstroUserConfig`. Its type looks like so (some details are omitted):
+
+```ts
+type AstroUserConfig = {
+  env?: {
+    schema: Record<string, {
+      scope: "static" | "dynamic"
+      access: "public" | "private"
+      type: "string" | "number" | "boolean"
+    }>
+  }
+}
+```
 
 ## Static variables
 
