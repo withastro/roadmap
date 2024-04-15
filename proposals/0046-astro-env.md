@@ -188,6 +188,33 @@ There's no protection to put in place regarding client-side usage, since `import
 
 ## Dynamic variables
 
+Dynamic variables are an adapter feature, meaning it's not supported by purely static site (ie. no adapter set).
+
+> TODO: see what api makes most sense, probably an entrypoint but it also needs to be request dependent for Cloudflare
+
+Variables are accessible through the `astro:env/dynamic` virtual module:
+
+```ts
+import { getEnv } from "astro:env/dynamic"
+
+getEnv("FOO")
+```
+
+Under the hood, this feature will rely on [Async Local Storage](https://nodejs.org/api/async_context.html). For instance, this will require the cloudflare adapter to implement a codemod to enable the TODO:flag_name flag in `wrangler.toml`.
+
+Values will be validated at runtime using the same custom validators as static variables, and typed using codegen:
+
+```ts
+declare module "astro:env/dynamic" {
+  type Values = {
+    "FOO": boolean
+    "BAR": string
+  }
+
+  export const getEnv: <TKey extends keyof Values>(key: TKey) => Values[TKey]
+}
+```
+
 # Testing Strategy
 
 How will this feature's implementation be tested? Explain if this can be tested with
