@@ -72,11 +72,13 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 # Detailed Design
 
-This is the bulk of the RFC. Explain the design in enough detail for somebody
-familiar with Astro to understand, and for somebody familiar with the
-implementation to implement. This should get into specifics and corner-cases,
-and include examples of how the feature is used. Any new terminology should be
-defined here.
+## Terminology
+
+## Astro config
+
+## Static variables
+
+## Dynamic variables
 
 # Testing Strategy
 
