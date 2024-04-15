@@ -142,7 +142,7 @@ envField.dynamic().private().string()
 
 ## Integrations
 
-The above way of declaring the schema allows integrations to declare their own constraints from inside `astro:config:setup`:
+The above way of declaring the schema allows integrations to declare their own constraints from inside `astro:config:setup` without any special handling:
 
 ```ts
 import { envField } from "astro/config"
