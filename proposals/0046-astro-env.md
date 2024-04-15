@@ -118,7 +118,7 @@ type PrivateDynamicEnvFieldMetadata = {
 }
 
 type EnvSchema =
-  [ Record<`PUBLIC_${string}`, PublicStaticEnvFieldMetadata & EnvFieldType>
+  | Record<`PUBLIC_${string}`, PublicStaticEnvFieldMetadata & EnvFieldType>
   | Record<string, (PrivateStaticEnvFieldMetadata | PrivateDynamicEnvFieldMetadata) & EnvFieldType>
 
 type AstroUserConfig = {
