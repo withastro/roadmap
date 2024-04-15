@@ -168,6 +168,8 @@ const integration = {
 
 Static variables are checked at some point between `astro:config:setup` and `astro:server:setup`. Since we don't/won't support many data structures, custom validators are used for the validation. They will also be used for dynamic variables at runtime.
 
+Some names must be reserved, like `SSR` to avoid conflicts with `import.meta.env.SSR`.
+
 The `astro:env/static` virtual module is generated like so:
 
 ```ts
@@ -250,7 +252,76 @@ export default defineConfig({
 
 # Alternatives
 
-What other designs have been considered? What is the impact of not doing this?
+## Typed `import.meta.env`
+
+https://github.com/florian-lefebvre/astro-env currently does [manual typing](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript) on behalf of the user. It's too basic and only handles static variables.
+
+## Dynamic variables using `Astro.env`
+
+The issue restrict dynamic variables usage inside `.astro` files (or endpoints `context`). It's common to be able to use it outside, eg. in `.ts`. That's why it uses an ALS.
+
+## Using zod
+
+Using zod in the public interface isn't great as `.env` files remain strings, so it requires more work to get right ([especially for booleans](https://env.t3.gg/docs/recipes#booleans)) and we only support a tiny subset of zod APIs.
+
+We've also considered using it under the hood. While it's not an issue for static variables (build time, not part of the bundle), it would increase the bundle for runtime usage significantly.
+
+## Providing fields helpers in a function
+
+Instead of exporting `envField` from `astro/config`, it has been considered to be provided as a function argument of `schema`:
+
+```ts
+export default defineConfig({
+  env: {
+    schema: (fields) => ({
+      FOO: fields.string()
+    })
+  }
+})
+```
+
+It's not great because:
+- It's not serializable
+- It can cause side-effects (if you call something before returning the object)
+- It makes merging in `updateConfig` (Integrations API) harder
+
+## Dedicated `env.ts`
+
+Having a dedicated entrypoint has been considered, mainly to play better with a zod based API:
+
+```ts
+import { defineEnv } from "astro/config"
+import { z } from "astro/zod"
+
+export default defineEnv({
+  FOO: z.string()
+})
+```
+
+It was too restrictive and caused 2 issues:
+- Users could forget to use the default export
+- Auto-complete could point to this file instead of virtual imports when typing `env`
+
+Note using such convention is still possible using the current proposal:
+
+```
+// env.ts
+import { envField } from "astro/config"
+
+export const envSchema = {
+  FOO: envField.static().public().string()
+} as const
+
+// astro.config.mjs
+import { defineConfig } from "astro/config"
+import { envSchema } from "./env"
+
+export default defineConfig({
+  env: {
+    schema: envSchema
+  }
+})
+```
 
 # Adoption strategy
 
