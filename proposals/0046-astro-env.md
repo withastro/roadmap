@@ -102,23 +102,28 @@ type NumberField = {
 
 type EnvFieldType = StringField | NumberField | BooleanField
 
-type StaticEnvFieldMetadata = {
+type PublicStaticEnvFieldMetadata = {
   scope: "static"
-  access: "public" | "private"
+  access: "public"
 }
 
-type DynamicEnvFieldMetadata = {
+type PrivateStaticEnvFieldMetadata = {
+  scope: "static"
+  access: "private"
+}
+
+type PrivateDynamicEnvFieldMetadata = {
   scope: "dynamic"
   access: "private" // allows for public if we ever want to support it
 }
 
+type EnvSchema =
+  [ Record<`PUBLIC_${string}`, PublicStaticEnvFieldMetadata & EnvFieldType>
+  | Record<string, (PrivateStaticEnvFieldMetadata | PrivateDynamicEnvFieldMetadata) & EnvFieldType>
+
 type AstroUserConfig = {
   env?: {
-    schema: Record<string, {
-      scope: "static" | "dynamic"
-      access: "public" | "private"
-      type: "string" | "number" | "boolean"
-    }>
+    schema: EnvSchema
   }
 }
 ```
