@@ -74,8 +74,8 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Terminology
 
-- `Static variable`: variable replaced by its value at build time. Uses `import.meta.env` under the hood
-- `Dynamic variable`: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
+- **Static variable**: variable replaced by its value at build time. Uses `import.meta.env` under the hood
+- **Dynamic variable**: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
 
 ## Astro config
 
