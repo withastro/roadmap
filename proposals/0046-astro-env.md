@@ -241,17 +241,12 @@ export default defineConfig({
 })
 ```
 
-# Drawbacks
+# Drawbacks / integration
 
-Why should we _not_ do this? Please consider:
-
-- Implementation cost, both in term of code size and complexity.
-- Whether the proposed feature can be implemented in user space.
-- Impact on teaching people Astro.
-- Integration of this feature with other existing and planned features
-- Cost of migrating existing Astro applications (_is it a breaking change?_)
-
-There are tradeoffs to choosing any path. Attempt to identify them here.
+- The implementation in terms of code size and complexity seems reasonable. It shouldn't affect too many parts of the codebase
+- The user can be implemented in userland, although more limited (eg. exposing apis to adapter is not possible without integrations inter-communication), see https://github.com/florian-lefebvre/astro-env/pull/4
+- This feature requires update across the docs as the official recommendation, although it's not breaking
+- Other parts of Astro need this, for example integrations like `@astrojs/db`
 
 # Alternatives
 
