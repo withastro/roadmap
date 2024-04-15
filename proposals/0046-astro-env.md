@@ -79,9 +79,39 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Astro config
 
-A new `env.schema` property is added to `AstroUserConfig`. Its type looks like so (some details are omitted):
+A new `env.schema` property is added to `AstroUserConfig`. Its type looks like so:
 
 ```ts
+type StringField = {
+  type: "string"
+  optional?: boolean
+  default?: string
+}
+
+type NumberField = {
+  type: "number"
+  optional?: boolean
+  default?: number
+}
+
+type NumberField = {
+  type: "boolean"
+  optional?: boolean
+  default?: boolean
+}
+
+type EnvFieldType = StringField | NumberField | BooleanField
+
+type StaticEnvFieldMetadata = {
+  scope: "static"
+  access: "public" | "private"
+}
+
+type DynamicEnvFieldMetadata = {
+  scope: "dynamic"
+  access: "private" // allows for public if we ever want to support it
+}
+
 type AstroUserConfig = {
   env?: {
     schema: Record<string, {
