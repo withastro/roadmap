@@ -114,7 +114,7 @@ type PrivateStaticEnvFieldMetadata = {
 
 type PrivateDynamicEnvFieldMetadata = {
   scope: "dynamic"
-  access: "private" // allows for public if we ever want to support it
+  access: "private"
 }
 
 type EnvSchema =
@@ -126,6 +126,31 @@ type AstroUserConfig = {
     schema: EnvSchema
   }
 }
+```
+
+Since there are various combinations possible that can make choosing confusing, we provide a `envField` helper that uses chaining, mirroring other APIs like Astro DB or zod:
+
+```ts
+import { envField } from "astro/config"
+
+/*
+{
+  scope: "static",
+  access: "public",
+  type: "number",
+  default: 4321
+}
+*/
+envField.static().public().number({ default: 4321 })
+
+/*
+{
+  scope: "dynamic",
+  access: "private",
+  type: "string"
+}
+*/
+envField.dynamic().private().string()
 ```
 
 ## Static variables
