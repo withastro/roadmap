@@ -352,8 +352,6 @@ export default defineConfig({
 - **Is this a breaking change? Can we write a codemod?**
   - This is not breaking
   - A codemod could help migrate, although not required. It may require too much efforts, given how codemods are hard to write
-- **Can we provide a runtime adapter library for the original API it replaces?**
-  - TODO: don't understand the question
 - **How will this affect other projects in the Astro ecosystem?**
   - This is not breaking for users projects nor integrations
   - Only my integration `astro-env` aims to provide the same features, so it will be deprecated
@@ -363,4 +361,3 @@ export default defineConfig({
 
 - How should the Adapter API look?
 - What's the name of the Cloudflare flag to enable the ALS?
-- What does "Can we provide a runtime adapter library for the original API it replaces?" mean?
