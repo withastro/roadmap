@@ -233,11 +233,7 @@ Features will be implemented incrementally using feature flags:
 export default defineConfig({
   experimental: {
     env: {
-      schema: {},
-      // then
-      staticVariables: true,
-      // then
-      dynamicVariables: true
+      schema: {}
     }
   }
 })
