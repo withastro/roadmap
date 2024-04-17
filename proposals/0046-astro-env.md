@@ -355,7 +355,7 @@ export default defineConfig({
 
 - **If we implement this proposal, how will existing Astro developers adopt it?**
   - They should not use [manual typing](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript) anymore
-  - Any custom env var (ie. not built-in like `SSR`) used with `import.meta.env` should be added to `env.schema` and imported through `astro:env/static`
+  - Any custom env var (ie. not built-in like `SSR`) used with `import.meta.env` should be added to `env.schema` and imported through `astro:env/static/public` or `astro:env/static/private`
 
   ```diff
   // astro.config.mjs
@@ -374,7 +374,7 @@ export default defineConfig({
 
   // whatever.ts
   - import.meta.env.PUBLIC_API_URL
-  + import { PUBLIC_API_URL } from "astro:env/static"
+  + import { PUBLIC_API_URL } from "astro:env/static/public"
   ```
   
 - **Is this a breaking change? Can we write a codemod?**
