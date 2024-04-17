@@ -141,6 +141,8 @@ envField.static().public().number.default(4321)
 envField.dynamic().private().string()
 ```
 
+Note that a variable is required by default, and can be made optional with `.optional()`
+
 ## Integrations
 
 The above way of declaring the schema allows integrations to declare their own constraints from inside `astro:config:setup` without any special handling:
