@@ -95,7 +95,7 @@ type NumberField = {
   default?: number
 }
 
-type NumberField = {
+type BooleanField = {
   type: "boolean"
   optional?: boolean
   default?: boolean
