@@ -36,7 +36,8 @@ export default defineConfig({
 ```
 
 ```ts
-import { API_URL, PUBLIC_FOO } from "astro:env/static"
+import { PUBLIC_FOO } from "astro:env/static/public"
+import { API_URL } from "astro:env/static/private"
 import { getEnv } from "astro:env/dynamic"
 
 const stripeKey = getEnv("STRIPE_KEY")
@@ -134,7 +135,7 @@ Since there are various combinations possible that can make choosing confusing, 
 import { envField } from "astro/config"
 
 // { scope: "static", access: "public", type: "number", default: 4321 }
-envField.static().public().number({ default: 4321 })
+envField.static().public().number.default(4321)
 
 // { scope: "dynamic", access: "private", type: "string" }
 envField.dynamic().private().string()
@@ -170,27 +171,45 @@ Static variables are checked at some point between `astro:config:setup` and `ast
 
 Some names must be reserved, like `SSR` to avoid conflicts with `import.meta.env.SSR`.
 
-The `astro:env/static` virtual module is generated like so:
+Two virtual modules will be generated, `astro:env/static/public` and `astro:env/static/private`:
+
+### Public
+
+Virtual module:
 
 ```ts
-export const FOO = import.meta.env["FOO"]
 export const PUBLIC_BAR = import.meta.env["PUBLIC_BAR"] ?? true
 ```
 
 Types are generated via codegen, likely at `.astro/types.d.ts`:
 
 ```ts
-declare module "astro:env/static" {
-  export const FOO: string
+declare module "astro:env/static/public" {
   export const PUBLIC_BAR: boolean
 } 
 ```
 
-There's no protection to put in place regarding client-side usage, since `import.meta.env` already handles it.
+### Public
+
+Virtual module:
+
+```ts
+export const FOO = import.meta.env["FOO"]
+```
+
+Types are generated via codegen, likely at `.astro/types.d.ts`:
+
+```ts
+declare module "astro:env/static/private" {
+  export const FOO: string
+} 
+```
+
+Importing this module client side will trigger an `AstroError`.
 
 ## Dynamic variables
 
-Dynamic variables are an adapter feature, meaning it's not supported by purely static site (ie. no adapter set).
+Dynamic variables are an adapter feature. If no implementation is provided by an adapter, it will use a fallback one that works for Node.js (likely based on `process.env`).
 
 > TODO: see what api makes most sense, probably an entrypoint but it also needs to be request dependent for Cloudflare
 
@@ -199,12 +218,17 @@ Variables are accessible through the `astro:env/dynamic` virtual module:
 ```ts
 import { getEnv } from "astro:env/dynamic"
 
-getEnv("FOO")
+getEnv("KNOWN_KEY") // whatever type defined in the schema
+getEnv("UNKNOWN_KEY") // string | undefined
 ```
+
+Importing this module client side will trigger an `AstroError`.
 
 Under the hood, this feature will rely on [Async Local Storage](https://nodejs.org/api/async_context.html). For instance, this will require the cloudflare adapter to implement a codemod to enable the TODO:flag_name flag in `wrangler.toml`.
 
-Values will be validated at runtime using the same custom validators as static variables, and typed using codegen:
+Values will be validated at runtime using the same custom validators as static variables. If the key passed is not found in the schema, it will either return a string (ie. raw value) or undefined. It's the adapter duty to handle what variables to return (eg. the Cloudflare adapter should not return a R2 binding).
+
+Below an example of how it could be typed using codegen:
 
 ```ts
 declare module "astro:env/dynamic" {
@@ -213,7 +237,13 @@ declare module "astro:env/dynamic" {
     "BAR": string
   }
 
-  export const getEnv: <TKey extends keyof Values>(key: TKey) => Values[TKey]
+  type Value = keyof Values
+
+	type Loose<T> = T | (string & {})
+
+	type Strictify<T extends string> = T extends `${infer _}` ? T : never
+
+  export const getEnv: <TKey extends Loose<Value>>(key: TKey) => TKey extends Strictify<Value> ? Values[TKey] : (string | undefined)
 }
 ```
 
