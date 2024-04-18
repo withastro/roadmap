@@ -178,3 +178,9 @@ I considered a static approach like SvelteKit and Next.js. While this approach w
 - Upon rerouting, should we trigger a middleware again? 
   - If we do `Astro.reroute('/about')`, should the middleware run again, with a new `Request` that contains `url = /about`? 
 
+- How should it be signature?
+  ```js
+  Astro.reroute({ request: new Request() });
+  // VS
+  Astro.reroute(new Request());
+  ```
