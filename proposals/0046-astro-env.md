@@ -174,81 +174,56 @@ Public variables are checked at some point between `astro:config:setup` and `ast
 
 Some names must be reserved, like `SSR` to avoid conflicts with `import.meta.env.SSR`.
 
-The virtual modules will be generated, `astro:env/static/public` and `astro:env/static/private`:
-
-### Public
-
-Virtual module:
+If the variable is marked as client only, it will be available through the `astro:env/client` virtual module. If it's marked as server only, it will be available through `astro:env/server` instead (importing this module client side will trigger an `AstroError`).
 
 ```ts
-export const PUBLIC_BAR = import.meta.env["PUBLIC_BAR"] ?? true
+declare module "astro:env/client" {
+  export const PUBLIC_FOO: boolean
+}
+
+declare module "astro:env/server" {
+  export const BAR: boolean
+  // more in this module below
+}
+
+import { PUBLIC_FOO } from "astro:env/client"
+import { BAR } from "astro:env/server"
 ```
 
-Types are generated via codegen, likely at `.astro/types.d.ts`:
+## Secret variables
 
-```ts
-declare module "astro:env/static/public" {
-  export const PUBLIC_BAR: boolean
-} 
-```
-
-### Public
-
-Virtual module:
-
-```ts
-export const FOO = import.meta.env["FOO"]
-```
-
-Types are generated via codegen, likely at `.astro/types.d.ts`:
-
-```ts
-declare module "astro:env/static/private" {
-  export const FOO: string
-} 
-```
-
-Importing this module client side will trigger an `AstroError`.
-
-## Dynamic variables
-
-Dynamic variables are an adapter feature. If no implementation is provided by an adapter, it will use a fallback one that works for Node.js (likely based on `process.env`).
+Secret variables by default use a Node.js compatible API to retrieve env variables (likely based on `process.env`). However, adapters can provide their own implementations.
 
 > TODO: see what api makes most sense, probably an entrypoint but it also needs to be request dependent for Cloudflare
 
-Variables are accessible through the `astro:env/dynamic` virtual module:
+Variables specified in the schema are accessible (and well typed) whereas unknown ones are typed more loosely. They will be able in the `astro:env/server` virtual module:
 
 ```ts
-import { getEnv } from "astro:env/dynamic"
+declare module "astro:env/server" {
+  type SecretValues = {
+    "FOO": boolean
+    "BAR": string
+  }
 
-getEnv("KNOWN_KEY") // whatever type defined in the schema
-getEnv("UNKNOWN_KEY") // string | undefined
+  type SecretValue = keyof SecretValues
+
+  type Loose<T> = T | (string & {})
+  type Strictify<T extends string> = T extends `${infer _}` ? T : never
+
+  export const getSecret: <TKey extends Loose<SecretValue>>(key: TKey) => TKey extends Strictify<SecretValue> ? SecretValues[TKey] : (string | undefined)
+}
+
+import { getSecret } from "astro:env/dynamic"
+
+getSecret("KNOWN_KEY") // whatever type defined in the schema
+getSecret("UNKNOWN_KEY") // string | undefined
 ```
-
-Importing this module client side will trigger an `AstroError`.
 
 Under the hood, this feature will rely on [Async Local Storage](https://nodejs.org/api/async_context.html). For instance, this will require the cloudflare adapter to implement a codemod to enable the TODO:flag_name flag in `wrangler.toml`.
 
 Values will be validated at runtime using the same custom validators as static variables. If the key passed is not found in the schema, it will either return a string (ie. raw value) or undefined. It's the adapter duty to handle what variables to return (eg. the Cloudflare adapter should not return a R2 binding).
 
 Below an example of how it could be typed using codegen:
-
-```ts
-declare module "astro:env/dynamic" {
-  type Values = {
-    "FOO": boolean
-    "BAR": string
-  }
-
-  type Value = keyof Values
-
-	type Loose<T> = T | (string & {})
-
-	type Strictify<T extends string> = T extends `${infer _}` ? T : never
-
-  export const getEnv: <TKey extends Loose<Value>>(key: TKey) => TKey extends Strictify<Value> ? Values[TKey] : (string | undefined)
-}
-```
 
 # Testing Strategy
 
@@ -285,15 +260,15 @@ export default defineConfig({
 
 https://github.com/florian-lefebvre/astro-env currently does [manual typing](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript) on behalf of the user. It's too basic and only handles static variables.
 
-## Dynamic variables using `Astro.env`
+## Secret variables using `Astro.env`
 
-The issue restrict dynamic variables usage inside `.astro` files (or endpoints `context`). It's common to be able to use it outside, eg. in `.ts`. That's why it uses an ALS.
+The issue restrict secret variables usage inside `.astro` files (or endpoints `context`). It's common to be able to use it outside, eg. in `.ts`. That's why it uses an ALS.
 
 ## Using zod
 
 Using zod in the public interface isn't great as `.env` files remain strings, so it requires more work to get right ([especially for booleans](https://env.t3.gg/docs/recipes#booleans)) and we only support a tiny subset of zod APIs.
 
-We've also considered using it under the hood. While it's not an issue for static variables (build time, not part of the bundle), it would increase the bundle for runtime usage significantly.
+We've also considered using it under the hood. While it's not an issue for public variables (build time, part of the bundle), it would increase the bundle for runtime usage significantly.
 
 ## Providing fields helpers in a function
 
@@ -368,14 +343,14 @@ export default defineConfig({
   export default defineConfig({
   +  env: {
   +    schema: {
-  +      PUBLIC_API_URL: envField.static().public().string()
+  +      PUBLIC_API_URL: envField.public().client().string()
   +    }
   +  }
   })
 
   // whatever.ts
   - import.meta.env.PUBLIC_API_URL
-  + import { PUBLIC_API_URL } from "astro:env/static/public"
+  + import { PUBLIC_API_URL } from "astro:env/client"
   ```
   
 - **Is this a breaking change? Can we write a codemod?**
