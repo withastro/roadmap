@@ -27,20 +27,19 @@ import { defineConfig, envField } from "astro/config"
 export default defineConfig({
   env: {
     schema: {
-      API_URL: envField.static().private().string(),
-      PUBLIC_FOO: envField.static().public().string({ default: "bar" }),
-      STRIPE_KEY: envField.dynamic().private().string()
+      API_URL: envField.public().server().string(),
+      PUBLIC_FOO: envField.public().client().string({ default: "bar" }),
+      STRIPE_KEY: envField.secret().private().string()
     }
   }
 })
 ```
 
 ```ts
-import { PUBLIC_FOO } from "astro:env/static/public"
-import { API_URL } from "astro:env/static/private"
-import { getEnv } from "astro:env/dynamic"
+import { PUBLIC_FOO } from "astro:env/client"
+import { API_URL, getSecret } from "astro:env/server"
 
-const stripeKey = getEnv("STRIPE_KEY")
+const stripeKey = getSecret("STRIPE_KEY")
 ```
 
 # Background & Motivation
@@ -75,8 +74,10 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Terminology
 
-- **Static variable**: variable replaced by its value at build time. Uses `import.meta.env` under the hood
-- **Dynamic variable**: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
+- **Public variable**: variable replaced by its value at build time. Uses `import.meta.env` under the hood
+- **Secret variable**: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
+- **Server variable**: variable available server-side only
+- **Client variable**: variable available client-side only
 
 ## Astro config
 
@@ -103,24 +104,24 @@ type BooleanField = {
 
 type EnvFieldType = StringField | NumberField | BooleanField
 
-type PublicStaticEnvFieldMetadata = {
-  scope: "static"
+type PublicClientEnvFieldMetadata = {
+  scope: "client"
   access: "public"
 }
 
-type PrivateStaticEnvFieldMetadata = {
-  scope: "static"
-  access: "private"
+type PublicServerEnvFieldMetadata = {
+  scope: "server"
+  access: "public"
 }
 
-type PrivateDynamicEnvFieldMetadata = {
-  scope: "dynamic"
-  access: "private"
+type SecretServerEnvFieldMetadata = {
+  scope: "server"
+  access: "secret"
 }
 
 type EnvSchema =
-  | Record<`PUBLIC_${string}`, PublicStaticEnvFieldMetadata & EnvFieldType>
-  | Record<string, (PrivateStaticEnvFieldMetadata | PrivateDynamicEnvFieldMetadata) & EnvFieldType>
+  | Record<`PUBLIC_${string}`, PublicClientEnvFieldMetadata & EnvFieldType>
+  | Record<string, (PublicServerEnvFieldMetadata | SecretServerEnvFieldMetadata) & EnvFieldType>
 
 type AstroUserConfig = {
   env?: {
@@ -134,14 +135,14 @@ Since there are various combinations possible that can make choosing confusing, 
 ```ts
 import { envField } from "astro/config"
 
-// { scope: "static", access: "public", type: "number", default: 4321 }
-envField.static().public().number.default(4321)
+// { scope: "client", access: "public", type: "number", default: 4321 }
+envField.public().client().number({ default: 4321 })
 
-// { scope: "dynamic", access: "private", type: "string" }
-envField.dynamic().private().string()
+// { scope: "server", access: "secret", type: "string" }
+envField.secret().server().string()
 ```
 
-Note that a variable is required by default, and can be made optional with `.optional()`
+Note that a variable is required by default, and can be made optional with `optional: true`
 
 ## Integrations
 
@@ -158,7 +159,7 @@ const integration = {
       params.updateConfig({
         env: {
           schema: {
-            PUBLIC_SUPABASE_URL: envField.static().public().string()
+            PUBLIC_SUPABASE_URL: envField.public().client().string()
           }
         }
       })
@@ -167,13 +168,13 @@ const integration = {
 } satisfies AstroIntegration
 ```
 
-## Static variables
+## Public variables
 
-Static variables are checked at some point between `astro:config:setup` and `astro:server:setup`. Since we don't/won't support many data structures, custom validators are used for the validation. They will also be used for dynamic variables at runtime.
+Public variables are checked at some point between `astro:config:setup` and `astro:server:setup`. Since we don't/won't support many data structures, custom validators are used for the validation. They will also be used for secret variables at runtime.
 
 Some names must be reserved, like `SSR` to avoid conflicts with `import.meta.env.SSR`.
 
-Two virtual modules will be generated, `astro:env/static/public` and `astro:env/static/private`:
+The virtual modules will be generated, `astro:env/static/public` and `astro:env/static/private`:
 
 ### Public
 
