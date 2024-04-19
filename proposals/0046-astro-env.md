@@ -27,9 +27,9 @@ import { defineConfig, envField } from "astro/config"
 export default defineConfig({
   env: {
     schema: {
-      API_URL: envField.public().server().string(),
-      PUBLIC_FOO: envField.public().client().string({ default: "bar" }),
-      STRIPE_KEY: envField.secret().private().string()
+      API_URL: envField.string({ context: "server", access: "public" }),
+      PUBLIC_FOO: envField.string({ context: "client", access: "public", default: "bar" }),
+      STRIPE_KEY: envField.string({ context: "server", access: "secret" })
     }
   }
 })
@@ -74,7 +74,7 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Terminology
 
-- **Public variable**: variable replaced by its value at build time. Uses `import.meta.env` under the hood
+- **Public variable**: variable replaced by its value at build time
 - **Secret variable**: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
 - **Server variable**: variable available server-side only
 - **Client variable**: variable available client-side only
@@ -105,17 +105,17 @@ type BooleanField = {
 type EnvFieldType = StringField | NumberField | BooleanField
 
 type PublicClientEnvFieldMetadata = {
-  scope: "client"
+  context: "client"
   access: "public"
 }
 
 type PublicServerEnvFieldMetadata = {
-  scope: "server"
+  context: "server"
   access: "public"
 }
 
 type SecretServerEnvFieldMetadata = {
-  scope: "server"
+  context: "server"
   access: "secret"
 }
 
@@ -130,19 +130,19 @@ type AstroUserConfig = {
 }
 ```
 
-Since there are various combinations possible that can make choosing confusing, we provide a `envField` helper that uses chaining, mirroring other APIs like Astro DB or zod:
+We provide a `envField` helper to make it easier to define the schema:
 
 ```ts
 import { envField } from "astro/config"
 
-// { scope: "client", access: "public", type: "number", default: 4321 }
-envField.public().client().number({ default: 4321 })
+// { context: "client", access: "public", type: "number", default: 4321 }
+envField.number({ context: "client", access: "public", default: 4321 })
 
-// { scope: "server", access: "secret", type: "string" }
-envField.secret().server().string()
+// { context: "server", access: "secret", type: "string" }
+envField.string({ context: "server", access: "secret" })
 ```
 
-Note that a variable is required by default, and can be made optional with `optional: true`
+Note that a variable is required by default, and can be made optional with `optional: true` or `default: value`.
 
 ## Integrations
 
@@ -159,7 +159,7 @@ const integration = {
       params.updateConfig({
         env: {
           schema: {
-            PUBLIC_SUPABASE_URL: envField.public().client().string()
+            PUBLIC_SUPABASE_URL: envField.string({ context: "client", access: "public" })
           }
         }
       })
@@ -171,8 +171,6 @@ const integration = {
 ## Public variables
 
 Public variables are checked at some point between `astro:config:setup` and `astro:server:setup`. Since we don't/won't support many data structures, custom validators are used for the validation. They will also be used for secret variables at runtime.
-
-Some names must be reserved, like `SSR` to avoid conflicts with `import.meta.env.SSR`.
 
 If the variable is marked as client only, it will be available through the `astro:env/client` virtual module. If it's marked as server only, it will be available through `astro:env/server` instead (importing this module client side will trigger an `AstroError`).
 
@@ -219,11 +217,9 @@ getSecret("KNOWN_KEY") // whatever type defined in the schema
 getSecret("UNKNOWN_KEY") // string | undefined
 ```
 
-Under the hood, this feature will rely on [Async Local Storage](https://nodejs.org/api/async_context.html). For instance, this will require the cloudflare adapter to implement a codemod to enable the TODO:flag_name flag in `wrangler.toml`.
+Under the hood, this feature relies on [Async Local Storage](https://nodejs.org/api/async_context.html). For instance, this will require the cloudflare adapter to implement a codemod to enable the TODO:flag_name flag in `wrangler.toml`.
 
 Values will be validated at runtime using the same custom validators as static variables. If the key passed is not found in the schema, it will either return a string (ie. raw value) or undefined. It's the adapter duty to handle what variables to return (eg. the Cloudflare adapter should not return a R2 binding).
-
-Below an example of how it could be typed using codegen:
 
 # Testing Strategy
 
@@ -313,7 +309,7 @@ Note using such convention is still possible using the current proposal:
 import { envField } from "astro/config"
 
 export const envSchema = {
-  FOO: envField.static().public().string()
+  FOO: envField.string({ context: "server", access: "public" })
 } as const
 
 // astro.config.mjs
@@ -343,7 +339,7 @@ export default defineConfig({
   export default defineConfig({
   +  env: {
   +    schema: {
-  +      PUBLIC_API_URL: envField.public().client().string()
+  +      PUBLIC_API_URL: envField.string({ context: "client", access: "public" })
   +    }
   +  }
   })
