@@ -26,13 +26,15 @@
 
 **Goal:** Confirm proposal feasibility with Astro Maintainers and the [Technical Steering Committee (TSC)](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#technical-steering-committee-tsc).
 
-**Requirements:** An existing proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, and has buy-in/interest from Astro maintainer(s).
+**Requirements:** An existing proposal (Stage 1). In addition, a proposal is more likely to be accepted if it is detailed and well thought-out, can demonstrate community interest, has at least one champion volunteer, has a maintainer asking as a champion, and has buy-in/interest from Astro maintainer(s).
 
 **Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/roadmap/issues)
 
 **What to Expect:** A proposal reaches this stage (aka "is accepted") during a meeting with Maintainers and TSC, following our existing [RFC Proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) voting process.
 
-When a proposal is accepted, a TSC member will create a new GitHub Issue summarizing the original proposal using our official template. At this point, the proposal champion is free to move on to the next stage. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue.
+When a proposal is accepted, a TSC member will create a new GitHub Issue summarizing the original proposal using our official template.
+
+The proposal's original author should be given a chance to volunteer to be its champion. If they refuse, someone else can offer for the position. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue. Once a champion is selected, they are free to move on to the next stage.
 
 In some cases, a proposal may be explicitly rejected by TSC if it is known to be infeasible, or go against some existing goals/mission of the project. In the event of an explicit rejection, a TSC member will comment on to the proposal explaining the reasoning for rejection.
 
