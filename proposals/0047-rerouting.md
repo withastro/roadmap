@@ -1,15 +1,3 @@
-<!--
-  Note: You are probably looking for `stage-1--discussion-template.md`!
-  This template is reserved for anyone championing an already-approved proposal.
-
-  Community members who would like to propose an idea or feature should begin
-  by creating a GitHub Discussion. See the repo README.md for more info.
-
-  To use this template: create a new, empty file in the repo under `proposals/${ID}.md`.
-  Replace `${ID}` with the official accepted proposal ID, found in the GitHub Issue
-  of the accepted proposal.
--->
-
 - Start Date: 2024-04-17
 - Reference Issues: https://github.com/withastro/roadmap/issues/896
 - Implementation PR: 
@@ -20,21 +8,25 @@ Programmatic control over routing.
 
 # Background & Motivation
 
+Various frameworks and web servers have the ability to "rewrite" a request, this means to make the same page accessible from different URLs.
 
-As astro grows in popularity, it is being used for more and more use cases. One of these is multitenant websites where a tenant may be given a subdomain. This proposal introduces a powerful primitive that allows astro users to build websites with complex routing requirements. Rather than a limitation, file-based routing is now a sensible default!
+Another use-case, is the ability to show a different content for a protected page in case the user doesn't meet certain criteria, e.g. a logged in page, but the user has an expired cookie.
+
+In an internationalization context, the ability to show the content of a different locale, in case the current page isn't translated for the requested locale.
 
 # Goals
 
-- Defuse.
+- Render other pages/routes from an Astro page.
+- Render other pages/routes from the middleware.
+- Set clear expectations between static pages and on-demand pages.
 - Make it unnecessary to rely on implicit routing rules
-- Introduce framework-designed 404 and 500 pages
 - Make middleware run for requests that don't match a route (with framework-designed error pages)
 
 # Non-Goals
 
-- Reroute to an external service.
-- Support for `functionPerRoute`
-- fallback rerouting
+- Reroute to an external service: mostly to avoid security concerns, and render content that doesn't belong to an Astro app. Users can still achieve this by using a reverse-proxy in case they require to render content from another sub-domain.
+- Support for `functionPerRoute`: rerouting to a new page would be to actually call another origin (another function/lambda), which means that it can't be achieved with the current design.
+- fallback rerouting: it means that Astro should pick the first route that is matched after the current one. This could contain too much magic, and create friction in understanding the API. Users can achieve the same result without this "fallback". 
 
 # Detailed Design
 
@@ -56,8 +48,16 @@ Internally, the `reroute` **must** create a new `Request` when attempting to ren
 - Accepting a `string` allows to quickly reroute to a URL without too much hassle. When using a `string`, Astro will create a new `Request` with the new URL, and it will inherit all the data from the previous request.
   > Astro won't do any particular check on the string. For example, it won't check for trailing slashes. 
 - Accepting a `URL` allows to create a more stable URL using the standard `URL` object. When using a `URL`, Astro will create a new `Request` with the new URL, and it will inherit all the data from the previous request.
+  For example, you can reroute to another URL that is in the same nested path:
+  ```astro
+  ---
+  // Astro.url = https://example.come/blog/post/slug
+  Astro.reroute(new URL('./another-slug', Astro.url)); // https://example.come/blog/post/another-slug 
+  Astro.reroute(new URL('../../about', Astro.url)); // https://example.come/about
+  ---
+  ```
   > Astro will check against domains that aren't allowed. Only reroutes to the current host are allowed.
-- Accepting a `Request` allows uses to manipulate the `Request` as much as they can. When using a `Request`, Astro **will not create** a new `Request` and it will use the one provided by the user.
+- Accepting a `Request` allows uses to manipulate the `Request` as much as they can. When using a `Request`, Astro **will not create** a new `Request` and it will use the one provided by the user. This is very useful in case users need to manipulate information, such as `Request` headers.
   > Astro will check against domains that aren't allowed. Only reroutes to the current host are allowed.
 
 ### Astro pages usage
@@ -167,6 +167,8 @@ The current API is a blocker for `functionPerRoute`. Since the rerouting isn't s
 # Alternatives
 
 I considered a static approach like SvelteKit and Next.js. While this approach would allow to achieve `functionPerRoute` support, we risk to litter the configuration with many entries. Plus, a static approach doesn't allow enough flexibility. 
+
+Another alternative that was evaluated was to make the feature available only from the middleware, although this would force users to use a tool - the middleware - that might not be needed for certain cases.
 
 # Adoption strategy
 
