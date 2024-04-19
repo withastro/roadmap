@@ -135,7 +135,7 @@ The page in `dist/contact/index.html` will contain:
 </html>
 ```
 
-### Results for on-demand pages
+### Results for on-demand pages (SSR and prerendered pages that opt-out)
 
 In SSR, rerouting to a page will result in rendering the contents of said page. The example provided for the static pages applies for on-demand pages too.
 
