@@ -147,6 +147,7 @@ When a user triggers a rerouting to another URL/route:
 - If the rerouted route doesn't match any of the existing routes, a 404 `Response` is returned. The middleware **is triggered** for the 404 (it keeps the existing behaviour)
 - The rerouted route will render the first page/route that is matched, among the list of [sorted routes](https://docs.astro.build/en/guides/routing/#route-priority-order).
 - Injected routes should be eligible from said matching.
+- Astro will be able to detect possible loops, in case the user tries to render the same route over and over again. I case a loop is detected, Astro will abort the rendering phase and return a [`508` response`]( https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/508).
 
 ## Adapters
 
