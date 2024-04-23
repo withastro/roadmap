@@ -150,6 +150,21 @@ When a user triggers a rerouting to another URL/route:
 - Astro will be able to detect possible loops, in case the user tries to render the same route over and over again. I case a loop is detected, Astro will abort the rendering phase and return a [`508` response`]( https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/508).
 - Inside the middleware, when a user calls `ctx.reroute("/")`, Astro will **re-run** the middleware again. That's required because if the user has some middleware logic that runs in `/`, it's their expectation to have that logic to trigger when rendering the page.  
 
+## `next("/")` VS `ctx.reroute('/')`
+
+The two functions, **when used inside a middleware** will behave differently: 
+
+### `ctx.reroute('/')`
+- It will stop the normal execution of middleware functions, all middleware functions after the current one won't be called.
+- The middleware will re-run again with the new `Request`/`APIContext`
+
+
+### `next('/')`
+- It **won't** stop the normal execution of middleware functions.
+- The next function after `next('/')` will receive a new `Request`/`APIContext` that is **manipulated** and will contain the rerouted URL.
+- `APIContext.params` aren't recreated due to some architectural constraints, as we don't have a `RouteData` type, needed to construct the new `params`.
+
+
 ## Adapters
 
 I don't envision any major blocker for our current adapters. 
@@ -185,3 +200,5 @@ Another alternative that was evaluated was to make the feature available only fr
   // VS
   Astro.reroute(new Request());
   ```
+- Should we call it `reroute` or `rewrite`? SvelteKit uses reroute, but many other frameworks and web servers use the term rewrite.
+- Do we need `next('/')`? 
