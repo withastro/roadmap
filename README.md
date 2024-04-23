@@ -34,7 +34,7 @@
 
 When a proposal is accepted, a TSC member will create a new GitHub Issue summarizing the original proposal using our official template.
 
-The proposal's original author should be given a chance to volunteer to be its champion. If they refuse, someone else can offer for the position. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue. Once a champion is selected, they are free to move on to the next stage.
+The proposal's original author will be given a chance to volunteer to be its champion. If they refuse, someone else can volunteer for the position by posting in the GitHub Issue. An accepted proposal will remain an open issue until a champion is confirmed by TSC. Once confirmed, the champion is free to advance the proposal to the next stage.
 
 In some cases, a proposal may be explicitly rejected by TSC if it is known to be infeasible, or go against some existing goals/mission of the project. In the event of an explicit rejection, a TSC member will comment on to the proposal explaining the reasoning for rejection.
 
