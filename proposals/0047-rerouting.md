@@ -148,6 +148,7 @@ When a user triggers a rerouting to another URL/route:
 - The rerouted route will render the first page/route that is matched, among the list of [sorted routes](https://docs.astro.build/en/guides/routing/#route-priority-order).
 - Injected routes should be eligible from said matching.
 - Astro will be able to detect possible loops, in case the user tries to render the same route over and over again. I case a loop is detected, Astro will abort the rendering phase and return a [`508` response`]( https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/508).
+- Inside the middleware, when a user calls `ctx.reroute("/")`, Astro will **re-run** the middleware again. That's required because if the user has some middleware logic that runs in `/`, it's their expectation to have that logic to trigger when rendering the page.  
 
 ## Adapters
 
@@ -177,9 +178,6 @@ Another alternative that was evaluated was to make the feature available only fr
 - Removal of said experimental flag after an incubation period where we test the feature.
 
 # Unresolved Questions
-
-- Upon rerouting, should we trigger a middleware again? 
-  - If we do `Astro.reroute('/about')`, should the middleware run again, with a new `Request` that contains `url = /about`? 
 
 - How should it be signature?
   ```js
