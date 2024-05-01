@@ -119,9 +119,7 @@ type SecretServerEnvFieldMetadata = {
   access: "secret"
 }
 
-type EnvSchema =
-  | Record<`PUBLIC_${string}`, PublicClientEnvFieldMetadata & EnvFieldType>
-  | Record<string, (PublicServerEnvFieldMetadata | SecretServerEnvFieldMetadata) & EnvFieldType>
+type EnvSchema = Record<string, (PublicClientEnvFieldMetadata | PublicServerEnvFieldMetadata | SecretServerEnvFieldMetadata) & EnvFieldType>
 
 type AstroUserConfig = {
   env?: {
@@ -310,7 +308,7 @@ import { envField } from "astro/config"
 
 export const envSchema = {
   FOO: envField.string({ context: "server", access: "public" })
-} as const
+}
 
 // astro.config.mjs
 import { defineConfig } from "astro/config"
