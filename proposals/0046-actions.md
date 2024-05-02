@@ -119,7 +119,6 @@ import { db, Likes, eq, sql } from "astro:db";
 
 export const server = {
   like: defineAction({
-    accept: "form",
     input: z.object({ postId: z.string() }),
     handler: async ({ postid }) => {
       const { likes } = await db
