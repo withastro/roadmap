@@ -481,7 +481,7 @@ export default {
 
 # Alternatives
 
-### Alternative places to declare an action
+## Alternative places to declare an action
 
 Before deciding on a `src/actions/` convention, we considered a few different places to declare actions:
 
@@ -517,11 +517,11 @@ trpc.project.create();
 
 This pattern mirrors REST-ful APIs: keep business logic close to the data, not the presentation. We brought this philosophy to the actions API as well.
 
-### Alternative ways to call an action
+## Alternative ways to call an action
 
 Related to our alternatives for defining actions, we found alternative ways to call an action.
 
-#### Type-safe fetch
+### Type-safe fetch
 
 One option used a type-safe `fetch()` helper to autocomplete available routes in your project and infer the return type. This is similar to [Nuxt's `useFetch()` utility](https://nuxt.com/docs/getting-started/data-fetching#usefetch)
 
@@ -562,7 +562,7 @@ This came with two potential issues:
 - No go-to-definition in your editor. This is a win for tRPC and React server actions we would like to mirror.
 - Limited to one action per file. This grows tedious for a series of related actions on a single database model (`getProject()`, `addProject()`, `setProjectStatus()`...)
 
-#### Server actions
+### Server actions
 
 Another option would mirror React server actions. Instead of masking behind an `astro:actions` module, you could declare and call actions with direct imports into your client code. This would require some way to signal to the bundler that the action should be handled safely when imported on the client.
 
@@ -572,7 +572,7 @@ Another is a bundler pragma like `"use server"` or an import attribute like `as 
 
 In the end, concerns with learning curve and bundler rules pushed us away from server actions. We may revisit compatibility as the React server action ecosystem grows.
 
-### Alternative to progressive fallbacks
+## Alternative to progressive fallbacks
 
 We implemented progressive fallbacks using middleware to intercept form requests. As an alternative, we considered adding a fallback handler on the `defineAction()` definition.
 
