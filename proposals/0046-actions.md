@@ -5,7 +5,7 @@ Start Date: 2024-05-01
 
 # Summary
 
-Let's make backend functions easy to write and easy to call with type safety.
+Astro actions make it easy to define and call backend functions with type-safety.
 
 # Example
 
