@@ -312,7 +312,9 @@ if (data) // handle result
 
 Your `input` schema gives you type safety wherever you call your action. Still, you may have further refinements in your Zod schema that can raise a validation error at runtime.
 
-You can check if an `error` is caused by input validation by using the `isInputError()` function. This will return a [Zod error](https://zod.dev/?id=error-handling) with utilities to format error messages. To parse form input errors by name, use the `.formErrors.fieldErrors` property. This example shows an error message if a comment's `body` field is invalid:
+You can check if an `error` is caused by input validation by using the `isInputError()` function. This will expose the `issues` property with a list of validation errors. It also exposes the `fields` property to get error messages by key when the input is an object.
+
+This example shows an error message if a comment's `body` field is invalid:
 
 ```tsx
 // src/components/Comment.tsx
@@ -328,7 +330,7 @@ export function Comment({ postId }: { postId: string }) {
         const formData = new FormData(e.target);
         const { error } = await actions.blog.comment.safe(formData);
         if (error && isInputError(error)) {
-          setBodyError(error.formErrors.fieldErrors.body);
+          setBodyError(error.fields.body);
         }
         // handle result
       }}
