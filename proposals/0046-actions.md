@@ -255,7 +255,7 @@ Implementation: The `getNameProps()` function returns hidden input attributes to
 
 ### Handle an action result on the server
 
-When using a progressive fallback, you can get the result of an action from your Astro frontmatter. Call `Astro.getActionResult()` with the action you want (ex. `Astro.getActionResult(actions.comment)`). This will return type-safe data when a matching POST request is received and `undefined` otherwise.
+When using a progressive fallback, you can get the result of an action from your Astro frontmatter. Call `Astro.getActionResult()` with the action you want (ex. `Astro.getActionResult(actions.comment)`). This will return type-safe `data` or `error` objects when a matching POST request is received and `undefined` otherwise.
 
 ```astro
 ---
@@ -264,7 +264,7 @@ import { actions } from 'astro:actions';
 const comment = Astro.getActionResult(actions.comment);
 ---
 
-{comment && (
+{comment?.data && (
 	<article class="new-comment">
 		{/* ... */}
 	</article>
@@ -292,21 +292,11 @@ export function Like() {
 		}}>
 			{likes} likes
 		</button>
-	)487918
+	)
 }
 ```
 
-You can also use `.safe` when getting the action result from your Astro frontmatter. Add `.safe` to the end of your action when passing to `Astro.getActionResult()`:
-
-```astro
----
-import { actions } from 'astro:actions';
-
-const { data, error } = Astro.getActionResult(actions.like.safe);
-if (data) // handle result
-// otherwise, show an error message
----
-```
+You can also handle the `error` object returned by `Astro.getActionResult()`.
 
 ### Input validation errors
 
