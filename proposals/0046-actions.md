@@ -230,16 +230,16 @@ export function Comment({ postId }: { postId: string }) {
 
 Actions work well when client JavaScript is enabled. However, you may see unexpected behavior when a form is submitted _before_ your component's JavaScript loads. This is common on slow internet connections or older devices. To offer a fallback experience, you can add a progressive fallback to your form.
 
-To add a fallback, add the `method="POST"` property to your `<form>` element. Then, call the `getNameProps()` function from `astro:actions` with the action you want to use (ex. `getNameProps(actions.comment)`). Spread the result onto an `input` within your form to apply metadata for Astro to handle the request:
+To add a fallback, add the `method="POST"` property to your `<form>` element. Then, call the `getActionProps()` function from `astro:actions` with the action you want to use (ex. `getActionProps(actions.comment)`). Spread the result onto an `input` within your form to apply metadata for Astro to handle the request:
 
 ```tsx
-import { actions, getNameProps } from 'astro:actions';
+import { actions, getActionProps } from 'astro:actions';
 
 // src/components/Comment.jsx
 export function Comment({ postId }: { postId: string }) {
 	return (
 		<form method="POST" onSubmit={...}>
-			<input {...getNameProps(actions.comment)} />
+			<input {...getActionProps(actions.comment)} />
 			{/* result:
 			<input
 				type="hidden"
@@ -251,7 +251,7 @@ export function Comment({ postId }: { postId: string }) {
 }
 ```
 
-Implementation: The `getNameProps()` function returns hidden input attributes to tell Astro which action should handle the request. Using middleware, Astro will intercept incoming requests with a form data `Content-type`. The form data is parsed to check for the `_astroAction` field and call the appropriate action.
+Implementation: The `getActionProps()` function returns hidden input attributes to tell Astro which action should handle the request. Using middleware, Astro will intercept incoming requests with a form data `Content-type`. The form data is parsed to check for the `_astroAction` field and call the appropriate action.
 
 ### Handle an action result on the server
 
