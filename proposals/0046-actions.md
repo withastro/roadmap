@@ -18,7 +18,7 @@ export const server = {
   like: defineAction({
     // accept json
     input: z.object({ postId: z.string() }),
-    handler: async ({ postId }, context) => {
+    handler: async ({ postId }) => {
       // update likes in db
 
       return likes;
@@ -32,7 +32,7 @@ export const server = {
       author: z.string(),
       body: z.string(),
     }),
-    handler: async ({ postId }, context) => {
+    handler: async ({ postId }) => {
       // insert comments in db
 
       return comment;
@@ -364,19 +364,20 @@ To handle this error, you can call your action using the `.safe()` extension and
 
 ## Access API context
 
-You can access the Astro API context from the second argument in your action `handler()`. This grants access to the base `request` object, cookies, middleware `locals` and more.
+You can access the Astro API context by calling `getApiContext()` your action `handler()`. This grants access to the base `request` object, cookies, middleware `locals` and more.
 
 This example gates `getUser()` requests by checking for a session cookie. If the user is unauthorized, you can raise a "bad request" error for the client to handle.
 
 ```ts
 // src/actions/index.ts
-import { defineAction, ActionError, z } from "astro:actions";
+import { defineAction, ActionError, z, getApiContext } from "astro:actions";
 import { db, Comment, Likes, eq, sql } from "astro:db";
 
 export const server = {
   getUsers: defineAction({
-    handler: async (_, context) => {
-      if (!context.cookies.has('expected-session')) {
+    handler: async () => {
+      const { cookies } = getApiContext();
+      if (!cookies.has('expected-session')) {
         throw new ActionError({
           code: "UNAUTHORIZED",
         });
