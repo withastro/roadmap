@@ -4,7 +4,7 @@
 
 # Summary
 
-Astro components are tightly coupled to `astro` (the metaframework). This proposal introduces a possible server-side API for rendering `.astro` files in isolation, outside the full `astro` build pipeline.
+Astro components are tightly coupled to `Astro` (the metaframework). This proposal introduces a possible server-side API for rendering `.astro` files in isolation, outside the full `astro` build pipeline.
 
 # Example
 
