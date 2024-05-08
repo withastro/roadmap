@@ -24,67 +24,67 @@ In an internationalization context, the ability to show the content of a differe
 
 # Non-Goals
 
-- Reroute to an external service: mostly to avoid security concerns, and render content that doesn't belong to an Astro app. Users can still achieve this by using a reverse-proxy in case they require to render content from another sub-domain.
-- Support for `functionPerRoute`: rerouting to a new page would be to actually call another origin (another function/lambda), which means that it can't be achieved with the current design.
-- fallback rerouting: it means that Astro should pick the first route that is matched after the current one. This could contain too much magic, and create friction in understanding the API. Users can achieve the same result without this "fallback". 
+- Rewrite to an external service: mostly to avoid security concerns, and render content that doesn't belong to an Astro app. Users can still achieve this by using a reverse-proxy in case they require to render content from another sub-domain.
+- Support for `functionPerRoute`: rewriting to a new page would be to actually call another origin (another function/lambda), which means that it can't be achieved with the current design.
+- fallback rewriting: it means that Astro should pick the first route that is matched after the current one. This could contain too much magic, and create friction in understanding the API. Users can achieve the same result without this "fallback". 
 
 # Detailed Design
 
 ## Proposed APIs
 
-The rerouting will be exposed to Astro pages, Astro endpoints and middleware. This API is a function called `reroute` that will contain the following signature:
+The rewriting will be exposed to Astro pages, Astro endpoints and middleware. This API is a function called `rewrite` that will contain the following signature:
 
 ```ts
-type Reroute = string | URL | Request
-const reroute: (payload: Reroute) => Promise<Response>
+type Rewrite = string | URL | Request
+const rewrite: (payload: Rewrite) => Promise<Response>
 
-reroute("/fr/hello");
-reroute(new URL("https://example.com"));
-reroute(new Request("https://localhost:8080", options));
+rewrite("/fr/hello");
+rewrite(new URL("https://example.com"));
+rewrite(new Request("https://localhost:8080", options));
 ```
 
-Internally, the `reroute` **must** create a new `Request` when attempting to render the rerouted route. The creation of this new `Request` will vary based on the signature used.
+Internally, the `rewrite` **must** create a new `Request` when attempting to render the rewritten route. The creation of this new `Request` will vary based on the signature used.
 
-- Accepting a `string` allows to quickly reroute to a URL without too much hassle. When using a `string`, Astro will create a new `Request` with the new URL, and it will inherit all the data from the previous request.
+- Accepting a `string` allows to quickly rewrite to a URL without too much hassle. When using a `string`, Astro will create a new `Request` with the new URL, and it will inherit all the data from the previous request.
   > Astro won't do any particular check on the string. For example, it won't check for trailing slashes. 
 - Accepting a `URL` allows to create a more stable URL using the standard `URL` object. When using a `URL`, Astro will create a new `Request` with the new URL, and it will inherit all the data from the previous request.
-  For example, you can reroute to another URL that is in the same nested path:
+  For example, you can rewrite to another URL that is in the same nested path:
   ```astro
   ---
   // Astro.url = https://example.come/blog/post/slug
-  Astro.reroute(new URL('./another-slug', Astro.url)); // https://example.come/blog/post/another-slug 
-  Astro.reroute(new URL('../../about', Astro.url)); // https://example.come/about
+  Astro.rewrite(new URL('./another-slug', Astro.url)); // https://example.come/blog/post/another-slug 
+  Astro.rewrite(new URL('../../about', Astro.url)); // https://example.come/about
   ---
   ```
-  > Astro will check against domains that aren't allowed. Only reroutes to the current host are allowed.
+  > Astro will check against domains that aren't allowed. Only rewrites to the current host are allowed.
 - Accepting a `Request` allows uses to manipulate the `Request` as much as they can. When using a `Request`, Astro **will not create** a new `Request` and it will use the one provided by the user. This is very useful in case users need to manipulate information, such as `Request` headers.
-  > Astro will check against domains that aren't allowed. Only reroutes to the current host are allowed.
+  > Astro will check against domains that aren't allowed. Only rewrites to the current host are allowed.
 
 ### Astro pages usage
 
-The `Astro` global will expose a new method called `reroute`:
+The `Astro` global will expose a new method called `rewrite`:
 
 ```astro
 ---
 if (Astro.url.startsWith("/fr/salut")) {
-    return Astro.reroute("/fr/hello")
+    return Astro.rewrite("/fr/hello")
 }
 ---
 ```
 
 ### Astro endpoints usage
 
-The `context` - `APIContext` type - will expose a new method called `reroute`
+The `context` - `APIContext` type - will expose a new method called `rewrite`
 
 ```js
 
 export const GET = (context) => {
-    return context.reroute("/fr/hello")
+    return context.rewrite("/fr/hello")
 }
 ```
 ### Middleware usage
 
-Other than exposing the `reroute` function via `context`, the signature of the `next` function will change to accept the same payload of the `reroute` function:
+Other than exposing the `rewrite` function via `context`, the signature of the `next` function will change to accept the same payload of the `rewrite` function:
 
 ```js
 export const onRequest = (context, next) => {
@@ -98,15 +98,15 @@ export const onRequest = (context, next) => {
 The `next` function will have this new signature, and it will be backwards compatible with the existing signature:
 
 ```ts
-type MiddlewareNext = (payload?: Reroute) => Promise<Response>;
+type MiddlewareNext = (payload?: Rewrite) => Promise<Response>;
 ```
 
 
 ### Results for static and prerendered pages
 
-In SSG, rerouting to a page will result in the compilation of a page that has the contents of a different page. 
+In SSG, rewriting to a page will result in the compilation of a page that has the contents of a different page. 
 
-If we have two pages, `src/pages/about.astro` and `src/pages/contact.astro`, if the `contact.astro` will reroute to `/about` using the rerouting strategy, it's contents will be the same as the `about.astro` component.
+If we have two pages, `src/pages/about.astro` and `src/pages/contact.astro`, if the `contact.astro` will rewrite to `/about` using the rewriting strategy, it's contents will be the same as the `about.astro` component.
 
 ```html
 <!-- src/pages/about.astro-->
@@ -122,7 +122,7 @@ If we have two pages, `src/pages/about.astro` and `src/pages/contact.astro`, if 
 ---
 // src/pages/contact.astro
 
-Astro.reroute("/about");
+Astro.rewrite("/about");
 ---
 ```
 The page in `dist/contact/index.html` will contain:
@@ -137,31 +137,31 @@ The page in `dist/contact/index.html` will contain:
 
 ### Results for on-demand pages (SSR and prerendered pages that opt-out)
 
-In SSR, rerouting to a page will result in rendering the contents of said page. The example provided for the static pages applies for on-demand pages too.
+In SSR, rewriting to a page will result in rendering the contents of said page. The example provided for the static pages applies for on-demand pages too.
 
 
-## Expectations upon rerouting
+## Expectations upon rewriting
 
-When a user triggers a rerouting to another URL/route:
-- The middleware is **NOT** triggered **again** upon rerouting.
-- If the rerouted route doesn't match any of the existing routes, a 404 `Response` is returned. The middleware **is triggered** for the 404 (it keeps the existing behaviour)
-- The rerouted route will render the first page/route that is matched, among the list of [sorted routes](https://docs.astro.build/en/guides/routing/#route-priority-order).
+When a user triggers a rewriting to another URL/route:
+- The middleware is **NOT** triggered **again** upon rewriting.
+- If the rewritten route doesn't match any of the existing routes, a 404 `Response` is returned. The middleware **is triggered** for the 404 (it keeps the existing behaviour)
+- The rewritten route will render the first page/route that is matched, among the list of [sorted routes](https://docs.astro.build/en/guides/routing/#route-priority-order).
 - Injected routes should be eligible from said matching.
 - Astro will be able to detect possible loops, in case the user tries to render the same route over and over again. I case a loop is detected, Astro will abort the rendering phase and return a [`508` response`]( https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/508).
-- Inside the middleware, when a user calls `ctx.reroute("/")`, Astro will **re-run** the middleware again. That's required because if the user has some middleware logic that runs in `/`, it's their expectation to have that logic to trigger when rendering the page.  
+- Inside the middleware, when a user calls `ctx.rewrite("/")`, Astro will **re-run** the middleware again. That's required because if the user has some middleware logic that runs in `/`, it's their expectation to have that logic to trigger when rendering the page.  
 
-## `next("/")` VS `ctx.reroute('/')`
+## `next("/")` VS `ctx.rewrite('/')`
 
 The two functions, **when used inside a middleware** will behave differently: 
 
-### `ctx.reroute('/')`
+### `ctx.rewrite('/')`
 - It will stop the normal execution of middleware functions, all middleware functions after the current one won't be called.
 - The middleware will re-run again with the new `Request`/`APIContext`
 
 
 ### `next('/')`
 - It **won't** stop the normal execution of middleware functions.
-- The next function after `next('/')` will receive a new `Request`/`APIContext` that is **manipulated** and will contain the rerouted URL.
+- The next function after `next('/')` will receive a new `Request`/`APIContext` that is **manipulated** and will contain the rewritten URL.
 - `APIContext.params` aren't recreated due to some architectural constraints, as we don't have a `RouteData` type, needed to construct the new `params`.
 
 
@@ -169,7 +169,7 @@ The two functions, **when used inside a middleware** will behave differently:
 
 I don't envision any major blocker for our current adapters. 
 
-I envision some potential changes for edge middleware, where the `reroute` function should be overridden with a platform specific function.
+I envision some potential changes for edge middleware, where the `rewrite` function should be overridden with a platform specific function.
  
 
 # Testing Strategy
@@ -179,7 +179,7 @@ I envision some potential changes for edge middleware, where the `reroute` funct
 
 # Drawbacks
 
-The current API is a blocker for `functionPerRoute`. Since the rerouting isn't statically analysable, it isn't possible to tell serverless computing to reroute a request to another function/lambda. 
+The current API is a blocker for `functionPerRoute`. Since the rewriting isn't statically analysable, it isn't possible to tell serverless computing to rewrite a request to another function/lambda. 
 
 # Alternatives
 
@@ -196,9 +196,9 @@ Another alternative that was evaluated was to make the feature available only fr
 
 - How should it be signature?
   ```js
-  Astro.reroute({ request: new Request() });
+  Astro.rewrite({ request: new Request() });
   // VS
-  Astro.reroute(new Request());
+  Astro.rewrite(new Request());
   ```
-- Should we call it `reroute` or `rewrite`? SvelteKit uses reroute, but many other frameworks and web servers use the term rewrite.
+- Should we call it `rewrite` or `rewrite`? SvelteKit uses rewrite, but many other frameworks and web servers use the term rewrite.
 - Do we need `next('/')`? 
