@@ -1,15 +1,3 @@
-<!--
-  Note: You are probably looking for `stage-1--discussion-template.md`!
-  This template is reserved for anyone championing an already-approved proposal.
-
-  Community members who would like to propose an idea or feature should begin
-  by creating a GitHub Discussion. See the repo README.md for more info.
-
-  To use this template: create a new, empty file in the repo under `proposals/${ID}.md`.
-  Replace `${ID}` with the official accepted proposal ID, found in the GitHub Issue
-  of the accepted proposal.
--->
-
 - Start Date: 2024-04-15
 - Reference Issues: https://github.com/withastro/roadmap/issues/837
 - Implementation PR: <!-- leave empty -->
@@ -188,9 +176,21 @@ import { BAR } from "astro:env/server"
 
 ## Secret variables
 
-Secret variables by default use a Node.js compatible API to retrieve env variables (likely based on `process.env`). However, adapters can provide their own implementations.
+Secret variables by default use a Node.js compatible API to retrieve env variables (likely based on `process.env`). However, adapters can provide their own implementations in `app.render`.
 
-> TODO: see what api makes most sense, probably an entrypoint but it also needs to be request dependent for Cloudflare
+```ts
+await app.render(request, {
+  getEnv(key) {
+    // env comes from cloudflare
+    const variable = env[key]
+    // prevent returning bindings
+    if (typeof variable === "string" || typeof variable === "undefined") {
+      return variable
+    }
+    return undefined
+  }
+})
+```
 
 Variables specified in the schema are accessible (and well typed) whereas unknown ones are typed more loosely. They will be able in the `astro:env/server` virtual module:
 
@@ -223,11 +223,8 @@ Values will be validated at runtime using the same custom validators as static v
 
 Unit tests will be made for:
 - Custom validators
-
-E2e test will be made for:
 - Testing public/private
 - Testing static/dynamic
-- Integrations
 
 Features will be implemented incrementally using feature flags:
 
@@ -354,8 +351,3 @@ export default defineConfig({
   - This is not breaking for users projects nor integrations
   - Only my integration `astro-env` aims to provide the same features, so it will be deprecated
   - Integrations adding manual environment checks like https://github.com/MatthiesenXYZ/astro-ghostcms/ will be able to migrate
-
-# Unresolved Questions
-
-- How should the Adapter API look?
-- What's the name of the Cloudflare flag to enable the ALS?
