@@ -103,7 +103,7 @@ The function `create` will throw an error if there's a validation error.
 > If you use a TypeScript file for your configuration, you are responsible for loading and transforming it to JavaScript.
 
 
-The `container` binding will expose a `renderToString` that accepts a Astro component and will return a `Response` object:
+The `container` binding will expose a `renderToString` that accepts a Astro component and will return a `string`:
 
 ```js
 import astroConfig from "../src/astro.config.mjs";
@@ -112,7 +112,7 @@ const container = await AstroContainer.create({
     astroConfig
 })
 
-const response = await container.renderToString(AstroComponent);
+const content = await container.renderToString(AstroComponent);
 ```
 
 ## Options
