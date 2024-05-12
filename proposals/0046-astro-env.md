@@ -304,7 +304,7 @@ https://github.com/florian-lefebvre/astro-env currently does [manual typing](htt
 
 ## Secret variables using `Astro.env`
 
-The issue restrict secret variables usage inside `.astro` files (or endpoints `context`). It's common to be able to use it outside, eg. in `.ts`
+The issue with this approach is that secrets usage is restricted to the Astro context (`.astro` files or endpoints/middlewares `context`), althought it's common to be able to use it outside, eg. in `.ts` files.
 
 ## Using zod
 
