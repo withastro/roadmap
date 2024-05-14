@@ -12,10 +12,7 @@ Provide the infrastructure to protect Astro websites from CSRF attacks
 // astro.config.mjs
 export default defineConfig({
     security: {
-        csrfProtection: {
-            origin: true,
-            cookie: true
-        }
+        checkOrigin: true
     }
 })
 ```
@@ -44,40 +41,10 @@ The solutions proposed should work only on request meant to **modify** data: `PO
 
 We will call these requests as **known requests**.
 
-
-During the exploration phase, I found two ways to implement CSRF.
-
-## `"origin"` option
-
 The header `origin` is a header that is preset and set by all modern browsers and there's no way to temper it. If the header `origin` won't match
 the origin of the URL, Astro will return a 403.
 
 This solution should fit most websites.
-
-## `"cookie"` option
-
-The cookie solution is an alternative way to provide CSRF protection. It will be heavily inspired from [Angular](https://angular.io/guide/http-security-xsrf-protection).
-
-When the **first** `GET` request is sent to the application, Astro will create a token that will be saved inside a cookie named `Astro-csrf-token`. This token will be read in the **known requests** and it doesn't match the expected value, it means that the request isn't genuine.
-
-The token must be unique for each user and must be verifiable by the server. This prevents the client from making up its own tokens.
-
-This solution should fit more esoteric scenarios, where applications are behind reverse proxies, because ...
-
-A user can provide options to configure the name of the cookie and the name of the token:
-
-```js
-// astro.config.mjs
-export default defineConfig({
-    security: {
-        csrfProtection: {
-            cookie: ["cookie-name", "token-name"]
-        }
-    }
-})
-```
-
-Having the option to change the name of the cookie and the token would allow to have the feature working with multiple Astro applications that are hosted in the same domain/subdomain.
 
 # Testing Strategy
 
@@ -92,8 +59,6 @@ Having these security checks could prevent some applications from running, so us
 N/A
 
 # Adoption strategy
-
-Please consider:
 
 - initial experimental flag;
 - remove the flag once we're confident in the implementation of the feature;
