@@ -87,7 +87,7 @@ but eventually each route must be rendered using the same data, which are:
 
 ### `create` function
 
-A container is class exposed via the `astro/container` specifier. Users **shouldn't** create a container using the `new` instance, but they should use he static function `create`:
+A container is class exposed via the `astro/container` specifier. Users **shouldn't** create a container using the `new` instance, but they should use the static function `create`:
 
 ```js
 const container = await AstroContainer.create()
