@@ -79,7 +79,13 @@ but eventually each route must be rendered using the same data, which are:
 - **RouteData**: a type that identifies a generic Astro route. It contains information such as the type of route, the associated component, etc.
 - **ComponentInstance**: The instance of an Astro component. This is the **compiled** component. Internally, an Astro component undergoes various transformations via Vite, and it eventually gets consumed by our rendering engine (if it's a page).
 
-## Create a container
+## Public APIs
+
+- `AstroContainer::create`: creates a new instance of the container.
+- `AstroContainer::renderToString`: renders a component and return a string.
+- `AstroContainer::renderToResponse`: renders a component and returns the `Response` emitted by the rendering phase.
+
+### `create` function
 
 A container is class exposed via the `astro/container` specifier. Users **shouldn't** create a container using the `new` instance, but they should use he static function `create`:
 
@@ -115,55 +121,23 @@ const container = await AstroContainer.create({
 const content = await container.renderToString(AstroComponent);
 ```
 
-## Options
+#### Options
 
 It will be possible to tweak the container APIs with options and such. The `.create` function will accept the following interface:
 
 ```ts
 type AstroContainerOptions = {
-    mode: "development" | "production";
     streaming: boolean;
-    renderers: SSRLoadedRenderer[];
+    renderers: AstroRenderer[];
     astroConfig: AstroUserConfig;
-    middleware: MiddlewareHandler
 }
 ```
 
 The `astroConfig` object is literally the same object exposed by the `defineConfig`, inside the `astro.config.mjs` file. This very configuration 
 will go under the same schema validation that Astro uses internally. This means that an invalid schema will result in an error of the `create` function.
 
-The `middleware` is the `onRequest` instance of the middleware, in case you're rendering a page that needs to trigger the middleware.
 
-
-## `vite` configuration
-
-Astro exposes already its internal `vite` configuration, so users that already use `vite` can take compile Astro components using the same their pipeline.
-
-For example, if users use `vitest`, they can add Astro's `vite` configuration by importing it from `astro/config` specifier:
-
-```js
-// vitest.config.js
-import { getViteConfig } from "astro/config";
-
-export default getViteConfig({
-    test: {}
-})
-```
-
-```js
-// Card.test.js
-import { Card } from "../src/components/Card.astro"
-import astroConfig from "../src/astro.config.mjs";
-
-const container = await AstroContainer.create({
-    astroConfig
-})
-
-const response = await container.renderToString(Card);
-// assertions
-```
-
-## `renderToStringOptions`
+### `renderToString` and `renderToResponse` options
 
 This function can accept an optional object as a second parameter:
 
@@ -171,12 +145,15 @@ This function can accept an optional object as a second parameter:
 import { onRequest } from "../src/middleware.js"
 
 const response = await container.renderToString(Card, {
-    slots: [
-        (await container.renderToString(CardItem).text()),
-        "Footer of the card"
-    ],
-    request: new Request("https://example.com/blog/blog-slug"),
-    params: ["slug"], // in case your route is `pages/blog/[slug].astro`
+    slots: {
+        default: await container.renderToString(CardItem).text() 
+    },
+    request: new Request("https://example.com/blog/blog-slug", {
+        headers: {}
+    }),
+    params: {
+        "slug": "blog-slug"
+    }, // in case your route is `pages/blog/[slug].astro`
     locals: {
         someFn() {
             
@@ -188,9 +165,9 @@ const response = await container.renderToString(Card, {
 });
 ```
 
-- `slots`: required in case your component is designed to render some slots inside of it.
+- `slots`: required in case your component is designed to render some slots inside of it. It supposed named slots too.
 - `request`: required in case your component/page access to some information such as `Astro.url` or `Astro.request`.
-- `params`
+- `params`: the `Astro.params` to provide to the components 
 - `locals`: initial value of the `Astro.locals`.
 - `status`: useful in case you're rendering an error page.
 
@@ -212,10 +189,8 @@ I have considered the idea of exposing the compiler itself, with a thin layer of
 # Adoption strategy
 
 Considering the fact that this API doesn't involve any configuration or virtual module, the API
-will be released with a `unstable_` prefix, e.g. `unstable_AstroContainer`. 
+will be released with a `experimental_` prefix, e.g. `experimental_AstroContainer`. 
 
 This implies that the public APIs of the class will be deemed unstable, and they can change anytime, in `patch` releases too. 
 
-Once the API is deemed stable, the `unstable_` prefix will be removed.
-
-# Unresolved Questions
+Once the API is deemed stable, the `experimental_` prefix will be removed.
