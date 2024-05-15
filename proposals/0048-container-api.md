@@ -69,7 +69,7 @@ That's why the first iteration of the APIs won't provide a built-in way to compi
 The API took a lot of time to land because it required some internal refactors. Thanks to these refactors, we will be able
 to land this API by using the **very same engine** that Astro uses under the hood.
 
-Eventually, we landed to a common and abstract concept called **Pipeline**. A pipeline is simply an abstract
+Eventually, we landed to a common and abstract concept called **Pipeline**. A pipeline is an abstract
 class that is responsible to render any kind of Astro route: page, endpoint, redirect, virtual.
 
 Each pipeline inside the Astro codebase (dev, build, SSR and now test) is responsible to collect the important information in different way,
