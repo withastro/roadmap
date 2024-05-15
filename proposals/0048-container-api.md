@@ -159,7 +159,6 @@ const response = await container.renderToString(Card, {
         someString: "string",
         someNumber: 100
     },
-    status: 400
 });
 ```
 
@@ -167,7 +166,7 @@ const response = await container.renderToString(Card, {
 - `request`: required in case your component/page access to some information such as `Astro.url` or `Astro.request`.
 - `params`: the `Astro.params` to provide to the components 
 - `locals`: initial value of the `Astro.locals`.
-- `status`: useful in case you're rendering an error page.
+- `routeType`: useful to test endpoints.
 
 # Testing Strategy
 
