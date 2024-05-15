@@ -19,7 +19,6 @@ console.log(await container.renderToString(Component, { props, slots }))
 The container can be optionally constructed with some settings that are typically reserved for Astro configuration.
 ```js
 const container = await AstroContainer.create({
-    mode: "production",
     streaming: true,
     astroConfig: {
         site: "https://example.com",
@@ -43,16 +42,14 @@ We've avoided doing this because... it's very hard! Part of the appeal of `.astr
 # Goals
 
 - Provide a **low-level** API for rendering `.astro` components in isolation
-- Expose a familiar, user-friendly API
 - Surface enough control for full `astro` parity, but abstract away internal APIs
 - Enable third-party tools to consume `.astro` files on the server
 - Enable unit testing of `.astro` component output
-- Possibly unblock `.mdx` compiledContent/html output?
-- Support Astro framework renderers (`@astrojs/*`) if possible
+- Support Astro framework renderers (`@astrojs/*`)
 
 # Non-Goals
 
-- Provide a way to **import** `.astro` components. Users will be responsible to provide a compiled component.
+- Provide a way to **import** `.astro` components in a non-vite environment. Users will be responsible to provide a compiled component.
 - Provide a way to **import** `astro.config.(mjs|mts)` out of the box.
 
 # Detailed Design
@@ -60,7 +57,8 @@ We've avoided doing this because... it's very hard! Part of the appeal of `.astr
 ## Preface
 
 **This** RFC will have a smaller scoped compared to what users have envisioned. The reason why the scope shrunk is that 
-I want to ship a smaller feature on the surface, which will allow us, later to enhance it based on user's feedback and use cases.
+
+We want to ship a smaller feature on the surface, which will allow us, later to enhance it based on user's feedback and use cases.
 
 That's why the first iteration of the APIs won't provide a built-in way to compile Astro components.
 
@@ -146,7 +144,7 @@ import { onRequest } from "../src/middleware.js"
 
 const response = await container.renderToString(Card, {
     slots: {
-        default: await container.renderToString(CardItem).text() 
+        default: await container.renderToString(CardItem) 
     },
     request: new Request("https://example.com/blog/blog-slug", {
         headers: {}
