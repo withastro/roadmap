@@ -4,7 +4,7 @@
 
 # Summary
 
-Astro components are tightly coupled to `Astro` (the metaframework). This proposal introduces a possible server-side API for rendering `.astro` files in isolation, outside the full `astro` build pipeline.
+Astro components are tightly coupled to `Astro` (the metaframework). This proposal introduces a server-side API for rendering `.astro` files in isolation, outside the full `astro` build pipeline.
 
 # Example
 
@@ -80,8 +80,8 @@ but eventually each route must be rendered using the same data, which are:
 ## Public APIs
 
 - `AstroContainer::create`: creates a new instance of the container.
-- `AstroContainer::renderToString`: renders a component and return a string.
-- `AstroContainer::renderToResponse`: renders a component and returns the `Response` emitted by the rendering phase.
+- `AstroContainer.renderToString`: renders a component and return a string.
+- `AstroContainer.renderToResponse`: renders a component and returns the `Response` emitted by the rendering phase.
 
 ### `create` function
 
