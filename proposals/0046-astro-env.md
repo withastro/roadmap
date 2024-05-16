@@ -10,41 +10,41 @@ Improve DX and security around environment variables in Astro.
 
 ```js
 // astro.config.mjs
-import { defineConfig, envField } from "astro/config"
+import { defineConfig, envField } from "astro/config";
 
 export default defineConfig({
   env: {
     schema: {
       PUBLIC_STRIPE_KEY: envField.string({
         context: "client",
-        access: "public"
+        access: "public",
       }),
       PUBLIC_PRODUCTION: envField.boolean({
         context: "server",
         access: "public",
-        optional: true
+        optional: true,
       }),
       API_PORT: envField.number({
         context: "server",
         access: "secret",
-        default: 7000
-      })
-    }
-  }
-})
+        default: 7000,
+      }),
+    },
+  },
+});
 ```
 
 ```ts
 import {
-  PUBLIC_STRIPE_KEY // string
-} from "astro:env/client"
+  PUBLIC_STRIPE_KEY, // string
+} from "astro:env/client";
 import {
   PUBLIC_PRODUCTION, // boolean | undefined
-  getSecret
-} from "astro:env/server"
+  getSecret,
+} from "astro:env/server";
 
-const API_PORT = getSecret("API_PORT") // number
-const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE") // string | undefined
+const API_PORT = getSecret("API_PORT"); // number
+const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE"); // string | undefined
 ```
 
 # Background & Motivation
@@ -59,7 +59,7 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 - A public variable key has to be prefixed by `PUBLIC_`
 - A non public variable accessed using `import.meta.env` on the client side will be `undefined` (value will be accessible server side)
 - Env variables can be loaded through `.env` (or `.env.production`, `.env.development`) and CLI
-- Any non built-in variable can be [manually typed]([.env.production](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript))
+- Any non built-in variable can be [manually typed](<[.env.production](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript)>)
 - Runtime variables should be access using `process.env`, or following the used runtime (eg. `Deno.env.get()` for the deno adapter)
 
 # Goals
@@ -79,7 +79,7 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Terminology
 
-- **Public variable**: variable replaced by its value at build time. Its key must be prefixed by `PUBLIC_` 
+- **Public variable**: variable replaced by its value at build time. Its key must be prefixed by `PUBLIC_`
 - **Secret variable**: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
 - **Server variable**: variable available server-side only
 - **Client variable**: variable available client-side and server-side
@@ -90,56 +90,64 @@ A new `env.schema` property is added to `AstroUserConfig`. Its type looks like s
 
 ```ts
 type StringField = {
-  type: "string"
-  optional?: boolean
-  default?: string
-}
+  type: "string";
+  optional?: boolean;
+  default?: string;
+};
 
 type NumberField = {
-  type: "number"
-  optional?: boolean
-  default?: number
-}
+  type: "number";
+  optional?: boolean;
+  default?: number;
+};
 
 type BooleanField = {
-  type: "boolean"
-  optional?: boolean
-  default?: boolean
-}
+  type: "boolean";
+  optional?: boolean;
+  default?: boolean;
+};
 
-type EnvFieldType = StringField | NumberField | BooleanField
+type EnvFieldType = StringField | NumberField | BooleanField;
 
 type PublicClientEnvFieldMetadata = {
-  context: "client"
-  access: "public"
-}
+  context: "client";
+  access: "public";
+};
 
 type PublicServerEnvFieldMetadata = {
-  context: "server"
-  access: "public"
-}
+  context: "server";
+  access: "public";
+};
 
 type SecretServerEnvFieldMetadata = {
-  context: "server"
-  access: "secret"
-}
+  context: "server";
+  access: "secret";
+};
 
-type EnvSchema = Record<string, (PublicClientEnvFieldMetadata | PublicServerEnvFieldMetadata | SecretServerEnvFieldMetadata) & EnvFieldType>
+type EnvSchema = Record<
+  string,
+  (
+    | PublicClientEnvFieldMetadata
+    | PublicServerEnvFieldMetadata
+    | SecretServerEnvFieldMetadata
+  ) &
+    EnvFieldType
+>;
 
 type AstroUserConfig = {
   env?: {
-    schema: EnvSchema
-  }
-}
+    schema: EnvSchema;
+  };
+};
 ```
 
 We provide a `envField` helper to make it easier to define the schema:
 
 ```ts
-import { envField } from "astro/config"
+import { envField } from "astro/config";
 
 // { context: "client", access: "public", type: "number", default: 4321 }
-envField.number({ context: "client", access: "public", default: 4321 })
+envField.number({ context: "client", access: "public", default: 4321 });
 ```
 
 Note that a variable is required by default, and can be made optional with `optional: true` or `default: value`.
@@ -149,8 +157,8 @@ Note that a variable is required by default, and can be made optional with `opti
 The above way of declaring the schema allows integrations to declare their own constraints from inside `astro:config:setup` without any special handling:
 
 ```ts
-import { envField } from "astro/config"
-import type { AstroIntegration } from "astro"
+import { envField } from "astro/config";
+import type { AstroIntegration } from "astro";
 
 const integration = {
   name: "stripe-integration",
@@ -159,16 +167,19 @@ const integration = {
       params.updateConfig({
         env: {
           schema: {
-            PUBLIC_STRIPE_KEY: envField.string({ context: "client", access: "public" })
-          }
-        }
-      })
-    }
-  }
-} satisfies AstroIntegration
+            PUBLIC_STRIPE_KEY: envField.string({
+              context: "client",
+              access: "public",
+            }),
+          },
+        },
+      });
+    },
+  },
+} satisfies AstroIntegration;
 ```
 
-Given how `updateConfig` works, if a variable is specified by a user and throuhg an integration, the one from the latest integration will be kept. 
+Given how `updateConfig` works, if a variable is specified by a user and throuhg an integration, the one from the latest integration will be kept.
 
 ## Validators and checking
 
@@ -191,7 +202,7 @@ declare module "astro:env/client" {
 }
 
 // Any .ts loaded by Vite
-import { PUBLIC_STRIPE_KEY } from "astro:env/client"
+import { PUBLIC_STRIPE_KEY } from "astro:env/client";
 ```
 
 ### Secret client variables
@@ -213,10 +224,12 @@ declare module "astro:env/server" {
 }
 
 // Any .ts loaded by Vite
-import { API_PORT } from "astro:env/server"
+import { API_PORT } from "astro:env/server";
 ```
 
 ### Secret server variables
+
+#### User API
 
 Secret server variables are available through `getSecret` exported from `astro:env/server`. This function allows retrieving a variable by its key:
 
@@ -228,37 +241,187 @@ Secret server variables are available through `getSecret` exported from `astro:e
 declare module "astro:env/server" {
   type SecretValues = {
     API_PORT: number;
-  }
+  };
 
-  type SecretValue = keyof SecretValues
+  type SecretValue = keyof SecretValues;
 
-  type Loose<T> = T | (string & {})
-  type Strictify<T extends string> = T extends `${infer _}` ? T : never
+  type Loose<T> = T | (string & {});
+  type Strictify<T extends string> = T extends `${infer _}` ? T : never;
 
-  export const getSecret: <TKey extends Loose<SecretValue>>(key: TKey) => TKey extends Strictify<SecretValue> ? SecretValues[TKey] : (string | undefined)
+  export const getSecret: <TKey extends Loose<SecretValue>>(
+    key: TKey
+  ) => TKey extends Strictify<SecretValue>
+    ? SecretValues[TKey]
+    : string | undefined;
 }
 
 // Any .ts loaded by Vite
-import { getSecret } from "astro:env/dynamic"
+import { getSecret } from "astro:env/dynamic";
 
-const API_PORT = getSecret("API_PORT") // number
-const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE") // string | undefined
+const API_PORT = getSecret("API_PORT"); // number
+const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE"); // string | undefined
 ```
 
-Adapters can provide their own implementation per request by providing a `getEnv` function to `app.render`. It's the adapter responsability to only return strings or undefined values (eg. Cloudflare `env` also contains bindings):
+#### Behaviors
+
+`getSecret` works differently depending on the case:
+
+- In dev mode, it uses `process.env`
+- While building (eg. static site or prerendered pages), it also uses `process.env`
+- In SSR, it throws unless an adapter provides its own implementation
+
+#### Adapters API
+
+##### `app.setGetEnv`
+
+Under the hood, `getSecret` uses `getEnv` from the runtime. It can be overrided by calling `app.setGetEnv`:
 
 ```ts
-await app.render(request, {
-  getEnv(key) {
-    // env comes from cloudflare
-    const variable = env[key]
-    // prevent returning bindings
-    if (typeof variable === "string" || typeof variable === "undefined") {
-      return variable
-    }
-    return undefined
+import { getEnv } from "./utils.js";
+// ...
+
+export const createExports = (manifest: SSRManifest) => {
+  const app = new App(manifest);
+  app.setGetEnv(getEnv);
+  // ...
+};
+```
+
+This sets `getEnv` globally but some adapters need to set it per request. Well, you can call this method whenever you want so it can be right before `app.render`:
+
+```ts
+// ...
+
+export const createExports = (manifest: SSRManifest) => {
+  const app = new App(manifest);
+
+  const fetch = async (
+    request: Request & CLOUDFLARE_REQUEST,
+    env: Env,
+    context: ExecutionContext
+  ) => {
+    // ...
+    app.setGetEnv((key) => env[key]);
+    const response = await app.render(request, { routeData, locals });
+    // ...
+  };
+  // ...
+};
+```
+
+##### Handling variables in dev and build
+
+Since in dev and build variables are taken from `process.env`, if env is coming from another source (eg. Cloudflare `platformProxy`) then it's important to call `overrideProcessEnv`:
+
+```ts
+import { overrideProcessEnv } from "astro/runtime/server/astro-env.js";
+import { getEnv } from "./utils.js";
+
+const integration = (): AstroIntegration => {
+  let config;
+
+  return {
+    name: "adapter",
+    hooks: {
+      "astro:config:done": (params) => {
+        config = params.config;
+      },
+      // Other hooks can be used
+      "astro:server:setup": () => {
+        const { env } = platformProxy();
+        // ...
+
+        if (config.env?.schema) {
+          overrideProcessEnv({
+            getEnv,
+            variables: Object.keys(config.env.schema).map((destKey) => ({
+              destKey,
+            })),
+          });
+        }
+      },
+    },
+  };
+};
+```
+
+##### Inlining build only variables
+
+`overrideProcessEnv` also allows to provide some build only variables for runtime, eg. [Netlify Build environment variables](https://docs.netlify.com/configure-builds/environment-variables/).
+
+An adapter can provide its own variables and override `process.env` accordingly. For example:
+
+```ts
+import { overrideProcessEnv } from "astro/runtime/server/astro-env.js"
+import { getEnv } from "./utils.js"
+
+const integration = (): AstroIntegration => {
+  let config;
+
+  return {
+    name: "adapter",
+    hooks: {
+      "astro:config:setup": ({ updateConfig }) => {
+        updateConfig({
+          env: {
+            schema: {
+              PUBLIC_NETLIFY: envField.boolean({
+								context: 'server',
+								access: 'public',
+								default: false,
+							}),
+							PUBLIC_DEPLOY_URL: envField.string({
+								context: 'server',
+								access: 'public',
+								optional: true,
+							}),
+            }
+          }
+        })
+      }
+      "astro:config:done": () => {
+        overrideProcessEnv({
+					getEnv,
+					variables: [
+						{
+							destKey: 'PUBLIC_NETLIFY',
+							srcKey: 'NETLIFY',
+						},
+						{
+							destKey: 'PUBLIC_DEPLOY_URL',
+							srcKey: 'DEPLOY_URL',
+							default: url,
+						},
+					],
+				});
+			}
+    },
   }
-})
+}
+```
+
+##### `getEnv` requirements
+
+> Note: It's recommended to extract an adapter `getEnv` implemention to a sharef function between the integration and server entrypoint.
+
+`getEnv` has to return `string | undefined`. If the env implementation returns `number` (eg. Cloudflare), it has to be converted back to string:
+
+```ts
+import type { GetEnv } from "astro/runtime/server/astro-env.js";
+
+export const createGetEnv =
+  (env: Record<string, unknown>): GetEnv =>
+  (key) => {
+    const v = env[key];
+    if (typeof v === "undefined" || typeof v === "string") {
+      return v;
+    }
+    if (typeof v === "boolean" || typeof v === "number") {
+      // let astro:env handle the validation and transformation
+      return v.toString();
+    }
+    return undefined;
+  };
 ```
 
 > Note: providing a `getEnv` implementation at the adapter level (vs. per request) is being considered.
@@ -283,10 +446,10 @@ Astro Env config options will first be made available under the `experimental` p
 export default defineConfig({
   experimental: {
     env: {
-      schema: {}
-    }
-  }
-})
+      schema: {},
+    },
+  },
+});
 ```
 
 # Drawbacks / integration
@@ -320,13 +483,14 @@ Instead of exporting `envField` from `astro/config`, it has been considered to b
 export default defineConfig({
   env: {
     schema: (fields) => ({
-      FOO: fields.string()
-    })
-  }
-})
+      FOO: fields.string(),
+    }),
+  },
+});
 ```
 
 It's not great because:
+
 - It's not serializable
 - It can cause side-effects (if you call something before returning the object)
 - It makes merging in `updateConfig` (Integrations API) harder
@@ -336,15 +500,16 @@ It's not great because:
 Having a dedicated entrypoint has been considered, mainly to play better with a zod based API:
 
 ```ts
-import { defineEnv } from "astro/config"
-import { z } from "astro/zod"
+import { defineEnv } from "astro/config";
+import { z } from "astro/zod";
 
 export default defineEnv({
-  FOO: z.string()
-})
+  FOO: z.string(),
+});
 ```
 
 It was too restrictive and caused 2 issues:
+
 - Users could forget to use the default export
 - Auto-complete could point to this file instead of virtual imports when typing `env`
 
@@ -352,29 +517,30 @@ Note using such convention is still possible using the current proposal:
 
 ```ts
 // env.ts
-import { envField } from "astro/config"
+import { envField } from "astro/config";
 
 export const envSchema = {
   PUBLIC_STRIPE_KEY: envField.string({
     context: "client",
-    access: "public"
+    access: "public",
   }),
-}
+};
 
 // astro.config.mjs
-import { defineConfig } from "astro/config"
-import { envSchema } from "./env"
+import { defineConfig } from "astro/config";
+import { envSchema } from "./env";
 
 export default defineConfig({
   env: {
-    schema: envSchema
-  }
-})
+    schema: envSchema,
+  },
+});
 ```
 
 # Adoption strategy
 
 - **If we implement this proposal, how will existing Astro developers adopt it?**
+
   - They should not use [manual typing](https://docs.astro.build/en/guides/environment-variables/#intellisense-for-typescript) anymore
   - Any custom env var (ie. not built-in like `SSR`) used with `import.meta.env` should be added to `env.schema` and imported through Astro Env virtual modules:
 
