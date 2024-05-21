@@ -224,11 +224,75 @@ export function Comment({ postId }: { postId: string }) {
 }
 ```
 
-### Add progressive enhancement with fallbacks
+### Call actions using React 19 form actions
+
+Astro actions are fully compatible with React 19 form actions. This includes automatic enhancement to submit your form in zero-JS scenarios. To use React 19 in your Astro project, [follow the React 19 beta installation guide.](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#installing)
+
+This example uses an Astro Action called `like()` that accepts a `postId` and returns the number of likes. With React 19, you can pass this action to the `useActionState()` hook to track the result. Apply the `experimental_withState()` function (to be renamed to `withState()` when stable) to apply progressive enhancement information:
+
+```tsx
+// src/components/Like.tsx
+import { actions } from 'astro:actions';
+import { useActionState } from 'react';
+import { experimental_withState } from '@astrojs/react/actions';
+
+export function Like({ postId }: { postId: string }) {
+	const [state, action, pending] = useActionState(
+		experimental_withState(actions.like),
+		0, // initial likes
+	);
+
+	return (
+		<form action={action}>
+			<input type="hidden" name="postId" value={postId} />
+      <button disabled={pending}>{state} ❤️</button>
+		</form>
+	);
+}
+```
+
+Implementation: `withState()` updates an action to match the expected signature for `useActionState()`: `(state, formData) => any`. The `state` field is applied as a stringified `formData` property to retrieve in your action `handler` as-needed. `withState()` also ensures progressive enhancement metadata is applied.
+
+You can also access the state stored by `useActionState()` from your action `handler`. Call `experimental_getActionState()` with the API context, and optionally apply a type to the result:
+
+```ts
+import { defineAction, z } from 'astro:actions';
+import { experimental_getActionState } from '@astrojs/react/actions';
+
+export const server = {
+  like: defineAction({
+    input: z.object({
+      postId: z.string(),
+    }),
+    handler: async ({ postId }, ctx) => {
+      const currentLikes = experimental_getActionState<number>(ctx);
+      // write to database
+      return currentLikes + 1;
+    }
+  })
+}
+```
+
+If you don't need to track the state, you can also apply Astro Actions directly to the `action` property on any React `<form>`. This will also apply progressive enhancement information:
+
+```tsx
+// src/components/SignOut.tsx
+import { actions } from 'astro:actions';
+
+export function SignOut() {
+  return (
+    <form action={actions.signOut}>
+      <button>Sign Out</button>
+    </form>
+  );
+}
+```
+
+### Add progressive enhancement for non-React contexts
 
 > Note: You will need server-rendering for progressive fallbacks. Be sure to [opt out of prerendering](https://docs.astro.build/en/guides/server-side-rendering/#opting-out-of-pre-rendering-in-hybrid-mode) on the page containing a progressively enhanced form.
 
-Actions work well when client JavaScript is enabled. However, you may see unexpected behavior when a form is submitted _before_ your component's JavaScript loads. This is common on slow internet connections or older devices. To offer a fallback experience, you can add a progressive fallback to your form.
+Actions work well when client JavaScript is enabled. The are also automatically enhanced for zero-JS scenarios using React 19 form actions. But in other contexts, you may see unexpected behavior when a form is submitted _before_ your component's JavaScript loads. This is common on slow internet connections or older devices. To offer a fallback experience, you can add a progressive fallback to your form.
 
 To add a fallback, add the `method="POST"` property to your `<form>` element. Then, call the `getActionProps()` function from `astro:actions` with the action you want to use (ex. `getActionProps(actions.comment)`). Spread the result onto an `input` within your form to apply metadata for Astro to handle the request:
 
