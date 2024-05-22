@@ -272,17 +272,31 @@ const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE"); // string | undefined
 
 #### Adapters API
 
-##### `app.setGetEnv`
+##### Supported astro feature flag `envGetSecret`
 
-Under the hood, `getSecret` uses `getEnv` from the runtime. It can be overrided by calling `app.setGetEnv`:
+A new feature flag can be passed to `setAdapter`:
+
+```ts
+setAdapter({
+  // ...
+  supportedAstroFeatures: {
+  	envGetSecret: 'experimental',
+  },
+})
+```
+
+##### `astro:env/setup`
+
+Under the hood, `getSecret` uses `getEnv` from the runtime. It can be overrided by calling `setGetEnv` exported from `astro:env/setup`:
 
 ```ts
 import { getEnv } from "./utils.js";
-// ...
+
+// Won't throw if the virtual module is not available because it'snot supported in
+// the users's astro version or if astro:env is not enabled in the project
+await import('astro:env/setup').then((mod) => mod.setGetEnv(getEnv)).catch(() => {});
 
 export const createExports = (manifest: SSRManifest) => {
-  const app = new App(manifest);
-  app.setGetEnv(getEnv);
   // ...
 };
 ```
@@ -301,7 +315,9 @@ export const createExports = (manifest: SSRManifest) => {
     context: ExecutionContext
   ) => {
     // ...
-    app.setGetEnv((key) => env[key]);
+    // Won't throw if the virtual module is not available because it'snot supported in
+    // the users's astro version or if astro:env is not enabled in the project
+    await import('astro:env/setup').then((mod) => mod.setGetEnv(env => env[key])).catch(() => {});
     const response = await app.render(request, { routeData, locals });
     // ...
   };
@@ -314,9 +330,6 @@ export const createExports = (manifest: SSRManifest) => {
 Since in dev and build variables are taken from `process.env`, if env is coming from another source (eg. Cloudflare `platformProxy`) then it's important to call `overrideProcessEnv`:
 
 ```ts
-import { overrideProcessEnv } from "astro/runtime/server/astro-env.js";
-import { getEnv } from "./utils.js";
-
 const integration = (): AstroIntegration => {
   let config;
 
@@ -329,16 +342,15 @@ const integration = (): AstroIntegration => {
       // Other hooks can be used
       "astro:server:setup": () => {
         const { env } = platformProxy();
-        // ...
 
-        if (config.env?.schema) {
-          overrideProcessEnv({
-            getEnv,
-            variables: Object.keys(config.env.schema).map((destKey) => ({
-              destKey,
-            })),
-          });
-        }
+				if (config.env?.schema) {
+					for (const key of Object.keys(config.env.schema)) {
+						const value = env[key];
+						if (value !== undefined) {
+							process.env[key] = value;
+						}
+					}
+				}
       },
     },
   };
@@ -380,20 +392,28 @@ const integration = (): AstroIntegration => {
         })
       }
       "astro:config:done": () => {
-        overrideProcessEnv({
-					getEnv,
-					variables: [
-						{
-							destKey: 'PUBLIC_NETLIFY',
-							srcKey: 'NETLIFY',
-						},
-						{
-							destKey: 'PUBLIC_DEPLOY_URL',
-							srcKey: 'DEPLOY_URL',
-							default: url,
-						},
-					],
-				});
+				const url = config.site
+					? config.site.endsWith('/')
+						? config.site.slice(0, -1)
+						: config.site
+					: 'https://example.com';
+				const variables: Array<{ destKey: string; srcKey?: string; default?: string }> = [
+					{
+						destKey: 'PUBLIC_NETLIFY',
+						srcKey: 'NETLIFY',
+					},
+					{
+						destKey: 'PUBLIC_DEPLOY_URL',
+						srcKey: 'DEPLOY_URL',
+						default: url,
+					},
+				];
+				for (const { destKey, srcKey, default: defaultValue } of variables) {
+					const value = process.env[srcKey ?? destKey];
+					if (value !== undefined) {
+						process.env[destKey] = value ?? defaultValue;
+					}
+				}
 			}
     },
   }
@@ -423,8 +443,6 @@ export const createGetEnv =
     return undefined;
   };
 ```
-
-> Note: providing a `getEnv` implementation at the adapter level (vs. per request) is being considered.
 
 # Testing Strategy
 
