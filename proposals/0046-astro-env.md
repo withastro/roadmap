@@ -1,4 +1,4 @@
-- Start Date: 2024-04-15
+8- Start Date: 2024-04-15
 - Reference Issues: https://github.com/withastro/roadmap/issues/837
 - Implementation PR: <!-- leave empty -->
 
@@ -596,3 +596,4 @@ export default defineConfig({
 - Add more validations rules, eg. length, email, url, gt, lt, etc..
 - `.env.template` generation with groups
 - Leaks detection using a middleware, [see example](https://github.com/dmno-dev/dmno/blob/main/packages/integrations/astro/src/astro-middleware.ts#L59)
+- Validate secrets on start (dev/build) under a flag
