@@ -571,3 +571,10 @@ export default defineConfig({
   - This is not breaking for users projects nor integrations
   - The `astro-env` integration will be deprecated
   - Integrations adding manual environment checks like https://github.com/MatthiesenXYZ/astro-ghostcms/ will be able to migrate
+
+# Future ideas
+
+- Add an `enum` data type
+- Add more validations rules, eg. length, email, url, gt, lt, etc..
+- `.env.template` generation with groups
+- Leaks detection using a middleware, [see example](https://github.com/dmno-dev/dmno/blob/main/packages/integrations/astro/src/astro-middleware.ts#L59)
