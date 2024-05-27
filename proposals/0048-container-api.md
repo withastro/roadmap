@@ -159,12 +159,16 @@ const response = await container.renderToString(Card, {
         someString: "string",
         someNumber: 100
     },
+    props: {
+        "someState": true
+    }
 });
 ```
 
 - `slots`: required in case your component is designed to render some slots inside of it. It supposed named slots too.
 - `request`: required in case your component/page access to some information such as `Astro.url` or `Astro.request`.
 - `params`: the `Astro.params` to provide to the components 
+- `props`: the `Astro.props` to provide to the components
 - `locals`: initial value of the `Astro.locals`.
 - `routeType`: useful to test endpoints.
 
