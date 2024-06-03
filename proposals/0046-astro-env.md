@@ -597,3 +597,4 @@ export default defineConfig({
 - `.env.template` generation with groups
 - Leaks detection using a middleware, [see example](https://github.com/dmno-dev/dmno/blob/main/packages/integrations/astro/src/astro-middleware.ts#L59)
 - Validate secrets on start (dev/build) under a flag
+- Tools for integrations authors to allow them using env variables inside integrations (ie. no access to virtual modules)
