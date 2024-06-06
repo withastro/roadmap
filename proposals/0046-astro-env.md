@@ -1,4 +1,4 @@
-8- Start Date: 2024-04-15
+- Start Date: 2024-04-15
 - Reference Issues: https://github.com/withastro/roadmap/issues/837
 - Implementation PR: <!-- leave empty -->
 
@@ -84,70 +84,66 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 - **Server variable**: variable available server-side only
 - **Client variable**: variable available client-side and server-side
 
-## Astro config and helper
+## Defining a schema
+
+### Astro config
 
 A new `env.schema` property is added to `AstroUserConfig`. Its type looks like so:
 
-```ts
-type StringField = {
-  type: "string";
-  optional?: boolean;
-  default?: string;
-};
+```js
+import { defineConfig } from "astro/config"
 
-type NumberField = {
-  type: "number";
-  optional?: boolean;
-  default?: number;
-};
-
-type BooleanField = {
-  type: "boolean";
-  optional?: boolean;
-  default?: boolean;
-};
-
-type EnvFieldType = StringField | NumberField | BooleanField;
-
-type PublicClientEnvFieldMetadata = {
-  context: "client";
-  access: "public";
-};
-
-type PublicServerEnvFieldMetadata = {
-  context: "server";
-  access: "public";
-};
-
-type SecretServerEnvFieldMetadata = {
-  context: "server";
-  access: "secret";
-};
-
-type EnvSchema = Record<
-  string,
-  (
-    | PublicClientEnvFieldMetadata
-    | PublicServerEnvFieldMetadata
-    | SecretServerEnvFieldMetadata
-  ) &
-    EnvFieldType
->;
-
-type AstroUserConfig = {
-  env?: {
-    schema: EnvSchema;
-  };
-};
+export default defineConfig({
+  env: {
+    schema: {
+      // ...
+    }
+  }
+})
 ```
+
+### `envField` helper
 
 We provide a `envField` helper to make it easier to define the schema:
 
 ```ts
 import { envField } from "astro/config";
 
-// { context: "client", access: "public", type: "number", default: 4321 }
-envField.number({ context: "client", access: "public", default: 4321 });
+envField.string({
+  context: "client",
+  access: "public",
+  optional: true,
+  max: 32,
+  min: 3,
+  length: 12,
+  url: true,
+  includes: 'foo',
+  startsWith: 'bar',
+  endsWith: 'baz'
+})
+
+envField.number({
+  context: "server",
+  access: "public",
+  default: 4321,
+  gt: 2,
+  min: 3,
+  lt: 10,
+  max: 9,
+  int: true
+})
+
+envField.boolean({
+  context: "server",
+  access: "public"
+})
+
+envField.enum({
+  context: "client",
+  access: "public",
+  values: ["foo", "bar"],
+  default: "bar"
+})
 ```
 
 Note that a variable is required by default, and can be made optional with `optional: true` or `default: value`.
@@ -592,8 +588,6 @@ export default defineConfig({
 
 # Future ideas
 
-- Add an `enum` data type
-- Add more validations rules, eg. length, email, url, gt, lt, etc..
 - `.env.template` generation with groups
 - Leaks detection using a middleware, [see example](https://github.com/dmno-dev/dmno/blob/main/packages/integrations/astro/src/astro-middleware.ts#L59)
 - Validate secrets on start (dev/build) under a flag
