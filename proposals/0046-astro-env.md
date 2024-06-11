@@ -15,11 +15,11 @@ import { defineConfig, envField } from "astro/config";
 export default defineConfig({
   env: {
     schema: {
-      PUBLIC_STRIPE_KEY: envField.string({
+      STRIPE_KEY: envField.string({
         context: "client",
         access: "public",
       }),
-      PUBLIC_PRODUCTION: envField.boolean({
+      PRODUCTION: envField.boolean({
         context: "server",
         access: "public",
         optional: true,
@@ -36,14 +36,14 @@ export default defineConfig({
 
 ```ts
 import {
-  PUBLIC_STRIPE_KEY, // string
+  STRIPE_KEY, // string
 } from "astro:env/client";
 import {
-  PUBLIC_PRODUCTION, // boolean | undefined
+  PRODUCTION, // boolean | undefined,
+  API_PORT, // number
   getSecret,
 } from "astro:env/server";
 
-const API_PORT = getSecret("API_PORT"); // number
 const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE"); // string | undefined
 ```
 
@@ -79,7 +79,7 @@ Other JS frameworks (eg. [SvelteKit](https://kit.svelte.dev/docs/modules#$env-dy
 
 ## Terminology
 
-- **Public variable**: variable replaced by its value at build time. Its key must be prefixed by `PUBLIC_`
+- **Public variable**: variable replaced by its value at build time
 - **Secret variable**: variable retrieved at runtime, never part of the bundle. Uses runtime specific features, like `process.env` or `Deno.env.get()`
 - **Server variable**: variable available server-side only
 - **Client variable**: variable available client-side and server-side
@@ -163,7 +163,7 @@ const integration = {
       params.updateConfig({
         env: {
           schema: {
-            PUBLIC_STRIPE_KEY: envField.string({
+            STRIPE_KEY: envField.string({
               context: "client",
               access: "public",
             }),
@@ -181,7 +181,7 @@ Given how `updateConfig` works, if a variable is specified by a user and throuhg
 
 Since Astro Env does not support many data structures, custom validators are used for the validation. They are used inside a vite plugin to check against public variables loaded by Vite and fail if constraints are not matched.
 
-Those validators are also used at runtime by `getSecret`, more on that in a section below.
+Those validators are also used at runtime for secrets, more on that in a section below.
 
 ## Client variables
 
@@ -194,11 +194,11 @@ Public client variables, once validated, are directly exported from `astro:env/c
 ```ts
 // .astro/env.d.ts
 declare module "astro:env/client" {
-  export const PUBLIC_STRIPE_KEY: string;
+  export const STRIPE_KEY: string;
 }
 
 // Any .ts loaded by Vite
-import { PUBLIC_STRIPE_KEY } from "astro:env/client";
+import { STRIPE_KEY } from "astro:env/client";
 ```
 
 ### Secret client variables
@@ -227,40 +227,30 @@ import { API_PORT } from "astro:env/server";
 
 #### User API
 
-Secret server variables are available through `getSecret` exported from `astro:env/server`. This function allows retrieving a variable by its key:
+Secret server variables are exported from `astro:env/server`. A `getSecret()` helper function is also exported to retrieve any secret by their key. It returns their raw value:
 
-- If the key has not been specified in the schema, the function returns `string | undefined`
-- If the key is part of the schema, it will be validated at runtime using the custom validators and return the right data type. Note that an invalid variable will throw an `AstroError` at runtime only
+> Note: secrets accessible through `astro:env/server` are validated at runtime.
 
 ```ts
 // .astro/env.d.ts
 declare module "astro:env/server" {
-  type SecretValues = {
-    API_PORT: number;
-  };
+  export const API_PORT: number;
 
-  type SecretValue = keyof SecretValues;
-
-  type Loose<T> = T | (string & {});
-  type Strictify<T extends string> = T extends `${infer _}` ? T : never;
-
-  export const getSecret: <TKey extends Loose<SecretValue>>(
-    key: TKey
-  ) => TKey extends Strictify<SecretValue>
-    ? SecretValues[TKey]
-    : string | undefined;
+  export const getSecret: (key: string) => string | undefined;
 }
 
 // Any .ts loaded by Vite
-import { getSecret } from "astro:env/dynamic";
+import {
+  API_PORT, // number
+  getSecret,
+ } from "astro:env/server";
 
-const API_PORT = getSecret("API_PORT"); // number
 const UNKNOWN_VARIABLE = getSecret("UNKNOWN_VARIABLE"); // string | undefined
 ```
 
 #### Behaviors
 
-`getSecret` works differently depending on the case:
+`getSecret` and exported secrets work differently depending on the case:
 
 - In dev mode, it uses `process.env`
 - While building (eg. static site or prerendered pages), it also uses `process.env`
@@ -351,69 +341,6 @@ const integration = (): AstroIntegration => {
     },
   };
 };
-```
-
-##### Inlining build only variables
-
-`overrideProcessEnv` also allows to provide some build only variables for runtime, eg. [Netlify Build environment variables](https://docs.netlify.com/configure-builds/environment-variables/).
-
-An adapter can provide its own variables and override `process.env` accordingly. For example:
-
-```ts
-import { overrideProcessEnv } from "astro/runtime/server/astro-env.js"
-import { getEnv } from "./utils.js"
-
-const integration = (): AstroIntegration => {
-  let config;
-
-  return {
-    name: "adapter",
-    hooks: {
-      "astro:config:setup": ({ updateConfig }) => {
-        updateConfig({
-          env: {
-            schema: {
-              PUBLIC_NETLIFY: envField.boolean({
-								context: 'server',
-								access: 'public',
-								default: false,
-							}),
-							PUBLIC_DEPLOY_URL: envField.string({
-								context: 'server',
-								access: 'public',
-								optional: true,
-							}),
-            }
-          }
-        })
-      }
-      "astro:config:done": () => {
-				const url = config.site
-					? config.site.endsWith('/')
-						? config.site.slice(0, -1)
-						: config.site
-					: 'https://example.com';
-				const variables: Array<{ destKey: string; srcKey?: string; default?: string }> = [
-					{
-						destKey: 'PUBLIC_NETLIFY',
-						srcKey: 'NETLIFY',
-					},
-					{
-						destKey: 'PUBLIC_DEPLOY_URL',
-						srcKey: 'DEPLOY_URL',
-						default: url,
-					},
-				];
-				for (const { destKey, srcKey, default: defaultValue } of variables) {
-					const value = process.env[srcKey ?? destKey];
-					if (value !== undefined) {
-						process.env[destKey] = value ?? defaultValue;
-					}
-				}
-			}
-    },
-  }
-}
 ```
 
 ##### `getEnv` requirements
@@ -534,7 +461,7 @@ Note using such convention is still possible using the current proposal:
 import { envField } from "astro/config";
 
 export const envSchema = {
-  PUBLIC_STRIPE_KEY: envField.string({
+  STRIPE_KEY: envField.string({
     context: "client",
     access: "public",
   }),
@@ -568,14 +495,14 @@ export default defineConfig({
   export default defineConfig({
   +  env: {
   +    schema: {
-  +      PUBLIC_API_URL: envField.string({ context: "client", access: "public" })
+  +      API_URL: envField.string({ context: "client", access: "public" })
   +    }
   +  }
   })
 
   // whatever.ts
   - import.meta.env.PUBLIC_API_URL
-  + import { PUBLIC_API_URL } from "astro:env/client"
+  + import { API_URL } from "astro:env/client"
   ```
 
 - **Is this a breaking change? Can we write a codemod?**
