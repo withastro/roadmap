@@ -30,7 +30,7 @@
 
 **Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/roadmap/issues)
 
-**What to Expect:** A proposal reaches this stage (aka "is accepted") during an [#rfc-meetings](RFC Meeting) with Maintainers and TSC, following our existing [RFC voting](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) process.
+**What to Expect:** A proposal reaches this stage (aka "is accepted") during an [#rfc-meetings](RFC Meeting) with Maintainers and TSC (>= L2), following our existing [RFC voting](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) process.
 
 When a proposal is accepted, a TSC member will create a new GitHub Issue summarizing the original proposal using our official template. At this point, the proposal champion is free to move on to the next stage. If a champion doesn't exist yet, then an accepted proposal may remain open until a champion volunteers by posting in the GitHub Issue.
 
@@ -64,7 +64,7 @@ RFCs advance through the stages during RFC meetings with TSC and maintainers. Vo
 
 Meetings occur ad hoc rather than on a scheduled basis. They are called for when a proposal author or champion feels it is ready to advance to the next stage. The author or champion can ask for a meeting by contacting TSC to schedule a time.
 
-All maintainers are invited to the meeting. If consensus is reached the RFC advances to the next stage. See [RFC proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) documentation for full details.
+All maintainers are invited to the meeting. If consensus is reached, the RFC advances to the next stage. See [RFC proposal](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) documentation for full details.
 
 ---
 
