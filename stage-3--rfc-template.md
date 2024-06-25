@@ -10,9 +10,12 @@
   of the accepted proposal.
 -->
 
+**If you have feedback, please leave it on the Stage 3 PR (link below).**
+
 - Start Date: <!-- today's date, YYYY-MM-DD -->
 - Reference Issues: <!-- related issues, otherwise leave empty -->
 - Implementation PR: <!-- leave empty -->
+- Stage 3 PR: <!-- related roadmap PR -->
 
 # Summary
 
