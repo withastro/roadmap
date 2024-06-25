@@ -82,6 +82,7 @@ but eventually each route must be rendered using the same data, which are:
 - `AstroContainer::create`: creates a new instance of the container.
 - `AstroContainer.renderToString`: renders a component and return a string.
 - `AstroContainer.renderToResponse`: renders a component and returns the `Response` emitted by the rendering phase.
+- `AstroContainer.addServerRenderer`: to programmatically store a renderer inside the container. 
 
 ### `create` function
 
@@ -126,7 +127,7 @@ It will be possible to tweak the container APIs with options and such. The `.cre
 ```ts
 type AstroContainerOptions = {
     streaming: boolean;
-    renderers: AstroRenderer[];
+    renderers: AddServerRenderer[];
     astroConfig: AstroUserConfig;
 }
 ```
@@ -134,6 +135,39 @@ type AstroContainerOptions = {
 The `astroConfig` object is literally the same object exposed by the `defineConfig`, inside the `astro.config.mjs` file. This very configuration 
 will go under the same schema validation that Astro uses internally. This means that an invalid schema will result in an error of the `create` function.
 
+#### Add a renderer
+
+Adding a renderer can be done manually or automatically. 
+
+The automatic way is meant for static applications, or cases where the container isn't called at runtime. The renderers maintained by the Astro org will expose
+a method called `getContainerRenderer` that will return the correct information that will tell the container **how to import the renderer**. The importing of the renderer is done via a function called `loadRenderers`, exported by a new virtual module called `astro:container`: 
+
+```js
+import { getContainerRenderer as reactRenderer } from "@astrojs/react";
+import { getContainerRenderer as vueRenderer } from "@astrojs/vue";
+import { laodRenderers } from "astro:container";
+import { AstroContainer } from "astro/container";
+
+const renderers = loadRenderers([
+    reactRenderer(),
+    vueRenderer()
+]);
+const container = await AstroContainer.create({ renderers })
+```
+
+The manual way is meant for on-demand applications, or cases where the container is called at runtime or inside other "shells" (PHP, Ruby, Java, etc.). 
+The developer is in charge of **importing** the server renderer and store it inside the container via `AstroContainer.addServerRenderer`:
+
+The renderers maintained by the Astro org will ship proper types for importing server renderers.
+
+```js
+import reactRenderer from "@astrojs/react/server.js";
+import vueRenderer from "@astrojs/vue/server.js";
+
+const container = await AstroContainer.create();
+container.addServerRenderer({renderer: reactRenderer});
+container.addServerRenderer({renderer: vueRenderer});
+```
 
 ### `renderToString` and `renderToResponse` options
 
