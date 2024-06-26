@@ -15,7 +15,7 @@
 - Start Date: <!-- today's date, YYYY-MM-DD -->
 - Reference Issues: <!-- related issues, otherwise leave empty -->
 - Implementation PR: <!-- leave empty -->
-- Stage 3 PR: <!-- related roadmap PR -->
+- Stage 3 PR: <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
 
 # Summary
 
