@@ -10,7 +10,7 @@
   of the accepted proposal.
 -->
 
-**If you have feedback, please leave it on the Stage 3 PR (link below).**
+**If you have feedback and the feature is released as experimental, please leave it on the Stage 3 PR. Otherwise, comment on the Stage 2 issue (links below).**
 
 - Start Date: <!-- today's date, YYYY-MM-DD -->
 - Reference Issues: <!-- related issues, otherwise leave empty -->
