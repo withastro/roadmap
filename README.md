@@ -50,6 +50,8 @@ A stale, accepted proposal can be removed (rejected after a previous acceptance)
 
 **What to Expect:** To create an RFC for an already-accepted proposal, the proposal champion must use our [`stage-3--rfc-template.md`](stage-3--rfc-template.md?plain=1) RFC template in the repo. The initial sections of the RFC template should be copy-pasted from the the accepted proposal (they match 1:1). All remaining sections are left for the champion to complete with the implementation and tradeoff details of the RFC.
 
+When a Stage 3 RFC is opened, the Stage 2 RFC should be closed with a comment that links to the Stage 3 RFC pull request.
+
 You do not need to get an RFC approved before beginning development! One of the best ways to validate your RFC is to prototype, so early prototyping and parallel development alongside the RFC is strongly encouraged. The RFC is a living document during this stage, and is most useful for gathering feedback as you build. An RFC will not be accepted and merged until it's PR is also ready to merge.
 
 The proposal champion can request feedback on their RFC at any point, either asynchronously in Discord (inside the `#dev`/`#dev-ptal` channel) or during our weekly community call. Maintainers are expected to provide timely feedback at this stage so that the RFC author is never blocked. If you are an RFC champion and need access to the `#dev-ptal` channel, message **@fks** for permission.
