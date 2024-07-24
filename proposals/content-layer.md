@@ -3,7 +3,7 @@
 - Start Date: 2024-07-23
 - Implementation PR: https://github.com/withastro/astro/pull/11360
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/946
-- Stage 3 PR: <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/982
 
 # Summary
 
