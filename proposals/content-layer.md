@@ -7,7 +7,9 @@
 
 # Summary
 
-Creates a successor to content collections with expanded use cases and improved performance.
+- Explore a new and improved content layer for Astro.
+- Improve the current experience of loading/defining data into content collections
+- Improve the current experience of querying data from content collections
 
 # Example
 
@@ -17,12 +19,10 @@ Collections are defined using a new `loader` property. There are built-in `file`
 // src/content/config.ts
 import { defineCollection, z } from "astro:content";
 import { glob, file } from "astro/loaders";
-// Loaders can be distributed as packages
-import { feedLoader } from "@ascorbic/feed-loader";
 
 // The `glob()` loader loads multiple files, with one entry per file
 const spacecraft = defineCollection({
-  type: "experimental_content",
+  type: "content",
   loader: glob({ pattern: "*.md", base: "src/data/spacecraft" }),
   // A schema is optional, but provides validation and type safety for data.
   // It can also be used to transform data before it is stored.
@@ -36,7 +36,7 @@ const spacecraft = defineCollection({
 
 // The `file()` loader loads multiple entries from one file
 const dogs = defineCollection({
-  type: "experimental_data",
+  type: "data",
   loader: file("src/data/dogs.json"),
   schema: z.object({
     id: z.string(),
@@ -45,16 +45,7 @@ const dogs = defineCollection({
   }),
 });
 
-// Custom loaders can be defined inline or imported from packages
-const podcasts = defineCollection({
-  type: "experimental_content",
-  loader: feedLoader({
-    url: "https://feeds.99percentinvisible.org/99percentinvisible",
-  }),
-  // A loader can provide its own schema, but a user-defined schema will override it.
-});
-
-export const collections = { spacecraft, dogs, podcasts };
+export const collections = { spacecraft, dogs };
 ```
 
 This is then used in Astro pages in the same way as current content collections.
@@ -72,82 +63,49 @@ Content layer is designed to be a successor to content collections that addresse
 # Goals
 
 - Create a successor to content collections that can be used with local and remote data.
-- Decouple content from Vite, so that data is no longer implemented as Rollup chunks.
+- Improve performance and scalability by decoupling data from Vite.
 - Provide a simple API for defining collections with a migration path from content collections.
 - Support local files in user-defined locations with built-in file and glob loaders.
-- Initially support Markdown rendering and JSON data for local files, with support for other formats in the future.
-- Provide an API for defining custom loaders that is powerful enough to handle a wide range of use cases, including CMS integrations.
-- Provide a higher-level API for simple inline loaders.
-- Make the API scalable to tens of thousands of entries, with good performance and low memory usage.
-- Allow loaders to define their own schemas, including dynamic schemas that can be introspected from the data source.
+- Support Markdown rendering and JSON data for local files, with support for other formats in the future.
+- Provide a flexible API for defining custom loaders.
+- Make the implementation scalable to tens of thousands of entries.
 
 # Non-Goals
 
-- Non-goal: allowing loaders to define multiple collections automatically. e.g. separate collections would need to be manually defined for posts and categories in a blog.
-- Non-goal: dependency tracing for entries.
-- Out of scope: hot-reloading remote data.
-- Out of scope: rendering markdown from remote data. A loader could store rendered HTML, but it would be up to the loader to handle this.
-- Out of scope: custom `Content` components.
-- Future: support for Markdoc and MDX rendering.
-- Future: SQLite-based backend for collections.
-- Future: support for queries more complex than get by ID.
+- Allowing loaders to define multiple collections automatically. e.g. separate collections would need to be manually defined for posts and categories in a blog.
+- Dependency tracing for entries.
+- Hot-reloading remote data.
+- Rendering markdown from remote data. A loader could store rendered HTML, but it would be up to the loader to handle this.
+- Custom `Content` components.
+- Support for queries more complex than get by ID.
+
+## Stretch Goals
+
+- Support for Markdoc and MDX rendering.
+- SQLite-based backend for collections.
+- Expressive query API.
 
 # Detailed Design
 
+## Glossary
+
+- **Collection**: A set of entries that share a common schema. Each entry has a unique ID.
+- **Entry**: A single piece of data in a collection.
+- **Loader**: A function or object that loads data into a collection.
+  - **Inline Loader**: A loader defined as a function that returns an array of entries which are then inserted into the store.
+  - **Loader Object**: A loader defined as an object with a `load` method that loads data into the store.
+
 ## Collection Definition
 
-Collections are defined in a similar way to current content collections, using `defineCollection()` in `src/content/config.ts`. There are two new collection types: `experimental_content` and `experimental_data`. The only difference between them is that when a collection is defined as `experimental_content`, entries will have a `render()` method that generates a component for rendering HTML content. This requires the loader to have set the `rendered.html` property.
-
-The `reference()` helper can be used in the same way as content collections, to reference other collections.
-
-## Built-in loaders
-
-There are two built-in loaders: `file()` and `glob()`, which load data from the local filesystem. The `glob()` loader covers the current use case of directories full of markdown or JSON content. The `glob()` helper is more flexible than in current content collections, as it can load data from anywhere on the filesystem. The `file()` loader loads multiple entries from a single file. Both loaders can process markdown in the same way as content collections. They can also extract images in the same way as content collections.
+Collections are defined in a similar way to current content collections, using `defineCollection()` in `src/content/config.ts`. There is a new `loader` property that defines how data is loaded into the collection. At its simplest, the loader can be a function that returns an array of entries.
 
 ```ts
-const spacecraft = defineCollection({
-  // The glob loader can be used for either markdown files (defined as experimental_content) or JSON files (defined as experimental_data).
-  type: "experimental_content",
-  // The pattern is any valid glob pattern. It is relative to the "base" directory.
-  // "base" is optional and defaults to the project root. It is defined relative to the project root, or as an absolute path.
-  loader: glob({ pattern: "*.md", base: "src/data/spacecraft" }),
-  schema: ({ image }) =>
-    z.object({
-      title: z.string(),
-      description: z.string(),
-      heroImage: image().optional(),
-    }),
-});
-
-const dogs = defineCollection({
-  type: "experimental_data",
-  // The file loader loads a single file which contains multiple entries. The path is relative to the project root, or an absolute path.
-  // The data must be an array of objects, each with a unique `id` property, or an object with IDs as keys and entries as values.
-  loader: file("src/data/dogs.json"),
-  schema: z.object({
-    id: z.string(),
-    breed: z.string(),
-    temperament: z.array(z.string()),
-  }),
-});
-```
-
-## Custom loaders
-
-The new collection `loader` property is required, and supports two different loader APIs:
-
-### High-level API
-
-A loader is an async function that returns an array of entries. This higher-level API is useful for defining custom loaders inline that don't need access to features such as incremental updates, content digests, or caching.
-
-```ts
-const dogs = defineCollection({
-  type: "experimental_data",
+const countries = defineCollection({
+  type: "data",
   loader: async () => {
     const response = await fetch("https://restcountries.com/v3.1/all");
     const data = await response.json();
-    // Must return an array of entries with an id property,
-    // or an object with IDs as keys and entries as values
+    // Must return an array of entries with an id property, or an object with IDs as keys and entries as values
     return data.map((country) => ({
       id: country.cca3,
       ...country,
@@ -156,11 +114,30 @@ const dogs = defineCollection({
 });
 ```
 
-### Low-level API
+The returned entries are stored in the collection, and can be queried using the `getCollection()` and `getEntry()` functions.
 
-For advanced loaders, the low-level API provides more control over the loading process. The loader is in control of adding entries to the data store, and has access to various helper tools. It can define its own schema, including generating it dynamically.
+## Loaders
 
-The loader is an object with a `load` method and optional `schema` property. The recommended pattern is to define a function that accepts configuration options and returns the loader object.
+There are two ways to define a loader, and the choice depends on the complexity of the loader and the features it requires. The example above uses the high-level API, which is an async function that returns an array of entries. This is useful for loaders that don't need to manually control how the data is loaded into the store. Whenever the loader is called, it will clear the store and reload all the entries.
+
+If a loader needs more control over the loading process, it can use the low-level API. This allows, for example, entries to be updated incrementally, or for the store to be cleared only when necessary. The low-level API is an object with a `load` method that is called to load data into the store. This is similar to an Astro integration or Vite plugin, and similarly the recommended pattern is to define a function that accepts configuration options and returns the loader object. This is the recommended pattern for loaders that are distributed as packages, as it provides the simplest API for users. For example, this is how a loader for an RSS feed might be used:
+
+```ts
+const podcasts = defineCollection({
+  type: "content",
+  loader: feedLoader({
+    url: "https://feeds.99percentinvisible.org/99percentinvisible",
+  }),
+});
+```
+
+The `feedLoader` function in this example receives a configuration object and returns a loader object, pre-configured with the URL of the feed. The loader object has a `load` method that is called to load data into the store.
+
+### Loader API
+
+A loader is an object with a `load` method that is called to load data into the store. The `load` method is an async function that receives a context object which includes a number of helper functions and objects. The loader can use these to load data, store it in the data store, and persist metadata between builds. The object can also define a schema for the data, which is used to validate and transform the data before it is stored. This can optionally be an async function that returns a schema, allowing the loader to introspect the data source to determine the schema or otherwise dynamically define it at load time.
+
+This is an example of a loader for an RSS feed:
 
 ```ts
 import type { Loader } from "astro/loaders";
@@ -174,14 +151,18 @@ export interface FeedLoaderOptions {
 
 export function feedLoader({ url }: FeedLoaderOptions): Loader {
   const feedUrl = new URL(url);
+  // Return a loader object
   return {
+    // The name of the loader. This is used in logs and error messages.
     name: "feed-loader",
     // The load method is called to load data
-    load: async ({ store, logger, parseData, meta }) => {
+    load: async ({ store, logger, parseData, meta, generateDigest }) => {
       logger.info("Loading posts");
 
       // The meta store is used to store metadata, such as sync tokens
       // etags or last-modified times. It is persisted between builds.
+      // In this case, we store the last-modified time of the feed, so we
+      // can make a conditional request for the data.
       const lastModified = meta.get("last-modified");
 
       // Make a conditional request for the feed
@@ -205,6 +186,8 @@ export function feedLoader({ url }: FeedLoaderOptions): Loader {
       const feed = parseFeed(res.body);
 
       // If the loader doesn't handle incremental updates, clear the store before inserting new entries
+      // In some cases the API might send a stream of updates, in which case you would not want to clear the store
+      // and instead add, delete or update entries as needed.
       store.clear();
 
       for (const item of feed.items) {
@@ -214,6 +197,12 @@ export function feedLoader({ url }: FeedLoaderOptions): Loader {
           data: item,
         });
 
+        // The generateDigest helper lets you generate a digest based on the content. This is an optional
+        // optimization. When inserting data into the store, if the digest is provided then the store will
+        // check if the content has changed before updating the entry. This will avoid triggering a rebuild
+        // in development if the content has not changed.
+        const digest = generateDigest(data);
+
         store.set({
           id,
           data,
@@ -222,6 +211,7 @@ export function feedLoader({ url }: FeedLoaderOptions): Loader {
           rendered: {
             html: data.description ?? "",
           },
+          digest,
         });
       }
     },
@@ -234,8 +224,7 @@ export function feedLoader({ url }: FeedLoaderOptions): Loader {
 
 ### The data store
 
-Each loader is provided with a data store object. This is an in-memory key/value store, scoped to that loader and is used to store entries. The store is persisted to disk between builds, so loaders can handle incremental updates.
-The store has the following methods:
+Each loader is provided with a data store object. This is an in-memory key/value store, scoped to that loader and is used to store collection entries. The store is persisted to disk between builds, so loaders can handle incremental updates. The store has the following interface:
 
 ```ts
 export interface ScopedDataStore {
@@ -280,6 +269,8 @@ export interface MetaStore {
 }
 ```
 
+The `reference()` helper can be used in the same way as content collections, to reference other collections.
+
 ## Using the data
 
 The data is accessed in the same way as content collections, using the `getCollection()` or `getEntry()` functions.
@@ -305,11 +296,41 @@ export const getStaticPaths: GetStaticPaths = async () => {
 }
 
 const { craft } = Astro.props;
+---
 
-// If a collection is defined as `experimental_content` and the loader has set the `rendered.html` property,
+<h1>{craft.data.title}</h1>
+<p>{craft.data.description}</p>
+
+```
+
+### Rendered content
+
+Some entry types may have HTML content that can be rendered as a component. While this can be accessed like any other property, a loader can also store the rendered HTML in the `rendered.html` property. This allows users to use the `<Content />` component to render the HTML. The `rendered` property can also include metadata such as frontmatter or headings, which can be accessed as properties on the `rendered.metadata` object.
+
+```astro
+---
+// src/pages/spacecraft/[id].astro
+import type { GetStaticPaths } from "astro";
+import { getCollection } from "astro:content";
+import { Image } from "astro:assets";
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const collection = await getCollection("spacecraft");
+  if (!collection) return [];
+  return collection.map((craft) => ({
+    params: {
+      id: craft.id,
+    },
+    props: {
+      craft,
+    },
+  }));
+}
+
+const { craft } = Astro.props;
+
+// If a collection is defined as `content` and the loader has set the `rendered.html` property,
 // the entry will have a `render()` method that generates a component for rendering HTML content.
-// The raw HTML can also be accessed with `craft.rendered.html`.
-// If it is markdown, the frontmatter and headings will be available as properties on `rendered.metadata`.
 const { Content } = await craft.render();
 ---
 
@@ -317,6 +338,38 @@ const { Content } = await craft.render();
 
 <Content />
 
+```
+
+## Built-in loaders
+
+There are two built-in loaders: `file()` and `glob()`, which load data from the local filesystem. The `glob()` loader covers the current use case of directories full of markdown or JSON content. The `glob()` helper is more flexible than in current content collections, as it can load data from anywhere on the filesystem. The `file()` loader loads multiple entries from a single file. Both loaders can process markdown in the same way as content collections. They can also extract images in the same way as content collections.
+
+```ts
+const spacecraft = defineCollection({
+  // The glob loader can be used for either markdown files (defined as content) or JSON files (defined as data).
+  type: "content",
+  // The pattern is any valid glob pattern. It is relative to the "base" directory.
+  // "base" is optional and defaults to the project root. It is defined relative to the project root, or as an absolute path.
+  loader: glob({ pattern: "*.md", base: "src/data/spacecraft" }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      description: z.string(),
+      heroImage: image().optional(),
+    }),
+});
+
+const dogs = defineCollection({
+  type: "data",
+  // The file loader loads a single file which contains multiple entries. The path is relative to the project root, or an absolute path.
+  // The data must be an array of objects, each with a unique `id` property, or an object with IDs as keys and entries as values.
+  loader: file("src/data/dogs.json"),
+  schema: z.object({
+    id: z.string(),
+    breed: z.string(),
+    temperament: z.array(z.string()),
+  }),
+});
 ```
 
 # Testing Strategy
@@ -338,7 +391,7 @@ const { Content } = await craft.render();
 
 # Adoption strategy
 
-- New collections can be defined alongside existing content collections by setting the `type` property to `experimental_content` or `experimental_data`.
+While the feature is experimental, collections are defined with `type: "experimental_data:` or `type: "experimental_content"`. This allows users to opt-in to the new content layer while still using content collections. It is still to be determined how the feature will be adopted when it is stable. This may be by having a different `type`. Once MDX and Markdoc are supported, the `glob()` loader will provide an easy migration path for users who are currently using content collections.
 
 # Unresolved Questions
 
