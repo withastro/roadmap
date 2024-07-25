@@ -63,6 +63,7 @@ Content layer is designed to be a successor to content collections that addresse
 # Goals
 
 - Create a successor to content collections that can be used with local and remote data.
+- Allow data to be cached between builds.
 - Improve performance and scalability by decoupling data from Vite.
 - Provide a simple API for defining collections with a migration path from content collections.
 - Support local files in user-defined locations with built-in file and glob loaders.
@@ -79,7 +80,7 @@ Content layer is designed to be a successor to content collections that addresse
 - Custom `Content` components.
 - Support for queries more complex than get by ID.
 
-## Stretch Goals
+## Stretch Goals/Future Work
 
 - Support for Markdoc and MDX rendering.
 - SQLite-based backend for collections.
