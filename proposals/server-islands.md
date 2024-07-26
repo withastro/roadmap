@@ -99,6 +99,8 @@ Additionally the props will be encrypted using [Web Crypto](https://developer.mo
 
 Note that this an additional form of protection only intended to protect against accidental leakage of secrets. It is *not* a replacement for per-request authentication, which should happen when islands render, nor is it intended to protect against CSRF. Islands are read-requests and should not suffer from CSRF in general.
 
+Included in the encrypted props will be the unique island name. At the time of the request this name will be checked to make sure it matches. The intent is to prevent forged requests for islands that happen to have the same props.
+
 ## Hydration
 
 The hydration script performs the following steps:
