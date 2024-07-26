@@ -91,6 +91,14 @@ Additionally the `slot="fallback"` is rendered and returned before the hydration
 - `props` passed to the component. An island can be rendered multiple times; the props are representative of a particular usage.
 - `slots` that are passed to the island component.
 
+### Props serialization
+
+Since the island is replaced with a script and fallback content at build time, the props must be serializable. This is done using `JSON.stringify`.
+
+Additionally the props will be encrypted using [Web Crypto](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API). Upon build Astro will create a new key which will be used for prop encryption. The same key is shipped the island routes in order to decrypt.
+
+Note that this an additional form of protection only intended to protect against accidental leakage of secrets. It is *not* a replacement for per-request authentication, which should happen when islands render, nor is it intended to protect against CSRF. Islands are read-requests and should not suffer from CSRF in general.
+
 ## Hydration
 
 The hydration script performs the following steps:
