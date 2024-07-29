@@ -53,7 +53,7 @@ export function Like({ postId }: { postId: string }) {
   return (
     <button
       onClick={async () => {
-        const newLikes = await actions.like({ postId });
+        const newLikes = await actions.like.orThrow({ postId });
         setLikes(newLikes);
       }}
     >
@@ -68,7 +68,7 @@ export function Comment({ postId }: { postId: string }) {
       onSubmit={async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        const result = await actions.blog.comment(formData);
+        const result = await actions.blog.comment.orThrow(formData);
         // handle result
       }}
     >
@@ -141,7 +141,7 @@ Now, this action is callable from client components and server forms.
 
 ### Call actions from a client component
 
-To call an action from a client component, you can import the `actions` object from `astro:actions`. This will include `like()` as a function, which accepts type-safe arguments as a JSON object.
+To call an action from a client component, you can import the `actions` object from `astro:actions`. This will include `like()` as a function, which accepts type-safe arguments as a JSON object. The return value will be an object containing either `data` with the action result, or `error` with any validation error or custom exception.
 
 Implementation: When imported on the client, the `actions` object will _not_ expose server code. It will instead expose a proxy object that calls a given action using a `fetch()` call. The object path will mirror the request URL that is fetched. For example, a call to `actions.like()` will generate a fetch to the URL `/_actions/like`. For nested objects like `actions.blog.like()`, dot chaining is used: `/_actions/blog.like`. The request is routed to your action using an injected handler at `/_actions/[...path]`.
 
@@ -157,8 +157,10 @@ export function Like({ postId }: { postId: string }) {
   return (
     <button
       onClick={async () => {
-        const newLikes = await actions.like({ postId });
-        setLikes(newLikes);
+        const { data, error } = await actions.like({ postId });
+        if (!error) {
+          setLikes(data);
+        }
       }}
     >
       {likes} likes
@@ -166,6 +168,14 @@ export function Like({ postId }: { postId: string }) {
   );
 }
 ```
+
+To retrieve `data` directly and allow errors to throw, you can add `orThrow()` following the format `actions.NAME.orThrow(input)`:
+
+```ts
+const newLikes = await actions.like.orThrow({ postId });
+setLikes(newLikes);
+```
+
 
 ## Handle form requests
 
@@ -237,26 +247,28 @@ import { useActionState } from 'react';
 import { experimental_withState } from '@astrojs/react/actions';
 
 export function Like({ postId }: { postId: string }) {
-	const [state, action, pending] = useActionState(
+	const [{ data, error }, action, pending] = useActionState(
 		experimental_withState(actions.like),
-		0, // initial likes
+		{ data: 0 }, // initial likes
 	);
 
 	return (
 		<form action={action}>
 			<input type="hidden" name="postId" value={postId} />
-      <button disabled={pending}>{state} ❤️</button>
+      <button disabled={pending}>{data} ❤️</button>
 		</form>
 	);
 }
 ```
+
+Note: Chaining `orThrow()` on a function will _disable_ progressive enhancement. This is because uncaught exceptions must be handled from the client.
 
 Implementation: `withState()` updates an action to match the expected signature for `useActionState()`: `(state, formData) => any`. The `state` field is applied as a stringified `formData` property to retrieve in your action `handler` as-needed. `withState()` also ensures progressive enhancement metadata is applied.
 
 You can also access the state stored by `useActionState()` from your action `handler`. Call `experimental_getActionState()` with the API context, and optionally apply a type to the result:
 
 ```ts
-import { defineAction, z } from 'astro:actions';
+import { defineAction, type ActionError, z } from 'astro:actions';
 import { experimental_getActionState } from '@astrojs/react/actions';
 
 export const server = {
@@ -265,9 +277,9 @@ export const server = {
       postId: z.string(),
     }),
     handler: async ({ postId }, ctx) => {
-      const currentLikes = experimental_getActionState<number>(ctx);
+      const state = experimental_getActionState<{ data: number } | { error: ActionError}>(ctx);
       // write to database
-      return currentLikes + 1;
+      return state.data + 1;
     }
   })
 }
@@ -294,7 +306,7 @@ export function SignOut() {
 
 Actions work well when client JavaScript is enabled. The are also automatically enhanced for zero-JS scenarios using React 19 form actions. But in other contexts, you may see unexpected behavior when a form is submitted _before_ your component's JavaScript loads. This is common on slow internet connections or older devices. To offer a fallback experience, you can add a progressive fallback to your form.
 
-To add a fallback, add the `method="POST"` property to your `<form>` element. Then, call the `getActionProps()` function from `astro:actions` with the action you want to use (ex. `getActionProps(actions.comment)`). Spread the result onto an `input` within your form to apply metadata for Astro to handle the request:
+To add a fallback, add the `method="POST"` property to your `<form>` element. Then, apply the action function directly to the `action` property of the form. This will apply the function name as a query string to be handled by the server:
 
 ```tsx
 import { actions, getActionProps } from 'astro:actions';
@@ -302,20 +314,27 @@ import { actions, getActionProps } from 'astro:actions';
 // src/components/Comment.jsx
 export function Comment({ postId }: { postId: string }) {
 	return (
-		<form method="POST" onSubmit={...}>
-			<input {...getActionProps(actions.comment)} />
-			{/* result:
-			<input
-				type="hidden"
-				name="_astroAction"
-				value="/_actions/comment" />
-			*/}
+		<form method="POST" action={actions.comment} onSubmit={...}>
+			{/* output: action="?_astroAction=comment" */}
 		</form>
 	)
 }
 ```
 
-Implementation: The `getActionProps()` function returns hidden input attributes to tell Astro which action should handle the request. Using middleware, Astro will intercept incoming requests with a form data `Content-type`. The form data is parsed to check for the `_astroAction` field and call the appropriate action.
+Implementation: Astro injects middleware to check for the `_astroAction` param and call the appropriate action.
+
+You may also construct form action URLs using string concatenation, or by using the `URL()` constructor, with the an action's `.queryString` property:
+
+```astro
+---
+import { actions } from 'astro:actions';
+const confirmationUrl = new URL('/confirmation', Astro.url);
+confirmationUrl.search = actions.queryString;
+---
+<form method="POST" action={confirmationUrl.pathname}>
+  <button>Submit</button>
+</form>
+```
 
 ### Handle an action result on the server
 
@@ -335,34 +354,7 @@ const comment = Astro.getActionResult(actions.comment);
 )}
 ```
 
-## Handle errors
-
-Actions can raise exceptions for any number of reasons: an invalid input, an unauthorized request, a missing resource, etc. By default, these errors will `throw` wherever your action is called.
-
-To handle errors in your code without using a `try / catch`, you can chain the `.safe()` function onto your existing actions. This will change the return type to either a `data` object with the result, or an `error` object with the exception.
-
-You can call `.safe()` from a client component to handle `data` and `error`:
-
-```tsx
-// src/components/Like.tsx
-import { actions } from 'astro:actions';
-
-export function Like() {
-	return (
-		<button onClick={async () => {
-			const { data, error } = await actions.like.safe({ postId });
-			if (data) // set state
-			// otherwise, handle the error
-		}}>
-			{likes} likes
-		</button>
-	)
-}
-```
-
-You can also handle the `error` object returned by `Astro.getActionResult()`.
-
-### Input validation errors
+## Input validation errors
 
 Your `input` schema gives you type safety wherever you call your action. Still, you may have further refinements in your Zod schema that can raise a validation error at runtime.
 
@@ -382,7 +374,7 @@ export function Comment({ postId }: { postId: string }) {
       onSubmit={async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        const { error } = await actions.blog.comment.safe(formData);
+        const { error } = await actions.blog.comment(formData);
         if (error && isInputError(error)) {
           setBodyError(error.fields.body);
         }
@@ -424,7 +416,7 @@ export const server = {
 };
 ```
 
-To handle this error, you can call your action using the `.safe()` extension and check whether an `error` is present. This property will be of type `ActionError`.
+To handle this error, you can call your action and check whether an `error` is present. This property will be of type `ActionError`.
 
 ## Access API Context
 
