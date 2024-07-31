@@ -447,6 +447,24 @@ export const server = {
 };
 ```
 
+## Call actions directly from server code
+
+You may need to call an action handler directly from server pages and endpoints. To do so, use the `Astro.callAction()` function. Pass the function you want to call as the first parameter, and any input arguments as the second parameter:
+
+```astro
+---
+import { actions } from 'astro:actions';
+
+const result = await Astro.callAction(actions.searchPosts, {
+  searchTerm: Astro.url.searchParams.get('search'),
+});
+---
+
+{result.data && (
+  {/* render the results */}
+)}
+```
+
 ## Integration actions
 
 Astro integrations can inject routes and middleware. We'd like to expand this pattern for actions as well.
