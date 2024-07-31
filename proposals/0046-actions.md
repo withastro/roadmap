@@ -139,7 +139,7 @@ Now, this action is callable from client components and server forms.
 
 > **@bholmesdev Note:** Users will call actions by importing an `actions` object from the `astro:actions` virtual module. To avoid misleading auto-import suggestions, we use the name `server` instead of `actions` for server code.
 
-### Call actions from a client component
+## Call actions from a client component
 
 To call an action from a client component, you can import the `actions` object from `astro:actions`. This will include `like()` as a function, which accepts type-safe arguments as a JSON object. The return value will be an object containing either `data` with the action result, or `error` with any validation error or custom exception.
 
@@ -202,9 +202,9 @@ export const server = {
 };
 ```
 
-You can also handle an untyped `FormData` object by setting the `input` to `z.instanceof(FormData)`.
+You can also handle an untyped `FormData` object by omitting the `input` argument.
 
-See the [Form API complete reference](#form-api-complete-reference) for all Zod validators we want to support. 
+See the [Form API complete reference](#form-api-complete-reference) for all Zod validators we support. 
 
 ### Call actions with form data from a client component
 
@@ -232,6 +232,64 @@ export function Comment({ postId }: { postId: string }) {
     </form>
   );
 }
+```
+
+### Call actions from an HTML form
+
+You may want to pass `FormData` using a standard HTML form as well. This is useful as a fallback for client forms during slow internet connections or older devices. You may also prefer to handle forms entirely from the server using an Astro component.
+
+To use a standard form request, add `method="POST"` as a form attribute to any `<form>` element. Then, apply your action function directly to the `action` property of the form. This will apply the function name as a query string to be handled by the server. 
+
+This example applies the `comment` action to a form using an Astro component. All expected inputs have a related `input` field, including a hidden input to pass the `postId` value to the server:
+
+```astro
+---
+// src/pages/index.astro
+import { actions } from 'astro:actions';
+---
+
+<form method="POST" action={actions.comment}>
+<!--output: action="?_astroAction=comment"-->
+  <input required name="author" />
+  <textarea required name="body" />
+  <input type="hidden" name="postId" value="example-post" />
+</form>
+```
+
+Implementation: Astro injects middleware to check for the `_astroAction` param and call the appropriate action.
+
+#### Handle a form action result on the server
+
+When using standard form request, you can get the resulting data or error from your Astro page. Call `Astro.getActionResult()` passing the action you want to get a result for (ex. `Astro.getActionResult(actions.comment)`). This will return type-safe `data` or `error` objects when a matching POST request is received, and `undefined` otherwise.
+
+```astro
+---
+import { actions } from 'astro:actions';
+
+const comment = Astro.getActionResult(actions.comment);
+---
+
+{comment?.data && (
+	<article class="new-comment">
+		{/* ... */}
+	</article>
+)}
+```
+
+
+#### Construct an `action` path to a new page
+
+You may also construct form action URLs using string concatenation, or by using the `URL()` constructor, with the an action's `.queryString` property:
+
+```astro
+---
+import { actions } from 'astro:actions';
+const confirmationUrl = new URL('/confirmation', Astro.url);
+confirmationUrl.search = actions.queryString;
+---
+<form method="POST" action={confirmationUrl.pathname}>
+  <button>Submit</button>
+</form>
 ```
 
 ### Call actions using React 19 form actions
@@ -300,61 +358,7 @@ export function SignOut() {
 }
 ```
 
-### Add progressive enhancement for non-React contexts
-
-> Note: You will need server-rendering for progressive fallbacks. Be sure to [opt out of prerendering](https://docs.astro.build/en/guides/server-side-rendering/#opting-out-of-pre-rendering-in-hybrid-mode) on the page containing a progressively enhanced form.
-
-Actions work well when client JavaScript is enabled. The are also automatically enhanced for zero-JS scenarios using React 19 form actions. But in other contexts, you may see unexpected behavior when a form is submitted _before_ your component's JavaScript loads. This is common on slow internet connections or older devices. To offer a fallback experience, you can add a progressive fallback to your form.
-
-To add a fallback, add the `method="POST"` property to your `<form>` element. Then, apply the action function directly to the `action` property of the form. This will apply the function name as a query string to be handled by the server:
-
-```tsx
-import { actions, getActionProps } from 'astro:actions';
-
-// src/components/Comment.jsx
-export function Comment({ postId }: { postId: string }) {
-	return (
-		<form method="POST" action={actions.comment} onSubmit={...}>
-			{/* output: action="?_astroAction=comment" */}
-		</form>
-	)
-}
-```
-
-Implementation: Astro injects middleware to check for the `_astroAction` param and call the appropriate action.
-
-You may also construct form action URLs using string concatenation, or by using the `URL()` constructor, with the an action's `.queryString` property:
-
-```astro
----
-import { actions } from 'astro:actions';
-const confirmationUrl = new URL('/confirmation', Astro.url);
-confirmationUrl.search = actions.queryString;
----
-<form method="POST" action={confirmationUrl.pathname}>
-  <button>Submit</button>
-</form>
-```
-
-### Handle an action result on the server
-
-When using a progressive fallback, you can get the result of an action from your Astro frontmatter. Call `Astro.getActionResult()` with the action you want (ex. `Astro.getActionResult(actions.comment)`). This will return type-safe `data` or `error` objects when a matching POST request is received and `undefined` otherwise.
-
-```astro
----
-import { actions } from 'astro:actions';
-
-const comment = Astro.getActionResult(actions.comment);
----
-
-{comment?.data && (
-	<article class="new-comment">
-		{/* ... */}
-	</article>
-)}
-```
-
-## Input validation errors
+### Handle input validation errors
 
 Your `input` schema gives you type safety wherever you call your action. Still, you may have further refinements in your Zod schema that can raise a validation error at runtime.
 
