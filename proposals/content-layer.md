@@ -22,7 +22,6 @@ import { glob, file } from "astro/loaders";
 
 // The `glob()` loader loads multiple files, with one entry per file
 const spacecraft = defineCollection({
-  type: "content",
   loader: glob({ pattern: "*.md", base: "src/data/spacecraft" }),
   // A schema is optional, but provides validation and type safety for data.
   // It can also be used to transform data before it is stored.
@@ -36,7 +35,6 @@ const spacecraft = defineCollection({
 
 // The `file()` loader loads multiple entries from one file
 const dogs = defineCollection({
-  type: "data",
   loader: file("src/data/dogs.json"),
   schema: z.object({
     id: z.string(),
@@ -67,7 +65,7 @@ Content layer is designed to be a successor to content collections that addresse
 - Improve performance and scalability by decoupling data from Vite.
 - Provide a simple API for defining collections with a migration path from content collections.
 - Support local files in user-defined locations with built-in file and glob loaders.
-- Support Markdown rendering and JSON data for local files, with support for other formats in the future.
+- Support Markdown and MDX rendering and JSON data for local files, with support for other formats in the future.
 - Provide a flexible API for defining custom loaders.
 - Make the implementation scalable to tens of thousands of entries.
 
@@ -82,7 +80,7 @@ Content layer is designed to be a successor to content collections that addresse
 
 ## Stretch Goals/Future Work
 
-- Support for Markdoc and MDX rendering.
+- Support for Markdoc rendering and CSV data.
 - SQLite-based backend for collections.
 - Expressive query API.
 
@@ -102,7 +100,6 @@ Collections are defined in a similar way to current content collections, using `
 
 ```ts
 const countries = defineCollection({
-  type: "data",
   loader: async () => {
     const response = await fetch("https://restcountries.com/v3.1/all");
     const data = await response.json();
@@ -125,7 +122,6 @@ If a loader needs more control over the loading process, it can use the low-leve
 
 ```ts
 const podcasts = defineCollection({
-  type: "content",
   loader: feedLoader({
     url: "https://feeds.99percentinvisible.org/99percentinvisible",
   }),
@@ -312,7 +308,7 @@ Some entry types may have HTML content that can be rendered as a component. Whil
 ---
 // src/pages/spacecraft/[id].astro
 import type { GetStaticPaths } from "astro";
-import { getCollection } from "astro:content";
+import { getCollection, render } from "astro:content";
 import { Image } from "astro:assets";
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -329,10 +325,8 @@ export const getStaticPaths: GetStaticPaths = async () => {
 }
 
 const { craft } = Astro.props;
-
-// If a collection is defined as `content` and the loader has set the `rendered.html` property,
-// the entry will have a `render()` method that generates a component for rendering HTML content.
-const { Content } = await craft.render();
+// The `render()` helper can be used to render the HTML content of an entry. If an entry doesn't have rendered content, it will return an empty component.
+const { Content } = await render(craft);
 ---
 
 <h1>{craft.data.title}</h1>
@@ -347,10 +341,11 @@ There are two built-in loaders: `file()` and `glob()`, which load data from the 
 
 ```ts
 const spacecraft = defineCollection({
-  // The glob loader can be used for either markdown files (defined as content) or JSON files (defined as data).
-  type: "content",
+  // The glob loader can be used for either markdown, MDX or JSON data.
   // The pattern is any valid glob pattern. It is relative to the "base" directory.
   // "base" is optional and defaults to the project root. It is defined relative to the project root, or as an absolute path.
+  // By default the ID is a slug of the entry filename, relative to `base`. Alternatively, the ID can be customized by passing
+  // a `generateId` function which recieves the entry path and data and returns a string ID.
   loader: glob({ pattern: "*.md", base: "src/data/spacecraft" }),
   schema: ({ image }) =>
     z.object({
@@ -361,7 +356,6 @@ const spacecraft = defineCollection({
 });
 
 const dogs = defineCollection({
-  type: "data",
   // The file loader loads a single file which contains multiple entries. The path is relative to the project root, or an absolute path.
   // The data must be an array of objects, each with a unique `id` property, or an object with IDs as keys and entries as values.
   loader: file("src/data/dogs.json"),
@@ -392,8 +386,4 @@ const dogs = defineCollection({
 
 # Adoption strategy
 
-While the feature is experimental, collections are defined with `type: "experimental_data:` or `type: "experimental_content"`. This allows users to opt-in to the new content layer while still using content collections. It is still to be determined how the feature will be adopted when it is stable. This may be by having a different `type`. Once MDX and Markdoc are supported, the `glob()` loader will provide an easy migration path for users who are currently using content collections.
-
-# Unresolved Questions
-
-The implementation of MDX is currently uncertain. It is a key feature of Astro, but cannot be handled in the same way as markdown. MDX is more like code than content, so it's harder to prerender. This removes some of the most important performance benefits of the content layer, as the entries still need to be handled by Vite at runtime. The minimum requirement is that `glob()` supports MDX but the implementation is the same as today under the hood. This would allow users to use MDX in the same way as markdown, but without the performance benefits. The ideal solution would be to find a way to pre-render MDX content and persist it in the store, but this is a much bigger challenge.
+While the feature is experimental, collections are defined with `type: "experimental_content"`. This allows users to opt-in to the new content layer while still using content collections. When the feature is stable, any collection with a `loader` property will use the content layer. The `glob()` loader will provide an easy migration path for users who are currently using content collections.
