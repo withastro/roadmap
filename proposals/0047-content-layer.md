@@ -244,7 +244,7 @@ export interface ScopedDataStore {
     digest?: number | string;
     /** The rendered content, if applicable. */
     rendered?: RenderedContent;
-    /** When an is deferred, it's rendering is executed at runtime. */
+    /** If an entry is a deferred, its rendering phase is delegated to a virtual module during the runtime phase when calling `renderEntry`. */
     deferredRender: boolean 
   }) => boolean;
   values: () => Array<DataEntry>;
