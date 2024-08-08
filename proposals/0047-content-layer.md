@@ -244,6 +244,8 @@ export interface ScopedDataStore {
     digest?: number | string;
     /** The rendered content, if applicable. */
     rendered?: RenderedContent;
+    /** When an is deferred, it's rendering is executed at runtime. */
+    deferredRender: boolean 
   }) => boolean;
   values: () => Array<DataEntry>;
   keys: () => Array<string>;
@@ -386,4 +388,12 @@ const dogs = defineCollection({
 
 # Adoption strategy
 
-While the feature is experimental, collections are defined with `type: "experimental_content"`. This allows users to opt-in to the new content layer while still using content collections. When the feature is stable, any collection with a `loader` property will use the content layer. The `glob()` loader will provide an easy migration path for users who are currently using content collections.
+- Experimental adoption via experimental flag:
+  ```js
+  // astro.config.mjs
+  export default defineConfig({
+    experimental: {
+        contentLayer: true
+    }
+  })
+  ```
