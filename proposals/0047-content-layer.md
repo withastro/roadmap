@@ -65,7 +65,7 @@ Content layer is designed to be a successor to content collections that addresse
 - Improve performance and scalability by decoupling data from Vite.
 - Provide a simple API for defining collections with a migration path from content collections.
 - Support local files in user-defined locations with built-in file and glob loaders.
-- Support Markdown and MDX rendering and JSON data for local files, with support for other formats in the future.
+- Support Markdown, MDX and Markdoc rendering and JSON data for local files.
 - Provide a flexible API for defining custom loaders.
 - Make the implementation scalable to tens of thousands of entries.
 
@@ -74,13 +74,12 @@ Content layer is designed to be a successor to content collections that addresse
 - Allowing loaders to define multiple collections automatically. e.g. separate collections would need to be manually defined for posts and categories in a blog.
 - Dependency tracing for entries.
 - Hot-reloading remote data.
-- Rendering markdown from remote data. A loader could store rendered HTML, but it would be up to the loader to handle this.
+- Rendering Markdown from remote data. A loader could store rendered HTML, but it would be up to the loader to handle this.
 - Custom `Content` components.
 - Support for queries more complex than get by ID.
 
 ## Stretch Goals/Future Work
 
-- Support for Markdoc rendering and CSV data.
 - SQLite-based backend for collections.
 - Expressive query API.
 
@@ -360,7 +359,7 @@ There are two built-in loaders: `file()` and `glob()`, which load data from the 
 
 ```ts
 const spacecraft = defineCollection({
-  // The glob loader can be used for either markdown, MDX or JSON data.
+  // The glob loader can be used for either markdown or JSON, as well as MDX and Markdoc if the integrations are enabled.
   // The pattern is any valid glob pattern. It is relative to the "base" directory.
   // "base" is optional and defaults to the project root. It is defined relative to the project root, or as an absolute path.
   // By default the ID is a slug of the entry filename, relative to `base`. Alternatively, the ID can be customized by passing
