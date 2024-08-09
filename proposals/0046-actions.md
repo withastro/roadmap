@@ -316,8 +316,7 @@ To create a redirect, call `Astro.getActionResult()` from the Astro component th
 For example, say you have a `createProduct()` action that returns the generated product id:
 
 ```ts title="src/actions/index.ts" mark={10}
-import { defineAction } from 'astro:actions';
-import { z } from 'astro:schema';
+import { defineAction, z } from 'astro:actions';
 
 export const server = {
   createProduct: defineAction({
