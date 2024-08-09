@@ -244,8 +244,6 @@ export interface ScopedDataStore {
     digest?: number | string;
     /** The rendered content, if applicable. */
     rendered?: RenderedContent;
-    /** If an entry is a deferred, its rendering phase is delegated to a virtual module during the runtime phase when calling `renderEntry`. */
-    deferredRender: boolean 
   }) => boolean;
   values: () => Array<DataEntry>;
   keys: () => Array<string>;
@@ -304,7 +302,26 @@ const { craft } = Astro.props;
 
 ### Rendered content
 
-Some entry types may have HTML content that can be rendered as a component. While this can be accessed like any other property, a loader can also store the rendered HTML in the `rendered.html` property. This allows users to use the `<Content />` component to render the HTML. The `rendered` property can also include metadata such as frontmatter or headings, which can be accessed as properties on the `rendered.metadata` object.
+Some entry types may have HTML content that can be rendered as a component. While this can be accessed like any other property, a loader can also store the rendered HTML in the `rendered.html` property. This allows users to use the `<Content />` component to render the HTML. The `rendered` property can also include metadata such as frontmatter or headings, which can be accessed as properties on the `rendered.metadata` object:
+
+```ts
+// src/content/config.ts
+store.set({
+  id,
+  data,
+  rendered: {
+    // A raw HTML string
+    html: data.description ?? "",
+    metadata: {
+      // Optionally, metadata such as headings can be stored here
+      headings: data.headings ?? [],
+    },
+  },
+  digest,
+});
+```
+
+This can then be accessed in the page like this:
 
 ```astro
 ---
@@ -328,7 +345,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
 const { craft } = Astro.props;
 // The `render()` helper can be used to render the HTML content of an entry. If an entry doesn't have rendered content, it will return an empty component.
-const { Content } = await render(craft);
+const { Content, headings } = await render(craft);
 ---
 
 <h1>{craft.data.title}</h1>
@@ -393,7 +410,7 @@ const dogs = defineCollection({
   // astro.config.mjs
   export default defineConfig({
     experimental: {
-        contentLayer: true
-    }
-  })
+      contentLayer: true,
+    },
+  });
   ```
