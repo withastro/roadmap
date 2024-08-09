@@ -234,7 +234,9 @@ export function Comment({ postId }: { postId: string }) {
 }
 ```
 
-### Call actions from an HTML form
+### Call actions from an HTML form action
+
+Note: Pages must be server rendered when calling actions using a form action. [Ensure prerendering is disabled on the page](/en/guides/server-side-rendering/#opting-out-of-pre-rendering-in-hybrid-mode) before using this API.
 
 You may want to pass `FormData` using a standard HTML form as well. This is useful as a fallback for client forms during slow internet connections or older devices. You may also prefer to handle forms entirely from the server using an Astro component.
 
@@ -242,9 +244,8 @@ To use a standard form request, add `method="POST"` as a form attribute to any `
 
 This example applies the `newsletter` action to a form using an Astro component, navigating to `/confirmation` on success:
 
-```astro
+```astro title="src/pages/index.astro"
 ---
-// src/pages/index.astro
 import { actions } from 'astro:actions';
 ---
 
@@ -260,9 +261,8 @@ import { actions } from 'astro:actions';
 
 You can also re-render the current page with the result by passing an action function directly:
 
-```astro
+```astro title="src/pages/index.astro"
 ---
-// src/pages/index.astro
 import { actions } from 'astro:actions';
 ---
 
@@ -272,51 +272,17 @@ import { actions } from 'astro:actions';
 </form>
 ```
 
-#### Handle form action data on the server
-
-When using standard form request, you can get the resulting data or error from your Astro page. Call `Astro.getActionResult()` passing the action you want to get a result for (ex. `Astro.getActionResult(actions.newsletter)`). This will return type-safe `data` or `error` objects when a matching POST request is received, and `undefined` otherwise.
-
-Call `Astro.getActionResult()` from your success route to get the `data` object:
-
-```astro
----
-// src/page/confirmation.astro
-import { actions } from 'astro:actions';
-
-const result = Astro.getActionResult(actions.newsletter);
-if (!result?.email) return Astro.redirect('/');
----
-
-<h1>Thanks for signing up!</h1>
-<p>We sent a confirmation email to {result.email}.</p>
-```
-
-⚠️ Action data is passed using a persisted cookie. **This cookie is not encrypted.** In general, we recommend returning the minimum information required from your action `handler` to avoid vulnerabilities, and persist other sensitive information in a database.
-
-For example, you might return the generated session id for a user when they are logged in, rather than returning the entire `user` object:
-
-```diff
-// src/actions/index.ts
-import { defineAction } from 'astro:actions';
-
-export const server = {
-  login: defineAction({
-    handler: async () => {
-      /* ... */
--     return user;
-+     return user.sessionId;
-    }
-  })
-}
-```
-
 #### Handle form action errors
 
-Astro avoids redirecting to your success route when an action fails. Instead, the current page is re-rendered with `error` available via `Astro.getActionResult()`. You can use the `isInputError()` utility to render error messages under any inputs that failed to validate.
+Astro avoids redirecting to your success route when an action fails. Instead, the current page is re-rendered with `error` available via `Astro.getActionResult()`. This function receives the action you want the result for as an argument (example: `Astro.getActionResult(actions.signup)`). This return an object with either `data` or `error` when an action is called, and `undefined` otherwise.
+
+Note: `getActionResult()` persists data as a single-use cookie. This means `getActionResult()` will return `undefined` when refreshing the page or revisiting the form.
+
+You can use the `isInputError()` utility to check whether an error contains validation errors. If the check passes, `error` will contain a `fields` object containing error messages for each input value that failed to validate. These messages can then be displayed to prompt your user to correct their submission.
 
 This example renders an error banner under the `email` input when an invalid email is submitted:
 
-```astro
+```astro title="src/pages/index.astro" ins={6,11}
 ---
 // src/pages/index.astro
 import { actions, isInputError } from 'astro:actions';
@@ -333,30 +299,91 @@ const inputErrors = isInputError(result?.error) ? result.error.fields : {};
 </form>
 ```
 
-Note: Errors are passed as a single-use cookie. This means error banners will disappear when refreshing the page or revisiting the form.
+##### Preserve input values on error
 
-#### Preserve input values on error
+Inputs will be cleared whenever a form is submitted. To persist input values, you can [enable view transitions](/en/guides/view-transitions/#adding-view-transitions-to-a-page) on the page and apply the `transition:persist` directive to each input:
 
-Inputs will be cleared whenever a form is submitted. To persist input values, you can [enable view transitions](https://docs.astro.build/en/guides/view-transitions/#adding-view-transitions-to-a-page) on the page and apply the `transition:persist` directive to each input:
-
-```astro
+```astro ins="transition:persist"
 <input transition:persist required type="email" name="email" />
 ```
 
-#### Construct an `action` path to a new page
+#### Redirect to a constructed route on success
 
-You may also construct form action URLs using string concatenation, or by using the `URL()` constructor, with the an action's `.queryString` property:
+You may need to use the result of an action to construct a redirect path. This is common when creating a product record and redirecting to that product's page (example: `/products/[id]`).
 
-```astro
+To create a redirect, call `Astro.getActionResult()` from the Astro component that received the action call. Check if a given action has returned successfully, and if so, redirect based on the `data` the action returns.
+
+For example, say you have a `createProduct()` action that returns the generated product id:
+
+```ts title="src/actions/index.ts" mark={10}
+import { defineAction } from 'astro:actions';
+import { z } from 'astro:schema';
+
+export const server = {
+  createProduct: defineAction({
+    accept: 'form',
+    input: z.object({ /* ... */ }),
+    handler: async (input) => {
+      // persist product to database
+      return productId;
+    },
+  })
+}
+```
+
+Retrieve this generated `productId` from the `data` property returned by `Astro.getActionResult(actions.createProduct)`. Use this value to construct an url and return a `redirect` response:
+
+```astro title="src/pages/products/create.astro"
 ---
 import { actions } from 'astro:actions';
-const confirmationUrl = new URL('/confirmation', Astro.url);
-confirmationUrl.search = actions.queryString;
+
+const result = Astro.getActionResult(actions.createProduct);
+if (result?.data?.productId) {
+  return Astro.redirect(`/products/${result.data.productId}`);
+}
 ---
-<form method="POST" action={confirmationUrl.pathname}>
-  <button>Submit</button>
+
+<form method="POST" action={actions.createProduct}>
+  <!--...-->
 </form>
 ```
+
+#### Update the UI with a form action result
+
+The result returned by `Astro.getActionResult()` is single-use, and will reset to `undefined` whenever the page is refreshed. This is ideal for [displaying input errors](#handle-form-action-errors) and showing temporary success banners.
+
+Call `Astro.getActionResult()` with a given action function, and use the `data` property to render a success message. This example uses the `productName` property returned by an `addToCart` action:
+
+```astro title="src/pages/products/[slug].astro"
+---
+import { actions } from 'astro:actions';
+
+const result = Astro.getActionResult(actions.addToCart);
+---
+
+{result.data?.productName && <p class="success">Added {result.data.productName} to cart</p>}
+
+<!--...-->
+```
+
+⚠️ Warning: Action data is passed using a persisted cookie. **This cookie is not encrypted.** In general, we recommend returning the minimum information required from your action `handler` to avoid vulnerabilities, and persist other sensitive information in a database.
+
+For example, you might return the name of a product in an `addToCart` action, rather than returning the entire `product` object:
+
+```diff title="src/actions/index.ts"
+import { defineAction } from 'astro:actions';
+
+export const server = {
+  addToCard: defineAction({
+    handler: async () => {
+      /* ... */
+-     return product;
++     return { productName: product.name };
+    }
+  })
+}
+```
+
 
 ### Call actions using React 19 form actions
 
