@@ -291,7 +291,7 @@ if (!result?.email) return Astro.redirect('/');
 <p>We sent a confirmation email to {result.email}.</p>
 ```
 
-⚠️ Action data is passed using a persisted cookie. **This cookie is not encrypted.** In general, recommend returning the minimum information required from your action `handler` to avoid vulnerabilities, and persist other sensitive information in a database.
+⚠️ Action data is passed using a persisted cookie. **This cookie is not encrypted.** In general, we recommend returning the minimum information required from your action `handler` to avoid vulnerabilities, and persist other sensitive information in a database.
 
 For example, you might return the generated session id for a user when they are logged in, rather than returning the entire `user` object:
 
@@ -312,7 +312,7 @@ export const server = {
 
 #### Handle form action errors
 
-Astro avoids redirecting to your success route when an action fails. Instead, the current page is re-rendered with any errors available via `Astro.getActionResult()`. You can use the `isInputError()` utility to render error messages under any inputs that fail to validate.
+Astro avoids redirecting to your success route when an action fails. Instead, the current page is re-rendered with `error` available via `Astro.getActionResult()`. You can use the `isInputError()` utility to render error messages under any inputs that failed to validate.
 
 This example renders an error banner under the `email` input when an invalid email is submitted:
 
