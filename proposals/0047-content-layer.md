@@ -223,7 +223,7 @@ export function feedLoader({ url }: FeedLoaderOptions): Loader {
 Each loader is provided with a data store object. This is an in-memory key/value store, scoped to that loader and is used to store collection entries. The store is persisted to disk between builds, so loaders can handle incremental updates. The store has the following interface:
 
 ```ts
-export interface ScopedDataStore {
+export interface AstroDataStore {
   get: (key: string) => DataEntry | undefined;
   entries: () => Array<[id: string, DataEntry]>;
   /**
@@ -312,7 +312,7 @@ store.set({
     // A raw HTML string
     html: data.description ?? "",
     metadata: {
-      // Optionally, metadata such as headings can be stored here
+      // Optionally, arbitrary metadata such as headings can be stored here
       headings: data.headings ?? [],
     },
   },
@@ -355,7 +355,7 @@ const { Content, headings } = await render(craft);
 
 ## Built-in loaders
 
-There are two built-in loaders: `file()` and `glob()`, which load data from the local filesystem. The `glob()` loader covers the current use case of directories full of markdown or JSON content. The `glob()` helper is more flexible than in current content collections, as it can load data from anywhere on the filesystem. The `file()` loader loads multiple entries from a single file. Both loaders can process markdown in the same way as content collections. They can also extract images in the same way as content collections.
+There are two built-in loaders: `file()` and `glob()`, which load data from the local filesystem. The `glob()` loader covers the current use case of directories full of markdown, MDX or JSON content. The `glob()` helper is more flexible than in current content collections, as it can load data from anywhere on the filesystem. The `file()` loader loads multiple entries from a single file. Both loaders can process markdown in the same way as content collections. They can also extract images in the same way as content collections.
 
 ```ts
 const spacecraft = defineCollection({
@@ -363,7 +363,7 @@ const spacecraft = defineCollection({
   // The pattern is any valid glob pattern. It is relative to the "base" directory.
   // "base" is optional and defaults to the project root. It is defined relative to the project root, or as an absolute path.
   // By default the ID is a slug of the entry filename, relative to `base`. Alternatively, the ID can be customized by passing
-  // a `generateId` function which recieves the entry path and data and returns a string ID.
+  // a `generateId` function which receives the entry path and data and returns a string ID.
   loader: glob({ pattern: "*.md", base: "src/data/spacecraft" }),
   schema: ({ image }) =>
     z.object({
@@ -383,6 +383,91 @@ const dogs = defineCollection({
     temperament: z.array(z.string()),
   }),
 });
+```
+
+## Integration support
+
+Astro integrations can use `astro:server:setup` hook to reload data from the content layer. The `refreshContent` function is passed to the hook, which allows integrations to refresh the content layer during `astro dev`. Use cases include:
+
+- Adding a sync button to the Astro toolbar
+- Opening a web socket to a CMS that listens for updates during dev
+- Creates a webhook URL that can be tunnelled to a public address for CMSs to trigger
+- Allow services such as code sandboxes or hosted dev servers to automatically trigger reloads
+
+### API
+
+Adds a `refreshContent` function to the `astro:server:setup` hook options, with the following signature:
+
+```ts
+async syncContent(options: {
+   loaders?: Array<string>,
+   context?: Record<string, any>
+})
+```
+
+- `loaders`: an optional array of loader names. If set, only collections that use those loaders will be synced. This allows integrations to selectively sync their own content.
+- `context`: an optional object with arbitrary data that is passed to the loader's `load` function as `refreshContextData`. This can be used to pass information such as events from a websocket or a webhook payload.
+
+### Usage
+
+An integration can use the `refreshContent` function to trigger a refresh of all collections, or just specific loaders, with optional context data. If the content layer is already loading, calls to `refreshContent` are queued and executed in series. The function returns a promise that resolves when that job has completed or throws if there is an error during sync.
+
+This example shows an integration that creates a refresh webhook endpoint when running `astro dev`. Sending a `POST` request to the endpoint will trigger a refresh of the content for collections that use a specific loader:
+
+```ts
+ {
+    name: 'my-integration',
+    hooks: {
+        'astro:server:setup': async ({ server, refreshContent }) => {
+            // `server` is the Vite dev server instance
+            server.middlewares.use('/_refresh', async (req, res) => {
+                if(req.method !== 'POST') {
+                  res.statusCode = 405
+                  res.end('Method Not Allowed');
+                  return
+                }
+                let body = '';
+                req.on('data', chunk => {
+                    body += chunk.toString();
+                });
+                req.on('end', async () => {
+                    try {
+                        const webhookBody = JSON.parse(body);
+                        await refreshContent?.({
+                          // The context can be any arbitrary object. We're calling it `webhookBody` here, but it could be anything.
+                          context: { webhookBody },
+                          // Only refresh collections that use the `my-loader` loader
+                          loaders: ['my-loader']
+                        });
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ message: 'Content refreshed successfully' }));
+                    } catch (error) {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Failed to refresh content: ' + error.message }));
+                    }
+                });
+            });
+        }
+    }
+}
+```
+
+Then, inside the loader, the `refreshContextData` object can be accessed in the `load` function:
+
+```ts
+import type { Loader } from "astro/loaders";
+export function myLoader(): Loader {
+  return {
+    name: "my-loader",
+    load: async ({ store, logger, refreshContextData, meta }) => {
+      if (refreshContextData?.webhookBody?.action) {
+        logger.info("Received incoming webhook");
+        // do something with the webhook body
+      }
+      // this is a normal sync...
+    },
+  };
+}
 ```
 
 # Testing Strategy
