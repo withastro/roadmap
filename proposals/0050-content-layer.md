@@ -355,11 +355,11 @@ const { Content, headings } = await render(craft);
 
 ## Built-in loaders
 
-There are two built-in loaders: `file()` and `glob()`, which load data from the local filesystem. The `glob()` loader covers the current use case of directories full of markdown, MDX or JSON content. The `glob()` helper is more flexible than in current content collections, as it can load data from anywhere on the filesystem. The `file()` loader loads multiple entries from a single file. Both loaders can process markdown in the same way as content collections. They can also extract images in the same way as content collections.
+There are two built-in loaders: `file()` and `glob()`, which load data from the local filesystem. The `glob()` loader covers the current use case of directories full of Markdown, MDX, Markdoc or JSON content. The `glob()` helper is more flexible than in current content collections, as it can load data from anywhere on the filesystem. The `file()` loader loads multiple entries from a single file. Both loaders can process Markdown in the same way as content collections. They can also extract images in the same way as content collections.
 
 ```ts
 const spacecraft = defineCollection({
-  // The glob loader can be used for either markdown or JSON, as well as MDX and Markdoc if the integrations are enabled.
+  // The glob loader can be used for either Markdown or JSON, as well as MDX and Markdoc if the integrations are enabled.
   // The pattern is any valid glob pattern. It is relative to the "base" directory.
   // "base" is optional and defaults to the project root. It is defined relative to the project root, or as an absolute path.
   // By default the ID is a slug of the entry filename, relative to `base`. Alternatively, the ID can be customized by passing
@@ -472,9 +472,9 @@ export function myLoader(): Loader {
 
 # Testing Strategy
 
-- Integration tests for the built-in loaders, covering markdown and JSON data.
-- Integration tests for image handling in markdown.
-- Integration tests for rendering components from markdown.
+- Integration tests for the built-in loaders, covering Markdown and JSON data.
+- Integration tests for image handling in Markdown.
+- Integration tests for rendering components from Markdown.
 - Integration tests for custom loaders, covering incremental updates and schema validation.
 - Unit tests for the data store and meta store.
 
@@ -489,12 +489,6 @@ export function myLoader(): Loader {
 
 # Adoption strategy
 
-- Experimental adoption via experimental flag:
-  ```js
-  // astro.config.mjs
-  export default defineConfig({
-    experimental: {
-      contentLayer: true,
-    },
-  });
-  ```
+- Experimental adoption via experimental flag in minor
+- Unflagged in major release beta
+- In future, implement existing content collections as a loader
