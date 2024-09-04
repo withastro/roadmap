@@ -399,7 +399,7 @@ Astro integrations can use `astro:server:setup` hook to reload data from the con
 Adds a `refreshContent` function to the `astro:server:setup` hook options, with the following signature:
 
 ```ts
-async syncContent(options: {
+async refreshContent(options: {
    loaders?: Array<string>,
    context?: Record<string, any>
 })
