@@ -223,7 +223,7 @@ export function feedLoader({ url }: FeedLoaderOptions): Loader {
 Each loader is provided with a data store object. This is an in-memory key/value store, scoped to that loader and is used to store collection entries. The store is persisted to disk between builds, so loaders can handle incremental updates. The store has the following interface:
 
 ```ts
-export interface AstroDataStore {
+export interface DataStore {
   get: (key: string) => DataEntry | undefined;
   entries: () => Array<[id: string, DataEntry]>;
   /**
