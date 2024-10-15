@@ -12,35 +12,59 @@ Have first-party support for fonts in Astro.
 
 # Example
 
-If the proposal involves a new or changed API, then include a basic code example.
-Otherwise, omit this section if it's not applicable.
+```js
+// astro config
+export default defineConfig({
+	fonts: {
+		families: ["Roboto", "Lato"]
+	}
+})
+```
+
+```astro
+---
+// layouts/Layout.astro
+import { Font } from "astro:fonts"
+---
+<head>
+	<Font family="Inter" preload />
+	<Font family="Lato" />
+	<style>
+		h1 {
+			font-family: var(--astro-font-inter);
+		}
+		p {
+			font-family: var(--astro-font-lato);
+		}
+	</style>
+</head>
+```
 
 # Background & Motivation
 
-Include any useful background detail that that explains why this RFC is important.
-What are the problems that this RFC sets out to solve? Why now? Be brief!
+Fonts is one of those basic things when making a website, but also an annoying one to deal with. Should I just use a link to a remote font? Or download it locally? How should I handle preloads then?
 
-It can be useful to illustrate your RFC as a user problem in this section.
-(ex: "Users have reported that it is difficult to do X in Astro today.")
+The goal is to improve the DX around using fonts in Astro.
+
+> Why not using fontsource?
+
+Fontsource is great! But it's not intuitive to preload, and more importantly, doesn't have all fonts. The goal is to have a more generic API for fonts (eg. you want to use a paid provider like adobe).
 
 # Goals
 
-A **concise, bulleted-list** outlining the intended goals of this RFC.
-
-- What are the exact problems that you are trying to solve with this RFC?
-- Separate these goals from the solution that you will outline below.
-- If this RFC isn't approved, these goals can be used to develop alternative solutions.
+- Specify what font to use
+- Cache fonts
+- Specify what provider to use
+- Load/preload font on a font basis
+- Generate fallbacks automatically
+- Performant defaults
+- Runtime agnostic
 
 # Non-Goals
 
-A **concise, bulleted-list** outlining anything intentionally left out of this RFC:
-
-- Non-goal: A goal that is intentionally not addressed in this RFC.
-- Out-of-scope: A goal that is related, but intentionally avoided here.
-- Future: A goal that is related, but left to be addressed in the future.
-
-This gives the reader the correct context on what is intentionally left out of scope.
-It is okay to leave this section empty.
+- Runtime API (SSR is supported tho)
+- Automatic subsetting
+- Font detection
 
 # Detailed Design
 
