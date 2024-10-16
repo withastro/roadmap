@@ -68,17 +68,34 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 
 # Detailed Design
 
-This is the bulk of the RFC. Explain the design in enough detail for somebody
-familiar with Astro to understand, and for somebody familiar with the
-implementation to implement. This should get into specifics and corner-cases,
-and include examples of how the feature is used. Any new terminology should be
-defined here.
+### Astro config
+
+- providers
+- simple and complex examples
+- font families
+- defaults?
+
+### Font component
+
+- typegen
+- preload and fallback
+
+### Usage
+
+- css var
+
+### How it works under the hood
+
+- Resolve fonts using unifont
+- Generate fallbacks with fontaine
+- Inject vite middleware to download fonts as they're requested in dev
+- Download everything in build
+- Caching (.astro in dev, cacheDir in build)
 
 # Testing Strategy
 
-How will this feature's implementation be tested? Explain if this can be tested with
-unit tests or integration tests or something else. If relevant, explain the test
-cases that will be added to cover all of the ways this feature might be used.
+- Integration tests
+- Experimental flag
 
 # Drawbacks
 
@@ -94,16 +111,23 @@ There are tradeoffs to choosing any path. Attempt to identify them here.
 
 # Alternatives
 
-What other designs have been considered? What is the impact of not doing this?
+- standalone integration: possible but less discoverable. Making it in core also allows to use the `astro:assets` virtual import
 
 # Adoption strategy
 
 Please consider:
 
 - If we implement this proposal, how will existing Astro developers adopt it?
+
+code snippets
+
 - Is this a breaking change? Can we write a codemod?
-- Can we provide a runtime adapter library for the original API it replaces?
+
+no
+
 - How will this affect other projects in the Astro ecosystem?
+
+should make astro-font obsolete
 
 # Unresolved Questions
 
