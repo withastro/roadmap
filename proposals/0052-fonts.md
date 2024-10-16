@@ -4,7 +4,7 @@
 - Reference Issues: <!-- related issues, otherwise leave empty -->
 - Implementation PR: <!-- leave empty -->
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/837
-- Stage 3 PR: <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1039
 
 # Summary
 
@@ -15,20 +15,20 @@ Have first-party support for fonts in Astro.
 ```js
 // astro config
 export default defineConfig({
-	fonts: {
-		families: ["Roboto", "Lato"]
-	}
-})
+  fonts: {
+    families: ["Roboto", "Lato"],
+  },
+});
 ```
 
 ```astro
 ---
 // layouts/Layout.astro
-import { Font } from "astro:fonts"
+import { Font } from 'astro:fonts'
 ---
 <head>
-	<Font family="Inter" preload />
-	<Font family="Lato" />
+	<Font family='Inter' preload />
+	<Font family='Lato' />
 	<style>
 		h1 {
 			font-family: var(--astro-font-inter);
@@ -70,10 +70,70 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 
 ### Astro config
 
-- providers
-- simple and complex examples
-- font families
-- defaults?
+#### Overview
+
+The goal is to have a config that starts really simple for basic usecases, but can also be complex for advanced usecases. Here's an example of basic config:
+
+```js
+import { defineConfig } from "astro/config";
+
+export default defineConfig({
+  fonts: {
+    families: ["Roboto", "Lato"],
+  },
+});
+```
+
+That would get fonts from [Google Fonts](https://fonts.google.com/) with sensible defaults (TBD).
+
+Here's a more complex example:
+
+```js
+import { defineConfig, fontProviders } from "astro/config";
+import { myCustomFontProvider } from "./provider";
+
+export default defineConfig({
+  fonts: {
+    providers: [
+      fontProviders.adobe({ apiKey: process.env.ADOBE_FONTS_API_KEY }),
+      myCustomFontProvider(),
+    ],
+    defaults: {
+      provider: "adobe",
+      weights: [200, 700],
+      styles: ["italic"],
+      subsets: [
+        "cyrillic-ext",
+        "cyrillic",
+        "greek-ext",
+        "greek",
+        "vietnamese",
+        "latin-ext",
+        "latin",
+      ],
+    },
+    families: [
+      "Roboto",
+      {
+        name: "Lato",
+        provider: "google",
+        weights: [100, 200, 300],
+      },
+      {
+        name: "Custom",
+        provider: "local",
+        src: ["./assets/fonts/Custom.woff2"],
+      },
+    ],
+  },
+});
+```
+
+#### Providers
+
+#### Defaults
+
+#### Families
 
 ### Font component
 
