@@ -131,9 +131,16 @@ export default defineConfig({
 
 #### Providers
 
+TODO: why providers like this
+- match the integration api
+- useful types with generic defineConfig + typegen
+- be able to not use all providers by default 
+
 #### Defaults
 
 #### Families
+
+TODO: why not at the root (eg. just `fonts`)? because it would be a mess to merge when calling `updateConfig`
 
 ### Font component
 
