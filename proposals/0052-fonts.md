@@ -213,9 +213,7 @@ export default defineConfig({
 
 ### Defaults
 
-Astro must provide sensible defaults when it comes to font weights, subsets and more. But when dealing with more custom advanced setups, it makes sense to be able to customize those defaults. They can be set in `fonts.defaults` and will be merged with Astro defaults (arrays do not merge).
-
-> TODO: need to see how it plays with the integration API `updateConfig()`
+Astro must provide sensible defaults when it comes to font weights, subsets and more. But when dealing with more custom advanced setups, it makes sense to be able to customize those defaults. They can be set in `fonts.defaults` and will be merged with Astro defaults.
 
 We need to decide what default to provide. I can see 2 paths:
 
@@ -260,7 +258,7 @@ The family will be typed using type gen, based on the user's config.
 
 Defaults to `false`:
 
-- **Enabled**: Outputs a preload link tag and a style tag, without fallbacks (TODO: check if we should actually include fallbacks there as well)
+- **Enabled**: Outputs a preload link tag and a style tag, without fallbacks
 - **Disabled**: Output a style tag with fallbacks (generated using [fontaine](https://github.com/unjs/fontaine))
 
 ### cssVar
@@ -287,18 +285,21 @@ h1 {
 
 ## How it works under the hood
 
-- Resolve fonts using unifont
-- Generate fallbacks with fontaine
-- Inject vite middleware to download fonts as they're requested in dev
-- Download everything in build
-- Caching (.astro in dev, cacheDir in build)
+- Once the config is fully resolved, we get fonts face data using `unifont`
+- We generate fallbacks using `fontaine` and pass all the data we need through a virtual import, used by the `<Font />` component
+- We inject a vite middleware in development to download fonts as they are requested in development
+- During build, we download all fonts and put them in `outDir`
+
+Data is cached to `cacheDir` for builds and `.astro/fonts` in development.
 
 # Testing Strategy
 
 - Integration tests
-- Experimental flag
+- Experimental flag (`experimental.fonts`)
 
 # Drawbacks
+
+TODO:
 
 Why should we _not_ do this? Please consider:
 
@@ -312,9 +313,13 @@ There are tradeoffs to choosing any path. Attempt to identify them here.
 
 # Alternatives
 
+TODO:
+
 - standalone integration: possible but less discoverable. Making it in core also allows to use the `astro:assets` virtual import
 
 # Adoption strategy
+
+TODO:
 
 Please consider:
 
@@ -332,5 +337,5 @@ should make astro-font obsolete
 
 # Unresolved Questions
 
-Optional, but suggested for first drafts.
-What parts of the design are still to be determined?
+- We need to see how merging `fonts.defaults` will work, especially for `updateConfig()`. Should we merge arrays in this case?
+- We need to check if fallbacks should still be included for preloaded fonts
