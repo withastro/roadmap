@@ -131,10 +131,85 @@ export default defineConfig({
 
 #### Providers
 
-TODO: why providers like this
-- match the integration api
-- useful types with generic defineConfig + typegen
-- be able to not use all providers by default 
+##### Definition
+
+A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction. It's a [unifont](https://github.com/unjs/unifont) provider.
+
+##### Built-in providers
+
+###### Google
+
+This is the default, and it's not configurable. Given the amount of fonts it supports by, it sounds like a logic choice. Note that the default can be customized for more advanced usecases.
+
+```js
+export default defineConfig({
+  fonts: {
+    families: ["Roboto"],
+  },
+});
+```
+
+```js
+export default defineConfig({
+  fonts: {
+    defaults: {
+      provider: "local",
+    },
+    families: [
+      {
+        name: "Roboto",
+        provider: "google",
+      },
+    ],
+  },
+});
+```
+
+###### Local
+
+This provider, unlike all the others, requires paths to fonts relatively to the root.
+
+```js
+import { defineConfig, fontProviders } from "astro/config";
+import { myCustomFontProvider } from "./provider";
+
+export default defineConfig({
+  fonts: {
+    families: [
+      {
+        name: "Custom",
+        provider: "local",
+        src: ["./assets/fonts/Custom.woff2"],
+      },
+    ],
+  },
+});
+```
+
+##### Opt-in providers
+
+Other unifont providers are exported from `astro/config`.
+
+```js
+import { defineConfig, fontProviders } from "astro/config";
+import { myCustomFontProvider } from "./provider";
+
+export default defineConfig({
+  fonts: {
+    providers: [
+      fontProviders.adobe({ apiKey: process.env.ADOBE_FONTS_API_KEY }),
+      myCustomFontProvider(),
+    ],
+    // ...
+  },
+});
+```
+
+##### Why this API?
+
+1. **Coherent API**: a few things in Astro are using this pattern, namely integrations and vite plugins. It's simple to author as a library author, easy to use as a user
+2. **Keep opt-in providers**: allows to only use 2 providers by default, and keeps the API open to anyone
+3. **Types!**: now that `defineConfig` [supports generics](https://github.com/withastro/astro/pull/12243), we can do powerful things! Associated with type generation, we can generate types for `families` `name`, infer the provider type from `defaults.provider` and more.
 
 #### Defaults
 
