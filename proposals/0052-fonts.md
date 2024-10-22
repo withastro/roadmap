@@ -213,9 +213,30 @@ export default defineConfig({
 
 #### Defaults
 
+Astro must provide sensible defaults when it comes to font weights, subsets and more. But when dealing with more custom advanced setups, it makes sense to be able to customize those defaults. They can be set in `fonts.defaults` and will be merged with Astro defaults (arrays do not merge).
+
+> TODO: need to see how it plays with the integration API `updateConfig()`
+
+We need to decide what default to provide. I can see 2 paths:
+
+| Path      | Example (weight)    | Advantage             | Downside                                                                          |
+| --------- | ------------------- | --------------------- | --------------------------------------------------------------------------------- |
+| Minimal   | Only include `400`  | Lightweight           | People will probably struggle by expecting all weights to be available by default |
+| Extensive | Include all weights | Predictable for users | Heavier by default                                                                |
+
 #### Families
 
-TODO: why not at the root (eg. just `fonts`)? because it would be a mess to merge when calling `updateConfig`
+TODO:
+
+The following API has been suggested for the simpler cases:
+
+```js
+export default defineConfig({
+  fonts: ["Roboto"]
+})
+```
+
+I'd love to support such API where you can provide fonts top level, or inside `fonts.families` but we can't. We can't because of how the integration API `defineConfig()` works. What if a user provides fonts names as `fonts`, and an integration provides fonts names as `fonts.families`? Given how the merging works, the shape of `AstroUserConfig` and `AstroConfig` musn't be too different. It already caused issues with i18n in the past.
 
 ### Font component
 
