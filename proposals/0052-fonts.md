@@ -68,9 +68,9 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 
 # Detailed Design
 
-### Astro config
+## Astro config
 
-#### Overview
+### Overview
 
 The goal is to have a config that starts really simple for basic usecases, but can also be complex for advanced usecases. Here's an example of basic config:
 
@@ -129,15 +129,15 @@ export default defineConfig({
 });
 ```
 
-#### Providers
+### Providers
 
-##### Definition
+#### Definition
 
 A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction. It's a [unifont](https://github.com/unjs/unifont) provider.
 
-##### Built-in providers
+#### Built-in providers
 
-###### Google
+##### Google
 
 This is the default, and it's not configurable. Given the amount of fonts it supports by, it sounds like a logic choice. Note that the default can be customized for more advanced usecases.
 
@@ -165,7 +165,7 @@ export default defineConfig({
 });
 ```
 
-###### Local
+##### Local
 
 This provider, unlike all the others, requires paths to fonts relatively to the root.
 
@@ -186,7 +186,7 @@ export default defineConfig({
 });
 ```
 
-##### Opt-in providers
+#### Opt-in providers
 
 Other unifont providers are exported from `astro/config`.
 
@@ -205,13 +205,13 @@ export default defineConfig({
 });
 ```
 
-##### Why this API?
+#### Why this API?
 
 1. **Coherent API**: a few things in Astro are using this pattern, namely integrations and vite plugins. It's simple to author as a library author, easy to use as a user
 2. **Keep opt-in providers**: allows to only use 2 providers by default, and keeps the API open to anyone
 3. **Types!**: now that `defineConfig` [supports generics](https://github.com/withastro/astro/pull/12243), we can do powerful things! Associated with type generation, we can generate types for `families` `name`, infer the provider type from `defaults.provider` and more.
 
-#### Defaults
+### Defaults
 
 Astro must provide sensible defaults when it comes to font weights, subsets and more. But when dealing with more custom advanced setups, it makes sense to be able to customize those defaults. They can be set in `fonts.defaults` and will be merged with Astro defaults (arrays do not merge).
 
@@ -224,7 +224,7 @@ We need to decide what default to provide. I can see 2 paths:
 | Minimal   | Only include `400`  | Lightweight           | People will probably struggle by expecting all weights to be available by default |
 | Extensive | Include all weights | Predictable for users | Heavier by default                                                                |
 
-#### Families
+### Families
 
 TODO:
 
@@ -232,8 +232,8 @@ The following API has been suggested for the simpler cases:
 
 ```js
 export default defineConfig({
-  fonts: ["Roboto"]
-})
+  fonts: ["Roboto"],
+});
 ```
 
 I'd love to support such API where you can provide fonts top level, or inside `fonts.families` but we can't. We can't because of how the integration API `defineConfig()` works. What if a user provides fonts names as `fonts`, and an integration provides fonts names as `fonts.families`? Given how the merging works, the shape of `AstroUserConfig` and `AstroConfig` musn't be too different. It already caused issues with i18n in the past.
@@ -252,22 +252,22 @@ import { Font } from "astro:assets"
 </head>
 ```
 
-#### Family
+### Family
 
 The family will be typed using type gen, based on the user's config.
 
-#### Preload
+### Preload
 
 Defaults to `false`:
 
 - **Enabled**: Outputs a preload link tag and a style tag, without fallbacks (TODO: check if we should actually include fallbacks there as well)
-- **Disabled**: Output a style tag with fallbacks
+- **Disabled**: Output a style tag with fallbacks (generated using [fontaine](https://github.com/unjs/fontaine))
 
-#### cssVar
+### cssVar
 
 Defaults to `astro-font-${computedFontName}`. Specifies what identifier to use for the generated css variable. This is useful for font families names that may contain special character or conflict with other fonts.
 
-### Usage
+## Usage
 
 Since fallbacks may be generated for a given family name, this name can't be used alone reliably:
 
@@ -285,7 +285,7 @@ h1 {
 }
 ```
 
-### How it works under the hood
+## How it works under the hood
 
 - Resolve fonts using unifont
 - Generate fallbacks with fontaine
