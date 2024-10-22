@@ -299,41 +299,23 @@ Data is cached to `cacheDir` for builds and `.astro/fonts` in development.
 
 # Drawbacks
 
-TODO:
+I have not identified any outstanding drawback:
 
-Why should we _not_ do this? Please consider:
-
-- Implementation cost, both in term of code size and complexity.
-- Whether the proposed feature can be implemented in user space.
-- Impact on teaching people Astro.
-- Integration of this feature with other existing and planned features
-- Cost of migrating existing Astro applications (_is it a breaking change?_)
-
-There are tradeoffs to choosing any path. Attempt to identify them here.
+- **Implementation cost, both in term of code size and complexity**: fine
+- **Whether the proposed feature can be implemented in user space**: yes
+- **Impact on teaching people Astro**: should make things easier, will need updating docs
+- **Integration of this feature with other existing and planned features**: reuses `astro:assets` to export the component, otherwise isolated from other features
+- **Is it a breaking change?** No
 
 # Alternatives
 
-TODO:
-
-- standalone integration: possible but less discoverable. Making it in core also allows to use the `astro:assets` virtual import
+This feature could be developed as an integration, eg. `@astrojs/fonts`. Making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module.
 
 # Adoption strategy
 
-TODO:
-
-Please consider:
-
-- If we implement this proposal, how will existing Astro developers adopt it?
-
-code snippets
-
-- Is this a breaking change? Can we write a codemod?
-
-no
-
-- How will this affect other projects in the Astro ecosystem?
-
-should make astro-font obsolete
+- **If we implement this proposal, how will existing Astro developers adopt it?** Fonts setups can vary a lot but migrating to the core fonts api should not require too much work
+- **Is this a breaking change? Can we write a codemod?** No
+- **How will this affect other projects in the Astro ecosystem?** This should make [`astro-font`](https://github.com/rishi-raj-jain/astro-font) obsolete
 
 # Unresolved Questions
 
