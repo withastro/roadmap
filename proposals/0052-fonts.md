@@ -224,17 +224,51 @@ We need to decide what default to provide. I can see 2 paths:
 
 ### Families
 
-TODO:
-
-The following API has been suggested for the simpler cases:
+A family is made of a least a `name`:
 
 ```js
 export default defineConfig({
-  fonts: ["Roboto"],
+  fonts: {
+    families: [
+      {
+        name: "Roboto",
+      },
+      "Roboto", // Shorthand
+    ],
+  },
 });
 ```
 
-I'd love to support such API where you can provide fonts top level, or inside `fonts.families` but we can't. We can't because of how the integration API `defineConfig()` works. What if a user provides fonts names as `fonts`, and an integration provides fonts names as `fonts.families`? Given how the merging works, the shape of `AstroUserConfig` and `AstroConfig` musn't be too different. It already caused issues with i18n in the past.
+It can specify options such as `weights`, `subsets` that default to the value of `fonts.defaults`:
+
+```js
+export default defineConfig({
+  fonts: {
+    families: [
+      {
+        name: "Roboto",
+        weights: [400, 600],
+      },
+    ],
+  },
+});
+```
+
+It can also specify a `provider` (and `src` if it's the `local` provider):
+
+```js
+export default defineConfig({
+  fonts: {
+    families: [
+      {
+        name: "Roboto",
+        provider: "local",
+        src: "./Roboto.woff2",
+      },
+    ],
+  },
+});
+```
 
 ### Font component
 
@@ -309,7 +343,21 @@ I have not identified any outstanding drawback:
 
 # Alternatives
 
+## As an integration
+
 This feature could be developed as an integration, eg. `@astrojs/fonts`. Making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module.
+
+## Different API for simpler cases
+
+The following API has been suggested for the simpler cases:
+
+```js
+export default defineConfig({
+  fonts: ["Roboto"],
+});
+```
+
+I'd love to support such API where you can provide fonts top level, or inside `fonts.families` but we can't. We can't because of how the integration API `defineConfig()` works. What if a user provides fonts names as `fonts`, and an integration provides fonts names as `fonts.families`? Given how the merging works, the shape of `AstroUserConfig` and `AstroConfig` musn't be too different. It already caused issues with i18n in the past.
 
 # Adoption strategy
 
