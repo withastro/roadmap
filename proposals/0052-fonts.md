@@ -84,7 +84,7 @@ export default defineConfig({
 });
 ```
 
-That would get fonts from [Google Fonts](https://fonts.google.com/) with sensible defaults (TBD).
+That would get fonts from [Google Fonts](https://fonts.google.com/) with sensible defaults.
 
 Here's a more complex example:
 
@@ -171,7 +171,6 @@ This provider, unlike all the others, requires paths to fonts relatively to the 
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
-import { myCustomFontProvider } from "./provider";
 
 export default defineConfig({
   fonts: {
@@ -192,13 +191,11 @@ Other unifont providers are exported from `astro/config`.
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
-import { myCustomFontProvider } from "./provider";
 
 export default defineConfig({
   fonts: {
     providers: [
       fontProviders.adobe({ apiKey: process.env.ADOBE_FONTS_API_KEY }),
-      myCustomFontProvider(),
     ],
     // ...
   },
@@ -345,7 +342,7 @@ I have not identified any outstanding drawback:
 
 ## As an integration
 
-This feature could be developed as an integration, eg. `@astrojs/fonts`. Making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module.
+This feature could be developed as an integration, eg. `@astrojs/fonts`. It will probably be an internal integration (like actions) but making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module.
 
 ## Different API for simpler cases
 
