@@ -59,11 +59,12 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 - Generate fallbacks automatically
 - Performant defaults
 - Runtime agnostic
+- Configure font families (subset, unicode range, weights etc)
 
 # Non-Goals
 
 - Runtime API (SSR is supported tho)
-- Automatic subsetting
+- Automatic subsetting (eg. analyzing static content)
 - Font detection
 
 # Detailed Design
