@@ -65,7 +65,7 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 
 - Runtime API (SSR is supported tho)
 - Automatic subsetting (eg. analyzing static content)
-- Font detection
+- Automatic font detection (ie. downloading fonts based on font families names used in the user's project)
 
 # Detailed Design
 
