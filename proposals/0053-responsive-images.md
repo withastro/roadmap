@@ -14,9 +14,9 @@
 
 - Start Date: 2024-11-04
 - Reference Issues: <!-- related issues, otherwise leave empty -->
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/12377
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1042
-- Stage 3 PR: <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1051
 
 # Summary
 
