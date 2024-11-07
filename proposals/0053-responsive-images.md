@@ -56,7 +56,7 @@ These are a lot of attributes to remember and understand, though the final three
 
 # Goals
 
-- A single `layout` prop that, when combined with existing props, sets the attributes that will make an image responsive and following best practices.
+- A new `layout` prop that sets all attributes that will make an image responsive and following best practices, including `srcset` entries and `sizes`
 - Config options to change the defaults for all images
 - Backwards-compatible, so that existing images are unaffected unless they set the props or config options.
 - Add support for optional cropping in image services
@@ -90,30 +90,50 @@ These are indicative implementations of the functions that generate the image wi
 export const getWidths = ({
   width,
   layout,
-  breakpoints,
+  // See below for the default list
+  breakpoints = DEFAULT_RESOLUTIONS,
+  originalWidth,
 }: {
   width?: number;
-  layout: Layout;
+  layout: ImageLayout;
   breakpoints?: Array<number>;
+  originalWidth?: number;
 }): Array<number> => {
+  const smallerThanOriginal = (w: number) =>
+    !originalWidth || w <= originalWidth;
+
   if (layout === "full-width") {
-    return breakpoints;
+    return breakpoints.filter(smallerThanOriginal);
   }
+
   if (!width) {
     return [];
   }
   const doubleWidth = width * 2;
+  const maxSize = originalWidth
+    ? Math.min(doubleWidth, originalWidth)
+    : doubleWidth;
   if (layout === "fixed") {
-    return [width, doubleWidth];
+    // If the image is larger than the original, only include the original width
+    // Otherwise, include the image width and the double-resolution width, unless
+    // the double-resolution width is larger than the original
+    return originalWidth && width > originalWidth
+      ? [originalWidth]
+      : [width, maxSize];
   }
   if (layout === "responsive") {
-    return [
-      // Always include the image at 1x and 2x the specified width
-      width,
-      doubleWidth,
-      // Filter out any resolutions that are larger than the double-resolution image
-      ...breakpoints.filter((w) => w < doubleWidth),
-    ];
+    return (
+      [
+        // Always include the image at 1x and 2x the specified width
+        width,
+        doubleWidth,
+        ...breakpoints,
+      ]
+        // Sort the resolutions in ascending order
+        .sort((a, b) => a - b)
+        // Filter out any resolutions that are larger than the double-resolution image or source image
+        .filter((w) => w <= maxSize)
+    );
   }
 
   return [];
@@ -161,39 +181,45 @@ export const getSizes = (
 
 It is important that an image is displayed at the correct size before the source has loaded, otherwise the page will need to re-layout. This causes annoying jumps in the page layout, and poor CLS scores. Because of this, we don't rely on the intrinsic size of the loaded image, and instead use CSS to set the correct sizing. We do not rely on just the image `width` and `height`, because we want the responsive images to resize according to the container width.
 
-Shared styles will be generated for all sites that use images, which are then applied to images according to the chosen layout. The images also have inline styles to set the sizes as CSS vars. e.g
+Shared styles will be generated for all sites that use images, which are then applied to images according to the chosen layout.
 
 ```astro
-<img class:list={["responsive", className]} style={{
-  "--w": width,
-  "--h": height,
-}}
-{/* ...other props */}
-/>
+<img class:list={["aim-re", className]} {/* ...other props */} />
 ```
 
-The classes for each layout would be as follows:
+CSS vars would be used to set the width, height and crop options for each image. The classes for each layout would be as follows:
 
 ```css
-.responsive {
-  max-width: calc(var(--w) * 1px);
-  max-height: calc(var(--h) * 1px);
-  aspect-ratio: var(--w) / var(--h);
-  width: 100%;
-}
-
-.full-width {
-  width: 100%;
-  aspect-ratio: var(--w) / var(--h);
-}
-
-.fixed {
-  width: calc(var(--w) * 1px);
-  height: calc(var(--h) * 1px);
-}
+<style
+	define:vars={{
+		w: width,
+		h: height,
+		fit: objectFit,
+		pos: objectPosition,
+	}}
+>
+	/* Shared by all Astro images */
+	.aim {
+		width: 100%;
+		height: auto;
+		object-fit: var(--fit);
+		object-position: var(--pos);
+		aspect-ratio: var(--w) / var(--h);
+	}
+	/* Styles for responsive layout */
+	.aim-re {
+		max-width: calc(var(--w) * 1px);
+		max-height: calc(var(--h) * 1px);
+	}
+	/* Styles for fixed layout */
+	.aim-fi {
+		width: calc(var(--w) * 1px);
+		height: calc(var(--h) * 1px);
+	}
+</style>
 ```
 
-Users can override these styles if they prefer, by passing a `class` prop to the component.
+Users can override these styles if they prefer, by passing `class` or `style` props to the component.
 
 ### Breakpoints
 
@@ -226,6 +252,10 @@ export const DEFAULT_RESOLUTIONS = [
 
 You may be expecting the list to include smaller resolutions such as 480 or 320. These are not needed however, as all devices that have screens that apparent size have a higher pixel density. There have been no devices made in the past decade or more that actually have a 320px wide screen with a 1x pixel density.
 
+## Lazy and priority loading
+
+Astro images currently default to `loading="lazy"` and `decoding="async"`, and for priority images you should set these to `eager` and `sync` respectively. Best practice is to also set the `fetchpriority` attribute, but this does not currently have a default in Astro. This proposal adds a new `priority` prop to handle these all at once, to make it easier to eagerly load your LCP and other priority images. It is a boolean prop, which sets `loading="eager"`, `decoding="sync"` and `fetchpriority="high"` for an image. Preloading is out of scope for this RFC, but it could conceivably used for this in future.
+
 ## Image service crop support
 
 Currently, Astro image services do not support cropping, and if the target image aspect ratio does not match the source image it will be stretched. While image services do support the height property, the built-in image service ignores it, and other services do not get passed the properties needed to handle cropping. Most of the underlying services do support cropping though, so could implement cropping in their image services if needed, normally with a single parameter. The sharp library that powers the default service supports cropping, with a wide range of options.
@@ -243,8 +273,8 @@ For that reason, this RFC includes image service crop support as a goal, though 
 
 There are new props added to the image component which expose this crop support.
 
-- `object-fit`: uses the `fit` property in the image transform to crop the image, and sets the `object-fit` CSS property. Requires both `width` and `height` to be set. For responsive images this defaults to `cover`, which is also the CSS value that is used if the value is not one that is supported by CSS. While this may be different from the one used by the image service, the image service should be returning an image that matches the size, so this will not be used in those cases. Existing images which are not cropped will have this set to `fill`, which matches the current behavior.
-- `object-position`: if `object-fit` is `cover` or a custom value, this specifies the focal point for the crop. Allowed values are the CSS values plus any custom values supported by the image service.
+- `fit`: uses the `fit` property in the image transform to crop the image, and sets the `object-fit` CSS property. Requires both `width` and `height` to be set. For responsive images this defaults to `cover`, which is also the CSS value that is used if the value is not one that is supported by CSS. While this may be different from the one used by the image service, the image service should be returning an image that matches the size, so this will not be used in those cases. Existing images which are not cropped will have this set to `fill`, which matches the current behavior.
+- `position`: if `fit` is `cover` or a custom value, this specifies the focal point for the crop. Allowed values are the CSS values plus any custom values supported by the image service.
 
 # Testing Strategy
 
