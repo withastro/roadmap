@@ -56,7 +56,7 @@ These are a lot of attributes to remember and understand, though the final three
 
 # Goals
 
-- A new `layout` prop that sets all attributes that will make an image responsive and following best practices, including `srcset` entries and `sizes`
+- A new `layout` prop for the `Image` and `Picture` components that sets all attributes that will make an image responsive and follow best practices, including `srcset` entries and `sizes`
 - Config options to change the defaults for all images
 - Backwards-compatible, so that existing images are unaffected unless they set the props or config options.
 - Add support for optional cropping in image services
@@ -81,7 +81,7 @@ The image `srcset` tells the browser which images are available. We want to gene
 
 For this reason, we will generate a srcset with width conditions, based on the width and layout props.
 
-These are indicative implementations of the functions that generate the image widths for the `srcset`. The `breakpoints` argument is an array of possible screen resolutions, which it uses to choose candidate breakpoints. The default list is shown in the section below. In the real implementation, widths that are larger than the source image would be filtered out.
+These are indicative implementations of the functions that generate the image widths for the `srcset`. The `breakpoints` argument is an array of possible screen resolutions, which it uses to choose candidate breakpoints. The default list is shown in the section below.
 
 ```ts
 /**
@@ -90,8 +90,7 @@ These are indicative implementations of the functions that generate the image wi
 export const getWidths = ({
   width,
   layout,
-  // See below for the default list
-  breakpoints = DEFAULT_RESOLUTIONS,
+  breakpoints,
   originalWidth,
 }: {
   width?: number;
@@ -181,42 +180,32 @@ export const getSizes = (
 
 It is important that an image is displayed at the correct size before the source has loaded, otherwise the page will need to re-layout. This causes annoying jumps in the page layout, and poor CLS scores. Because of this, we don't rely on the intrinsic size of the loaded image, and instead use CSS to set the correct sizing. We do not rely on just the image `width` and `height`, because we want the responsive images to resize according to the container width.
 
-Shared styles will be generated for all sites that use images, which are then applied to images according to the chosen layout.
+Shared styles will be generated for all sites that use images, which are then applied to images according to the chosen layout, using data attributes to target the styles, with CSS variables to set the image-specific options.
 
 ```astro
-<img class:list={["aim-re", className]} {/* ...other props */} />
+<img [data-astro-image]="responsive" {/* ...other props */} style="--w: 800; --h: 600; --fit: cover; --pos: center;" />
 ```
 
 CSS vars would be used to set the width, height and crop options for each image. The classes for each layout would be as follows:
 
 ```css
-<style
-	define:vars={{
-		w: width,
-		h: height,
-		fit: objectFit,
-		pos: objectPosition,
-	}}
->
-	/* Shared by all Astro images */
-	.aim {
-		width: 100%;
-		height: auto;
-		object-fit: var(--fit);
-		object-position: var(--pos);
-		aspect-ratio: var(--w) / var(--h);
-	}
-	/* Styles for responsive layout */
-	.aim-re {
-		max-width: calc(var(--w) * 1px);
-		max-height: calc(var(--h) * 1px);
-	}
-	/* Styles for fixed layout */
-	.aim-fi {
-		width: calc(var(--w) * 1px);
-		height: calc(var(--h) * 1px);
-	}
-</style>
+[data-astro-image] {
+  width: 100%;
+  height: auto;
+  object-fit: var(--fit);
+  object-position: var(--pos);
+  aspect-ratio: var(--w) / var(--h);
+}
+/* Styles for responsive layout */
+[data-astro-image="responsive"] {
+  max-width: calc(var(--w) * 1px);
+  max-height: calc(var(--h) * 1px);
+}
+/* Styles for fixed layout */
+[data-astro-image="fixed"] {
+  width: calc(var(--w) * 1px);
+  height: calc(var(--h) * 1px);
+}
 ```
 
 Users can override these styles if they prefer, by passing `class` or `style` props to the component.
@@ -227,26 +216,38 @@ The default list of breakpoints is chosen to give coverage of all common screen 
 
 Local image services that resize the images at build time need to balance the number of images generated against the time taken to build them. Remote image services are not restricted in this way, because images are resized on demand. For this reason different default breakpoint lists will be used for local and remote services. This list is the full set, which would only be used for full-width images served from a remote image service. Other layouts would filter this list according to the rules given above.
 
-While the comments list the common screen resolution that matches these, bear inb mind that the browser can also use these sizes for other screen sizes depending on conditions such as network speed or display pixel density.
+While the comments list the common screen resolution that matches these, bear in mind that the browser can also use these sizes for other screen sizes depending on conditions such as network speed or display pixel density.
 
 ```ts
-// Common screen widths. These will be filtered according to the image size and layout
+// Common screen widths. This full list is used for image services that transform at runtime
 export const DEFAULT_RESOLUTIONS = [
-  6016, // 6K
-  5120, // 5K
-  4480, // 4.5K
-  3840, // 4K
-  3200, // QHD+
-  2560, // WQXGA
-  2048, // QXGA
-  1920, // 1080p
-  1668, // Various iPads
-  1280, // 720p
-  1080, // iPhone 6-8 Plus
-  960, // older horizontal phones
-  828, // iPhone XR/11
-  750, // iPhone 6-8
   640, // older and lower-end phones
+  750, // iPhone 6-8
+  828, // iPhone XR/11
+  960, // older horizontal phones
+  1080, // iPhone 6-8 Plus
+  1280, // 720p
+  1668, // Various iPads
+  1920, // 1080p
+  2048, // QXGA
+  2560, // WQXGA
+  3200, // QHD+
+  3840, // 4K
+  4480, // 4.5K
+  5120, // 5K
+  6016, // 6K
+];
+
+// A more limited set of screen widths, for statically generated images
+export const LIMITED_RESOLUTIONS = [
+  640, // older and lower-end phones
+  750, // iPhone 6-8
+  828, // iPhone XR/11
+  1080, // iPhone 6-8 Plus
+  1280, // 720p
+  1668, // Various iPads
+  2048, // QXGA
+  2560, // WQXGA
 ];
 ```
 
@@ -260,9 +261,7 @@ Astro images currently default to `loading="lazy"` and `decoding="async"`, and f
 
 Currently, Astro image services do not support cropping, and if the target image aspect ratio does not match the source image it will be stretched. While image services do support the height property, the built-in image service ignores it, and other services do not get passed the properties needed to handle cropping. Most of the underlying services do support cropping though, so could implement cropping in their image services if needed, normally with a single parameter. The sharp library that powers the default service supports cropping, with a wide range of options.
 
-While these responsive images do not rely on crop support in the services, it will give better results, with smaller image sizes when the aspect ratio is different. Currently the full image is served, with the image needing to be cropped using CSS in the browser. This means a lot of wasted pixels being sent. Adding crop support would mean only the needed image sizes would be sent.
-
-For that reason, this RFC includes image service crop support as a goal, though it is not a blocker for the initial feature.
+While these responsive images do not rely on crop support in the services, it will give better results, with smaller image sizes when the aspect ratio is different. Currently the full image is served, with the image needing to be cropped using CSS in the browser. This means a lot of wasted pixels being sent. Adding crop support means only the needed image sizes would be sent.
 
 #### New `ImageTransform` properties
 
@@ -292,12 +291,11 @@ The current component allows users to implement most of these options by setting
 
 # Adoption strategy
 
-- This will initially be enabled with an `experimental.responsiveImages` config option.
+- This will initially be enabled with an `experimental.responsiveImages` config option. Configuration of defaults use prefixed option names: `image.experimentalLayout` and `image.experimentalFit`.
 - When unflagged, it will be backwards-compatible. If `layout` is not set as a prop or default config value, the component will behave exactly as now.
 - In future we may decide to make this the default, but that would be in a future major, not Astro 5.
 
 # Unresolved Questions
 
 - The crop attributes and values may not work well once we look at different image services.
-- The default breakpoint list for the sharp service needs to be chosen, as the full list is too long.
 - It may be possible to combine responsive with full-width layouts, though this would need some thought
