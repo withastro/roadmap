@@ -17,7 +17,7 @@ it on the Stage 3 PR. Otherwise, comment on the Stage 2 issue (links below).**
 - Reference Issues: <!-- related issues, otherwise leave empty -->
 - Implementation PR: https://github.com/withastro/astro/pull/12441
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1050
-- Stage 3 PR:
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1055
   <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
 
 # Summary
