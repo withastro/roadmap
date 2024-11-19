@@ -172,9 +172,7 @@ should be called when a user logs out or their session is otherwise invalidated.
 ## Configuration
 
 The session object is configured using the `session` key in the Astro config.
-All configuration is optional if the adapter has built-in support. This is the
-case for the Node adapter, which uses filesystem storage by default, and is
-expected to be the case for most adapters.
+The `driver` option is required, unless an adapter provides a default. The type for `options` depends on the driver, and may or may not be required. TypeScript types will show this to the user.
 
 ```js
 // astro.config.ts
@@ -195,15 +193,14 @@ export default defineConfig({
       host: process.env.REDIS_HOST,
       password: process.env.REDIS_PASSWORD,
     },
-    // Optional: the name of the session ID cookie
-    cookieName: "my-session-id",
-    // Optional: cookie options
-    cookieOptions: {
-      // Default is 1 hour
-      maxAge: 86400,
-      // Default is 'Lax'
-      sameSite: "Strict",
-    },
+    // If set to a string, this will be used as the cookie name
+    cookie: "my-session-id",
+    // If set to an object, this will allow advanced options to be set
+    // cookie: {
+    //  name: "my-session-id"
+    //  maxAge: 86400,
+    //  sameSite: "Strict",
+    //},
   },
 });
 ```
@@ -250,7 +247,7 @@ serialized using devalue and written back to the backend.
 Because of the variety of environments to which Astro can be deployed, there is
 no single approach to storage that can be relied upon in all cases. For this
 reason, adapters should provide default session storage drivers where possible.
-Sessions are only available in on-demand rendered pages and API endpoints, so
+Sessions are only available in server-rendered contexts, so
 there will always be an adapter available. The Node adapter will use filesystem
 storage by default, but this is not suitable for serverless environments. For
 these, the adapter can default to any storage service that is available. For
