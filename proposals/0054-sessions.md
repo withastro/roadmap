@@ -112,10 +112,6 @@ Returns the value of the given key in the session. If the key does not exist, it
 
 Sets the value of the given key in the session. The value can be any serializable type.
 
-### `Astro.session.flash(key: string, value: any): void`
-
-Sets the value of the given key in the session. The value can be any serializable type. The value will be deleted after the next request.
-
 ### `Astro.session.regenerate(): void`
 
 Regenerates the session ID. Best practice is to call this when a user logs in or escalates their privileges, to prevent session fixation attacks.
@@ -174,8 +170,6 @@ The session is implemented as a single object stored in the backend, rather than
 When `session.get()` is called, the session ID is read from the cookie. If there is no session ID, a new one is generated. The full session data is then fetched as a single value from the backend and deserialized into using devalue. Future reads and writes within that request context are done on this local object. If any entries have an expiry time set, they are checked and deleted at this point if required.
 
 When `session.set()` is called, if there is no session ID, a new one is generated. If a local session object has already been fetched, the value is set on that. If not, the data is set on a partial local session object. If there is a TTL specified, either as an argument to `set()` or in the session config, an expiry time is calculated and included as metadata, stored alongside the value. This is merged with the full session if `get()` is called later in the request. Otherwise this is done at the end of the request, and the merged object is serialized using devalue and written back to the backend.
-
-When `session.flash()` is called, the data is stored with a flag that means it will only be retrieved once and then deleted. This is useful for messages that should only be shown once, for example, or for passing data to a redirected page.
 
 ## Adapter and integration support
 
