@@ -99,20 +99,6 @@ export default defineConfig({
       fontProviders.adobe({ apiKey: process.env.ADOBE_FONTS_API_KEY }),
       myCustomFontProvider(),
     ],
-    defaults: {
-      provider: "adobe",
-      weights: [200, 700],
-      styles: ["italic"],
-      subsets: [
-        "cyrillic-ext",
-        "cyrillic",
-        "greek-ext",
-        "greek",
-        "vietnamese",
-        "latin-ext",
-        "latin",
-      ],
-    },
     families: [
       "Roboto",
       {
@@ -134,13 +120,13 @@ export default defineConfig({
 
 #### Definition
 
-A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction. It's a [unifont](https://github.com/unjs/unifont) provider.
+A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction. It's an abstraction on top of [unifont](https://github.com/unjs/unifont) providers.
 
 #### Built-in providers
 
 ##### Google
 
-This is the default, and it's not configurable. Given the amount of fonts it supports by, it sounds like a logic choice. Note that the default can be customized for more advanced usecases.
+This is the default, and it's not configurable. Given the amount of fonts it supports by, it sounds like a logic choice.
 
 ```js
 export default defineConfig({
@@ -153,9 +139,6 @@ export default defineConfig({
 ```js
 export default defineConfig({
   fonts: {
-    defaults: {
-      provider: "local",
-    },
     families: [
       {
         name: "Roboto",
@@ -203,15 +186,31 @@ export default defineConfig({
 });
 ```
 
+Note that under the hood, the definition would look like:
+
+```ts
+function adobe(config: AdobeConfig): FontProvider {
+  return {
+    name: "adobe",
+    entrypoint: "astro/assets/fonts/adobe",
+    config
+  }
+}
+
+export const fontProviders = {
+  adobe
+}
+```
+
 #### Why this API?
 
 1. **Coherent API**: a few things in Astro are using this pattern, namely integrations and vite plugins. It's simple to author as a library author, easy to use as a user
 2. **Keep opt-in providers**: allows to only use 2 providers by default, and keeps the API open to anyone
-3. **Types!**: now that `defineConfig` [supports generics](https://github.com/withastro/astro/pull/12243), we can do powerful things! Associated with type generation, we can generate types for `families` `name`, infer the provider type from `defaults.provider` and more.
+3. **Types!**: now that `defineConfig` [supports generics](https://github.com/withastro/astro/pull/12243), we can do powerful things! Associated with type generation, we can generate types for `families` `name`, infer the provider type from `provider` and more.
 
 ### Defaults
 
-Astro must provide sensible defaults when it comes to font weights, subsets and more. But when dealing with more custom advanced setups, it makes sense to be able to customize those defaults. They can be set in `fonts.defaults` and will be merged with Astro defaults.
+Astro must provide sensible defaults when it comes to font weights, subsets and more.
 
 We need to decide what default to provide. I can see 2 paths:
 
@@ -237,7 +236,7 @@ export default defineConfig({
 });
 ```
 
-It can specify options such as `weights`, `subsets` that default to the value of `fonts.defaults`:
+It can specify options such as `weights` and `subsets`:
 
 ```js
 export default defineConfig({
@@ -365,5 +364,4 @@ I'd love to support such API where you can provide fonts top level, or inside `f
 
 # Unresolved Questions
 
-- We need to see how merging `fonts.defaults` will work, especially for `updateConfig()`. Should we merge arrays in this case?
 - We need to check if fallbacks should still be included for preloaded fonts
