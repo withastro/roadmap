@@ -28,7 +28,7 @@ Expose common Astro config properties to users and integrations
 > The following example don't reflect the final naming of the module 
 
 ```js
-import { trailingSlash, i18n, build } from 'astro:manifest/routing';
+import { trailingSlash, i18n, build } from 'astro:config/routing';
 
 console.log(trailingSlash);
 console.log(i18n.locales);
@@ -36,7 +36,7 @@ console.log(build.format);
 ```
 
 ```js
-import { srcDir, build } from 'astro:manifest/paths';
+import { srcDir, build } from 'astro:config/paths';
 
 console.log(srcDir);
 console.log(build.client)
@@ -65,9 +65,9 @@ Many integrations need this data and have to create virtual modules for this anw
 > [!IMPORTANT]
 > The proposal will use some paths/names that might not be official, only to provide some scenarios or examples. Please refer to [#proposed-apis] to understand the final and proposed modules.  
 
-The main idea is to provide a virtual module with sub-paths (e.g. `astro:manifest/client`, `astro:manifest/server`), each sub path will expose information that won't be available in the other sub paths, so information won't be repeated. These modules will be compiled into code, so a piece information e.g. `trailingSlash` should be available only once in order to avoid polluting the final bundle with repeated code.
+The main idea is to provide a virtual module with sub-paths (e.g. `astro:config/client`, `astro:config/server`), each sub path will expose information that won't be available in the other sub paths, so information won't be repeated. These modules will be compiled into code, so a piece information e.g. `trailingSlash` should be available only once in order to avoid polluting the final bundle with repeated code.
 
-Some sub-paths can't be used inside client-side code, because they could expose sensitive information, such as file system paths. Hence, we should divide the information based on where they could be used. We can't track if binding e.g. `config.srcDir` is used inside a client script, but we can track if a `import { srcDir } from astro:manifest/paths` is used inside a client side code. 
+Some sub-paths can't be used inside client-side code, because they could expose sensitive information, such as file system paths. Hence, we should divide the information based on where they could be used. We can't track if binding e.g. `config.srcDir` is used inside a client script, but we can track if a `import { srcDir } from astro:config/paths` is used inside a client side code. 
 
 ## Use the manifest
 
@@ -88,19 +88,19 @@ These are guidelines, so exceptions are possible, as long as they have a good re
 
 ## Proposed APIs
 
-Proposed name of the module: `astro:manifest`
+Proposed name of the module: `astro:config`
 
 Proposed sub-paths
 
 **By feature**:
-- `astro:manifest/routing`, exported bindings: 
+- `astro:config/routing`, exported bindings: 
   - `i18n`
   - `trailingSlash`
   - `base`
   - `build.format`
   - `site` 
   - `redirects`[^1]
-- `astro:manifest/fs`, exposed bindings: 
+- `astro:config/fs`, exposed bindings: 
   - `srcDirc`
   - `cacheDir`
   - `outDir`
@@ -112,14 +112,14 @@ Proposed sub-paths
   - `root`
 
 **By "position"**
-- `astro:manifest/client`, exported bindings:
+- `astro:config/client`, exported bindings:
   - `i18n`
   - `trailingSlash`
   - `base`
   - `build.format`
   - `site`
   - `redirects`[^1]
-- `astro:manifest/server`, exposed bindings:
+- `astro:config/server`, exposed bindings:
   - `srcDirc`
   - `cacheDir`
   - `outDir`
@@ -159,7 +159,7 @@ I feel that Astro should provide the primitives to integrations, so they can cre
 
 # Adoption strategy
 
-- The experimental flag `experimental.serializedManifest` will be shipped in a minor.
+- The experimental flag `experimental.serializeConfig` will be shipped in a minor.
 - Once the RFC is stable and approved, a new minor will remove the flag.
 
 # Unresolved Questions
