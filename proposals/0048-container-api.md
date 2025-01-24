@@ -145,7 +145,7 @@ a method called `getContainerRenderer` that will return the correct information 
 ```js
 import { getContainerRenderer as reactRenderer } from "@astrojs/react";
 import { getContainerRenderer as vueRenderer } from "@astrojs/vue";
-import { laodRenderers } from "astro:container";
+import { loadRenderers } from "astro:container";
 import { AstroContainer } from "astro/container";
 
 const renderers = loadRenderers([
