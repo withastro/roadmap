@@ -90,36 +90,22 @@ These are guidelines, so exceptions are possible, as long as they have a good re
 
 Proposed name of the module: `astro:config`
 
-Proposed sub-paths
+Proposed submodules
 
-**By feature**:
-- `astro:config/routing`, exported bindings: 
-  - `i18n`
-  - `trailingSlash`
-  - `base`
-  - `build.format`
-  - `site` 
-  - `redirects`[^1]
-- `astro:config/fs`, exposed bindings: 
-  - `srcDirc`
-  - `cacheDir`
-  - `outDir`
-  - `build.client`
-  - `build.server`
-  - `build.serverEntry`
-  - `build.assetsPrefix`
-  - `publicDir`
-  - `root`
+### `astro:config/client`
 
-**By "position"**
-- `astro:config/client`, exported bindings:
+Exported bindings:
+
   - `i18n`
   - `trailingSlash`
   - `base`
   - `build.format`
   - `site`
   - `redirects`[^1]
-- `astro:config/server`, exposed bindings:
+
+### `astro:config/server`
+
+Exported bindings:
   - `srcDirc`
   - `cacheDir`
   - `outDir`
@@ -129,6 +115,13 @@ Proposed sub-paths
   - `build.assetsPrefix`
   - `publicDir`
   - `root`
+  - `i18n`
+  - `trailingSlash`
+  - `base`
+  - `build.format`
+  - `site`
+  - `redirects`[^1]
+
 
 To note that `/routing`/`/client` can be used anywhere in the code, even in client scripts.
 
