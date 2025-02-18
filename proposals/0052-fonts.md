@@ -151,7 +151,7 @@ export default defineConfig({
 
 ##### Local
 
-This provider, unlike all the others, requires paths to fonts relatively to the root.
+This provider, unlike all the others, requires specifying fonts paths and properties relatively to the root.
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
@@ -162,7 +162,12 @@ export default defineConfig({
       {
         name: "Custom",
         provider: "local",
-        src: ["./assets/fonts/Custom.woff2"],
+        src: [
+          {
+            weights: ["400"],
+            paths: ["./assets/fonts/Custom.woff2"],
+          },
+        ],
       },
     ],
   },
@@ -193,13 +198,13 @@ function adobe(config: AdobeConfig): FontProvider {
   return {
     name: "adobe",
     entrypoint: "astro/assets/fonts/adobe",
-    config
-  }
+    config,
+  };
 }
 
 export const fontProviders = {
-  adobe
-}
+  adobe,
+};
 ```
 
 #### Why this API?
@@ -342,7 +347,7 @@ I have not identified any outstanding drawback:
 
 ## As an integration
 
-This feature could be developed as an integration, eg. `@astrojs/fonts`. It will probably be an internal integration (like actions) but making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module.
+This feature could be developed as an integration, eg. `@astrojs/fonts`. Making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module for the `<Font />` component.
 
 ## Different API for simpler cases
 
