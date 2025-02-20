@@ -326,7 +326,19 @@ h1 {
 - We inject a vite middleware in development to download fonts as they are requested in development
 - During build, we download all fonts and put them in `outDir`
 
-Data is cached to `cacheDir` for builds and `.astro/fonts` in development.
+## Caching
+
+When resolving fonts data, we keep track of the original URLs and filepaths and replace them with a URL we control: `/_astro/fonts/<hash>.<ext>`.
+
+### Development
+
+When a font file is requested using a hash, we download it using its original URL and save it to `.astro/fonts`. If the file already exists, we serve it without downloading from its original URL.
+
+Note that font files requests are never cached to make it easier to debug. Caching is happening at another level (described above).
+
+### Build
+
+We go through all fonts data, download the files to `node_modules/.astro/fonts` and copy them to the client output directory. We avoid downloading files if they already exist.
 
 # Testing Strategy
 
