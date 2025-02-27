@@ -319,6 +319,35 @@ h1 {
 }
 ```
 
+## Fallbacks
+
+We try to generate useful fallbacks when possible (and if the user specifies at least one):
+
+- Using `fontaine`, we get metrics using the family name
+- We check the last fallback to see if it's a generic family name (eg. sans-serif)
+- We get associated local fonts (eg. Arial)
+- We generate font faces so that the local font matches the original font shape
+
+The easiest way to benefit from fallback generation is by doing the following:
+
+```js
+{
+  family: 'Roboto',
+  fallbacks: ['sans-serif']
+}
+```
+
+This will give `Roboto, 'Roboto fallback: Arial', sans-serif`. This way we can infer what local font to use. It's still possible to provide more fallbacks:
+
+```js
+{
+  family: 'Roboto',
+  fallbacks: ['Times New Roman', 'sans-serif']
+}
+```
+
+This will give `Roboto, 'Roboto fallback: Arial', 'Times New Roman', sans-serif`.
+
 ## How it works under the hood
 
 - Once the config is fully resolved, we get fonts face data using `unifont`
