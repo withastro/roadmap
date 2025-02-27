@@ -89,7 +89,7 @@ For this reasons, most non-trivial apps need to implement some kind of server-si
 
 # Non-Goals
 
-- Type-safety. This may be added later, but there are questions about the best way to do this, because of issues with the way that the config is loaded.
+- Schema validation of session data. Astro doesn't give access to the astro.config.mjs file at runtime, so this is tough to implement. A schema would either need to be serializable, or defined in a different file. Neither is ideal. For now we will rely on the user to validate their own data, and just provide support for defining types.
 - User management, auth etc. This is just raw sessions, but they may be useful if someone is implementing auth
 - Building or maintaining our own driver backends. We will rely on existing libraries for this.
 - Strong consistency, atomic writes
@@ -101,8 +101,6 @@ The session object is a wrapper around pluggable storage backends. It is lazy-lo
 ## API
 
 The session object is available in all Astro contexts, including components, actions, and API endpoints. In components, it is accessed via the global `Astro` object, and in actions and API endpoints it is available on the `context` object. The API is the same in all cases.
-
-Values are serialized and deserialized using [devalue](https://github.com/Rich-Harris/devalue), which is the same library used by content layer and actions. This means that supported types are the same, and include strings, numbers, Dates, Maps, Sets, Arrays and plain objects.
 
 ### `Astro.session.get(key: string): Promise<any>`
 
@@ -176,6 +174,41 @@ When `session.set()` is called, if there is no session ID, a new one is generate
 Because of the variety of environments to which Astro can be deployed, there is no single approach to storage that can be relied upon in all cases. For this reason, adapters should provide default session storage drivers where possible. Sessions are only available in server-rendered contexts, so there will always be an adapter available. The Node adapter will use filesystem storage by default, but this is not suitable for serverless environments. For these, the adapter can default to any storage service that is available. For example, Netlify may use Netlify Blobs, Vercel may use Vercel KV or Upstash, Cloudflare may use Cloudflare Workers KV and Deno Deploy may use Deno KV. Integrations can also provide their own storage drivers, and these can be auto-configured by the integration.
 
 This is done using the normal integration API, and should be handled in the [`astro:config:done` hook](https://docs.astro.build/en/reference/integrations-reference/#astroconfigdone). The adapter or integration is responsible for ensuring that they do not overwrite any user-defined driver configuration. Adapters may choose to accept their own configuration options which they can apply to the storage driver where needed. Adapters may provide a storage driver for use in development, or rely on the built-in node adapter which is provided by the dev server.
+
+## Data types
+
+By default, session data is untyped, and users can store arbitrary data in any key. Values are serialized and deserialized using [devalue](https://github.com/Rich-Harris/devalue), which is the same library used in content collections and actions. This means that supported types are the same, and include strings, numbers, arrays, `Date`, `Map`, `Set`, `URL`, and plain objects.
+
+Users can optionally define TypeScript types for their session data by creating a `src/env.d.ts` file and adding a declaration for the `App.SessionData` type:
+
+```ts
+declare namespace App {
+  interface SessionData {
+    user: {
+      id: string;
+      name: string;
+    };
+    cart: string[];
+  }
+}
+```
+
+This will allow users to access the session data with type-checking and auto-completion in their editor:
+
+```ts
+---
+const cart = await Astro.session.get('cart');
+// const cart: string[] | undefined
+
+const something = await Astro.session.get('something');
+// const something: any
+
+Astro.session.set('user', { id: 1, name: 'Houston' });
+// Error: Argument of type '{ id: number; name: string }' is not assignable to parameter of type '{ id: string; name: string; }'.
+---
+```
+
+These types are only used for type-checking and auto-completion in the editor, and are not enforced at runtime. The user is responsible for validating the data in the session. See [non-goals](#non-goals) for more information on why this is the case.
 
 ## Local development
 
