@@ -321,6 +321,20 @@ h1 {
 
 ## Fallbacks
 
+### What are they?
+
+A fallback is a font that is displayed while the font you want is loading: 
+
+- A page loads, the `BigShinyCoolFont.woff2` file has not loaded yet, what should happen? Ideally text should be rendered still but we don’t have the correct font yet
+- In the past this just mean you had a “stack” like `font-family: "Big Shiny Cool Font", Helvetica, Arial, sans-serif;` that named some common system fonts to use if `"Big Shiny Cool Font"` is not available
+- However, this can lead to a lot of layout shift. Fonts all have different proportions, so just switching from a system font to your custom font can be quite a janky loading experience
+- Modern browsers provide CSS tools to adjust how fallback fonts display to make them more close to the custom font *proportions* (obviously the fonts will still be different but you can adjust so that the layout doesn’t shift as much)
+- `fontaine` allows to extract metrics from the target font (`"Big Shiny Cool Font"` in this example) and automatically calculate settings to apply to the fallbacks to improve the perceived loading experience
+
+Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to understand the technique.
+
+### What and are we generating them?
+
 We try to generate useful fallbacks when possible (and if the user specifies at least one):
 
 - Using `fontaine`, we get metrics using the family name
