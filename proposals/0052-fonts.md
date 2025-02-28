@@ -335,7 +335,7 @@ Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to u
 
 ### What and are we generating them?
 
-We generate useful fallbacks when possible (conditions sepcified below):
+We generate useful fallbacks when possible (conditions specified below):
 
 - We get metrics using the family name thanks to [`fontaine`](https://github.com/unjs/fontaine). We use this library because its APIs match our usage but if we wanted more control, we could use `capsizecss` which is used under the hood
 - We check the last fallback to see if it's a generic family name (eg. sans-serif)
