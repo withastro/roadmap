@@ -345,9 +345,9 @@ We generate useful fallbacks when possible (conditions specified below):
 Here are all the conditions required to generate a custom fallback:
 
 - The family has at least one fallback
-- Metrics can be generated from this family (TODO: this should be the last check as it's the most costly step)
 - The last fallback is a generic family name. We don't want to error/log because it's absolute valid not to use some
 - The generic font family has local fonts associated
+- Metrics can be generated from this family (TODO: this should be the last check as it's the most costly step)
 
 The easiest way to benefit from fallback generation is by doing the following:
 
