@@ -272,6 +272,45 @@ export default defineConfig({
 });
 ```
 
+It also accepts a `as` prop, which will be used when generating CSS. This is useful in the following cases:
+
+1. You are an integration and want to make sure you don't conflict with fonts declared by the user
+2. Your font name can't be properly converted to a CSS variable name
+
+For example with the following config:
+
+```js
+export default defineConfig({
+  fonts: {
+    families: [
+      {
+        name: "Roboto",
+        as: "Custom"
+      },
+    ],
+  },
+});
+```
+
+And using the component as follows:
+
+```astro
+---
+import { Font } from "astro:assets"
+---
+<head>
+  <Font family="Roboto" />
+</head>
+```
+
+The following CSS variable would be generated:
+
+```css
+:root {
+  --astro-font-custom: Custom;
+}
+```
+
 ### Font component
 
 Setting the config (see above) configures what fonts to download, but it doesn't include font automatically on pages. Instead, we provide a `<Font />` component that can be used to compose where and how to load fonts.
