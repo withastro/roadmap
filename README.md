@@ -30,7 +30,7 @@
 
 **Location:** GitHub Issues [(see all accepted proposals).](https://github.com/withastro/roadmap/issues)
 
-**What to Expect:** A proposal reaches this stage (aka "is accepted") during an [#rfc-meetings](RFC Meeting) with Maintainers and TSC (>= L2), following our existing [RFC voting](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) process.
+**What to Expect:** A proposal reaches this stage (aka "is accepted") during an [RFC Meeting](#rfc-meetings) with Maintainers and TSC (>= L2), following our existing [RFC voting](https://github.com/withastro/.github/blob/main/GOVERNANCE.md#voting-rfc-proposals) process.
 
 When a proposal is accepted, a maintainer (L2+) will create a new GitHub Issue summarizing the original proposal using our official template.
 
