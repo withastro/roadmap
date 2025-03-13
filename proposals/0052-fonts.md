@@ -334,7 +334,7 @@ The family will be typed using type gen, based on the user's config.
 Defaults to `false`:
 
 - **Enabled**: Outputs a preload link tag and a style tag, without fallbacks
-- **Disabled**: Output a style tag with fallbacks (generated using [fontaine](https://github.com/unjs/fontaine))
+- **Disabled**: Output a style tag with fallbacks (generated using [capsize](https://github.com/seek-oss/capsize/))
 
 ## Usage
 
@@ -366,7 +366,7 @@ A fallback is a font that is displayed while the font you want is loading:
 - In the past this just mean you had a “stack” like `font-family: "Big Shiny Cool Font", Helvetica, Arial, sans-serif;` that named some common system fonts to use if `"Big Shiny Cool Font"` is not available
 - However, this can lead to a lot of layout shift. Fonts all have different proportions, so just switching from a system font to your custom font can be quite a janky loading experience
 - Modern browsers provide CSS tools to adjust how fallback fonts display to make them more close to the custom font *proportions* (obviously the fonts will still be different but you can adjust so that the layout doesn’t shift as much)
-- `fontaine` allows to extract metrics from the target font (`"Big Shiny Cool Font"` in this example) and automatically calculate settings to apply to the fallbacks to improve the perceived loading experience
+- `capsize` allows to extract metrics from the target font (`"Big Shiny Cool Font"` in this example) and automatically calculate settings to apply to the fallbacks to improve the perceived loading experience
 
 Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to understand the technique.
 
@@ -374,7 +374,7 @@ Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to u
 
 We generate useful fallbacks when possible (conditions specified below):
 
-- We get metrics using the family name thanks to [`fontaine`](https://github.com/unjs/fontaine). We use this library because its APIs match our usage but if we wanted more control, we could use `capsizecss` which is used under the hood
+- We get metrics using the family name thanks to [`capsize`](https://github.com/seek-oss/capsize/). We use this library because its APIs match our usage but if we wanted more control, we could use `capsizecss` which is used under the hood
 - We check the last fallback to see if it's a generic family name (eg. sans-serif)
 - We get associated local fonts (eg. Arial)
 - We generate font faces so that the local font matches the original font shape
@@ -409,7 +409,7 @@ This will give `Roboto, 'Roboto fallback: Arial', 'Times New Roman', sans-serif`
 ## How it works under the hood
 
 - Once the config is fully resolved, we get fonts face data using `unifont`
-- We generate fallbacks using `fontaine` and pass all the data we need through a virtual import, used by the `<Font />` component
+- We generate fallbacks using `capsize` and pass all the data we need through a virtual import, used by the `<Font />` component
 - We inject a vite middleware in development to download fonts as they are requested in development
 - During build, we download all fonts and save them to `config.outDir` (or `config.build.client` with a server build output) 
 
