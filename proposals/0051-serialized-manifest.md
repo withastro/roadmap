@@ -123,18 +123,23 @@ Exported bindings:
   - `redirects`[^1]
 
 
-To note that `/routing`/`/client` can be used anywhere in the code, even in client scripts.
+To note that `/server`/`/client` can be used anywhere in the code, even in client scripts.
 
 [^1]: To evaluate, probably not needed
+
+## Deprecations
+
+We will deprecate existing means to read this information. The following will be deprecated:
+- `import.meta.env.BASE_URL`
+- `import.meta.env.SITE`
+- `import.meta.env.ASSETS_PREFIX`
+- `Astro.site`/`ctx.site`
 
 # Testing Strategy
 
 - The virtual modules will be "usable" via experimental flag. Attempting to use these virtual modules without the experimental flag turned on will result into a hard error.
 - After a gracing period where we stabilise the APIs, the experimental flag will be removed.
-- We will deprecate existing means to read this information. The following will be deprecated:
-  - `import.meta.env.BASE_URL`
-  - `import.meta.env.SITE`
-  - `import.meta.env.ASSETS_PREFIX`
+
 
 # Drawbacks
 
