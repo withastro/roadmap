@@ -56,7 +56,7 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 - Cache fonts
 - Specify what provider to use
 - Load/preload font on a font basis
-- Generate fallbacks automatically
+- Allow generating fallbacks automatically
 - Performant defaults
 - Runtime agnostic
 - Configure font families (subset, unicode range, weights etc)
@@ -328,10 +328,7 @@ The family will be typed using type gen, based on the user's config.
 
 ### Preload
 
-Defaults to `false`:
-
-- **Enabled**: Outputs a preload link tag and a style tag, without fallbacks
-- **Disabled**: Output a style tag with fallbacks (generated using [capsize](https://github.com/seek-oss/capsize/))
+Defaults to `false`. Will output preload link tags.
 
 ## Usage
 
@@ -367,7 +364,7 @@ A fallback is a font that is displayed while the font you want is loading:
 
 Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to understand the technique.
 
-### What and are we generating them?
+### What and how are we generating them?
 
 We generate useful fallbacks when possible (conditions specified below):
 
@@ -402,6 +399,27 @@ This will give `Roboto, 'Roboto fallback: Arial', sans-serif`. Here, `Roboto fal
 ```
 
 This will give `Roboto, 'Roboto fallback: Arial', 'Times New Roman', sans-serif`.
+
+### Disabling automatic fallback generation
+
+You can set `automaticFallback: false` to disable this behavior. This config:
+
+```js
+{
+  family: 'Roboto',
+  fallbacks: ['Custom', 'sans-serif'],
+  automaticFallback: false
+}
+```
+
+will generate:
+
+```js
+{
+  family: 'Roboto',
+  fallbacks: ['Custom', 'sans-serif'],
+}
+```
 
 ## How it works under the hood
 
@@ -463,6 +481,3 @@ I'd love to support such API where you can provide fonts top level, or inside `f
 - **Is this a breaking change? Can we write a codemod?** No
 - **How will this affect other projects in the Astro ecosystem?** This should make [`astro-font`](https://github.com/rishi-raj-jain/astro-font) obsolete
 
-# Unresolved Questions
-
-- We need to check if fallbacks should still be included for preloaded fonts
