@@ -271,8 +271,8 @@ export default defineConfig({
 
 It also accepts a `as` prop, which will be used when generating CSS. This is useful in the following cases:
 
-1. You are an integration and want to make sure you don't conflict with fonts declared by the user
-2. Your font name can't be properly converted to a CSS variable name
+1. Avoid conflicts between the font names declared by integrations and those declared by the end-users
+2. A font name contains characters that cannot be used to generate the CSS variable name
 
 For example with the following config:
 
