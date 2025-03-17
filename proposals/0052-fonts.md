@@ -215,14 +215,11 @@ export const fontProviders = {
 
 ### Defaults
 
-Astro must provide sensible defaults when it comes to font weights, subsets and more.
+Astro provides sensible defaults:
 
-We need to decide what default to provide. I can see 2 paths:
-
-| Path      | Example (weight)    | Advantage             | Downside                                                                          |
-| --------- | ------------------- | --------------------- | --------------------------------------------------------------------------------- |
-| Minimal   | Only include `400`  | Lightweight           | People will probably struggle by expecting all weights to be available by default |
-| Extensive | Include all weights | Predictable for users | Heavier by default                                                                |
+- Weight: `400`
+- Styles: `normal` and `italic`
+- Subets: `cyrillic-ext`, `cyrillic`, `greek-ext`, `greek`, `vietnamese`, `latin-ext` and `latin`
 
 ### Families
 
@@ -285,7 +282,7 @@ export default defineConfig({
     families: [
       {
         name: "Roboto",
-        as: "Custom"
+        as: "Custom",
       },
     ],
   },
@@ -360,12 +357,12 @@ The generated css variable name follows thie pattern: `--astro-font-${kebab(fami
 
 ### What are they?
 
-A fallback is a font that is displayed while the font you want is loading: 
+A fallback is a font that is displayed while the font you want is loading:
 
 - A page loads, the `BigShinyCoolFont.woff2` file has not loaded yet, what should happen? Ideally text should be rendered still but we don’t have the correct font yet
 - In the past this just mean you had a “stack” like `font-family: "Big Shiny Cool Font", Helvetica, Arial, sans-serif;` that named some common system fonts to use if `"Big Shiny Cool Font"` is not available
 - However, this can lead to a lot of layout shift. Fonts all have different proportions, so just switching from a system font to your custom font can be quite a janky loading experience
-- Modern browsers provide CSS tools to adjust how fallback fonts display to make them more close to the custom font *proportions* (obviously the fonts will still be different but you can adjust so that the layout doesn’t shift as much)
+- Modern browsers provide CSS tools to adjust how fallback fonts display to make them more close to the custom font _proportions_ (obviously the fonts will still be different but you can adjust so that the layout doesn’t shift as much)
 - `capsize` allows to extract metrics from the target font (`"Big Shiny Cool Font"` in this example) and automatically calculate settings to apply to the fallbacks to improve the perceived loading experience
 
 Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to understand the technique.
@@ -411,7 +408,7 @@ This will give `Roboto, 'Roboto fallback: Arial', 'Times New Roman', sans-serif`
 - Once the config is fully resolved, we get fonts face data using `unifont`
 - We generate fallbacks using `capsize` and pass all the data we need through a virtual import, used by the `<Font />` component
 - We inject a vite middleware in development to download fonts as they are requested in development
-- During build, we download all fonts and save them to `config.outDir` (or `config.build.client` with a server build output) 
+- During build, we download all fonts and save them to `config.outDir` (or `config.build.client` with a server build output)
 
 ## Caching
 
