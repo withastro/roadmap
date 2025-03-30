@@ -15,20 +15,22 @@ Have first-party support for fonts in Astro.
 ```js
 // astro config
 export default defineConfig({
-  fonts: {
-    families: ["Roboto", "Lato"],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+    },
+  ],
 });
 ```
 
 ```astro
 ---
 // layouts/Layout.astro
-import { Font } from 'astro:fonts'
+import { Font } from "astro:fonts"
 ---
 <head>
-	<Font family='Inter' preload />
-	<Font family='Lato' />
+	<Font family="Inter" preload />
+	<Font family="Lato" />
 	<style>
 		h1 {
 			font-family: var(--astro-font-inter);
@@ -79,9 +81,11 @@ The goal is to have a config that starts really simple for basic usecases, but c
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  fonts: {
-    families: ["Roboto", "Lato"],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+    },
+  ],
 });
 ```
 
@@ -94,25 +98,23 @@ import { defineConfig, fontProviders } from "astro/config";
 import { myCustomFontProvider } from "./provider";
 
 export default defineConfig({
-  fonts: {
-    providers: [
-      fontProviders.adobe({ apiKey: process.env.ADOBE_FONTS_API_KEY }),
-      myCustomFontProvider(),
-    ],
-    families: [
-      "Roboto",
-      {
-        name: "Lato",
-        provider: "google",
-        weights: [100, 200, 300],
-      },
-      {
-        name: "Custom",
-        provider: "local",
-        src: ["./assets/fonts/Custom.woff2"],
-      },
-    ],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+    },
+    {
+      name: "Lato",
+      provider: fontProviders.adobe({
+        apiKey: process.env.ADOBE_FONTS_API_KEY,
+      }),
+      weights: [100, 200, 300],
+    },
+    {
+      name: "Custom",
+      provider: "local",
+      src: [{ paths: ["./assets/fonts/Custom.woff2"] }],
+    },
+  ],
 });
 ```
 
@@ -126,26 +128,26 @@ A provider allows to retrieve font faces data from a font family name from a giv
 
 ##### Google
 
-This is the default, and it's not configurable. Given the amount of fonts it supports by, it sounds like a logic choice.
+This is the default, and it's not configurable. Given the amount of fonts it supports, it sounds like a logic choice.
 
 ```js
 export default defineConfig({
-  fonts: {
-    families: ["Roboto"],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+    },
+  ],
 });
 ```
 
 ```js
 export default defineConfig({
-  fonts: {
-    families: [
-      {
-        name: "Roboto",
-        provider: "google",
-      },
-    ],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+      provider: "google",
+    },
+  ],
 });
 ```
 
@@ -157,49 +159,48 @@ This provider, unlike all the others, requires specifying fonts paths and proper
 import { defineConfig, fontProviders } from "astro/config";
 
 export default defineConfig({
-  fonts: {
-    families: [
-      {
-        name: "Custom",
-        provider: "local",
-        src: [
-          {
-            weights: ["400"],
-            paths: ["./assets/fonts/Custom.woff2"],
-          },
-        ],
-      },
-    ],
-  },
+  fonts: [
+    {
+      name: "Custom",
+      provider: "local",
+      src: [
+        {
+          weights: ["400"],
+          paths: ["./assets/fonts/Custom.woff2"],
+        },
+      ],
+    },
+  ],
 });
 ```
 
 #### Opt-in providers
 
-Other unifont providers are exported from `astro/config`.
+Other unifont providers are exported from `astro/config` and can be passed as `provider`:
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
 
 export default defineConfig({
-  fonts: {
-    providers: [
-      fontProviders.adobe({ apiKey: process.env.ADOBE_FONTS_API_KEY }),
-    ],
-    // ...
-  },
+  fonts: [
+    {
+      name: "Lato",
+      provider: fontProviders.adobe({
+        apiKey: process.env.ADOBE_FONTS_API_KEY,
+      }),
+    },
+  ],
 });
 ```
 
 Note that under the hood, the definition would look like:
 
 ```ts
-function adobe(config: AdobeConfig): FontProvider {
-  return {
-    name: "adobe",
+function adobe(config: AdobeConfig) {
+  return defineFontProvider({
     entrypoint: "astro/assets/fonts/adobe",
     config,
-  };
+  });
 }
 
 export const fontProviders = {
@@ -219,7 +220,7 @@ Astro provides sensible defaults:
 
 - Weight: `400`
 - Styles: `normal` and `italic`
-- Subets: `cyrillic-ext`, `cyrillic`, `greek-ext`, `greek`, `vietnamese`, `latin-ext` and `latin`
+- Subsets: `cyrillic-ext`, `cyrillic`, `greek-ext`, `greek`, `vietnamese`, `latin-ext` and `latin`
 
 ### Families
 
@@ -227,14 +228,11 @@ A family is made of a least a `name`:
 
 ```js
 export default defineConfig({
-  fonts: {
-    families: [
-      {
-        name: "Roboto",
-      },
-      "Roboto", // Shorthand
-    ],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+    },
+  ],
 });
 ```
 
@@ -242,14 +240,12 @@ It can specify options such as `weights` and `subsets`:
 
 ```js
 export default defineConfig({
-  fonts: {
-    families: [
-      {
-        name: "Roboto",
-        weights: [400, 600],
-      },
-    ],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+      weights: [400, 600],
+    },
+  ],
 });
 ```
 
@@ -257,15 +253,13 @@ It can also specify a `provider` (and `src` if it's the `local` provider):
 
 ```js
 export default defineConfig({
-  fonts: {
-    families: [
-      {
-        name: "Roboto",
-        provider: "local",
-        src: "./Roboto.woff2",
-      },
-    ],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+      provider: "local",
+      src: "./Roboto.woff2",
+    },
+  ],
 });
 ```
 
@@ -278,14 +272,12 @@ For example with the following config:
 
 ```js
 export default defineConfig({
-  fonts: {
-    families: [
-      {
-        name: "Roboto",
-        as: "Custom",
-      },
-    ],
-  },
+  fonts: [
+    {
+      name: "Roboto",
+      as: "Custom",
+    },
+  ],
 });
 ```
 
@@ -384,21 +376,21 @@ The easiest way to benefit from fallback generation is by doing the following:
 
 ```js
 {
-  family: 'Roboto',
-  fallbacks: ['sans-serif']
+  family: "Roboto",
+  fallbacks: ["sans-serif"]
 }
 ```
 
-This will give `Roboto, 'Roboto fallback: Arial', sans-serif`. Here, `Roboto fallback: Arial` is generated by Astro because it could get metrics from the Roboto font. We use Arial because it's a sans-serif font. It's still possible to provide more fallbacks:
+This will give `Roboto, "Roboto fallback: Arial", sans-serif`. Here, `Roboto fallback: Arial` is generated by Astro because it could get metrics from the Roboto font. We use Arial because it's a sans-serif font. It's still possible to provide more fallbacks:
 
 ```js
 {
-  family: 'Roboto',
-  fallbacks: ['Times New Roman', 'sans-serif']
+  family: "Roboto",
+  fallbacks: ["Times New Roman", "sans-serif"]
 }
 ```
 
-This will give `Roboto, 'Roboto fallback: Arial', 'Times New Roman', sans-serif`.
+This will give `Roboto, "Roboto fallback: Arial", "Times New Roman", sans-serif`.
 
 ### Disabling automatic fallback generation
 
@@ -406,8 +398,8 @@ You can set `automaticFallback: false` to disable this behavior. This config:
 
 ```js
 {
-  family: 'Roboto',
-  fallbacks: ['Custom', 'sans-serif'],
+  family: "Roboto",
+  fallbacks: ["Custom", "sans-serif"],
   automaticFallback: false
 }
 ```
@@ -416,8 +408,8 @@ will generate:
 
 ```js
 {
-  family: 'Roboto',
-  fallbacks: ['Custom', 'sans-serif'],
+  family: "Roboto",
+  fallbacks: ["Custom", "sans-serif"],
 }
 ```
 
@@ -463,21 +455,8 @@ I have not identified any outstanding drawback:
 
 This feature could be developed as an integration, eg. `@astrojs/fonts`. Making it part of core allows to make it more discoverable, more used. It also allows to use the `astro:assets` module for the `<Font />` component.
 
-## Different API for simpler cases
-
-The following API has been suggested for the simpler cases:
-
-```js
-export default defineConfig({
-  fonts: ["Roboto"],
-});
-```
-
-I'd love to support such API where you can provide fonts top level, or inside `fonts.families` but we can't. We can't because of how the integration API `defineConfig()` works. What if a user provides fonts names as `fonts`, and an integration provides fonts names as `fonts.families`? Given how the merging works, the shape of `AstroUserConfig` and `AstroConfig` musn't be too different. It already caused issues with i18n in the past.
-
 # Adoption strategy
 
 - **If we implement this proposal, how will existing Astro developers adopt it?** Fonts setups can vary a lot but migrating to the core fonts api should not require too much work
 - **Is this a breaking change? Can we write a codemod?** No
 - **How will this affect other projects in the Astro ecosystem?** This should make [`astro-font`](https://github.com/rishi-raj-jain/astro-font) obsolete
-
