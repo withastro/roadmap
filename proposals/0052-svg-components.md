@@ -122,7 +122,7 @@ In addition to standard unit and integration tests, the testing strategy should 
 
 - **Status Quo:** Leave developers to their own decision for handling SVGs which has typically been either embedding into Astro components or reaching for [`astro-icon`](https://github.com/natemoo-re/astro-icon) / [`unplugin-icons`](https://github.com/unplugin/unplugin-icons).
 - **SVG Spritesheet Plugin:** Leave SVG handling to userland entirely and provide an Astro plugin that automates SVG Sprite generation. This plugin could compile multiple SVGs into a single spritesheet at build time, allowing developers to manually include optimized SVGs where needed.
-- **Partial Implementation:** If full integration into Astro's core is deemed too complex, a partial implementation could involve adding support for importing `.svg` files as components without the full Sprite optimization. This would allow developers to use `.svg` files more easily, while leaving optimization to future versions or third-party tools.
+- **SVG Component:** A very similar implementation that uses an Astro `SVG` component to render a "src" which will typically be a `?raw` string from a Vite import. This implementation requires a bit more wiring up but is slightly more flexible as it allows rendering of any string. Prior art: [astro-svg-loader](https://github.com/jasikpark/astro-svg-loader).
 
 # Adoption strategy
 
