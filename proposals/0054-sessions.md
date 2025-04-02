@@ -110,13 +110,17 @@ Returns the value of the given key in the session. If the key does not exist, it
 
 Sets the value of the given key in the session. The value can be any serializable type.
 
+### `Astro.session.load(id: string): string`
+
+Loads a session by ID. In normal use a session is loaded automatically from the session cookie, but this can be used to load a session from a different ID. This is useful in cases where the session ID is stored elsewhere, such as in a database or localStorage. It also allows a session to be restored on another device, such as when it is associated with a logged-in user.
+
 ### `Astro.session.regenerate(): void`
 
 Regenerates the session ID. Best practice is to call this when a user logs in or escalates their privileges, to prevent session fixation attacks.
 
 ### `Astro.session.destroy(): void`
 
-Destroys the session, deleting the cookie and the object from the backaned. This should be called when a user logs out or their session is otherwise invalidated.
+Destroys the session, deleting the cookie and the object from the backend. This should be called when a user logs out or their session is otherwise invalidated.
 
 ## Configuration
 
