@@ -113,7 +113,9 @@ export default defineConfig({
       name: "Custom",
       cssVariable: "--that-can-be-anything",
       provider: "local",
-      src: [{ paths: ["./assets/fonts/Custom.woff2"] }],
+      variants: [
+        { src: ["./assets/fonts/Custom.woff2"], weight: 400, style: "normal" },
+      ],
     },
   ],
 });
@@ -156,7 +158,7 @@ export default defineConfig({
 
 ##### Local
 
-This provider, unlike all the others, requires specifying fonts paths and properties relatively to the root.
+This provider, unlike all the others, requires specifying fonts properties as you would do it for [`@font-face`](https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face). `src` has to be relative to the root:
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
@@ -167,11 +169,8 @@ export default defineConfig({
       name: "Custom",
       cssVariable: "--font-custom",
       provider: "local",
-      src: [
-        {
-          weights: ["400"],
-          paths: ["./assets/fonts/Custom.woff2"],
-        },
+      variants: [
+        { src: ["./assets/fonts/Custom.woff2"], weight: 400, style: "normal" },
       ],
     },
   ],
@@ -257,7 +256,7 @@ export default defineConfig({
 });
 ```
 
-It can also specify a `provider` (and `src` if it's the `local` provider):
+It can also specify a `provider` (and `variants` if it's the `local` provider):
 
 ```js
 export default defineConfig({
@@ -266,7 +265,6 @@ export default defineConfig({
       name: "Roboto",
       cssVariable: "--font-roboto",
       provider: "local",
-      src: "./Roboto.woff2",
     },
   ],
 });
