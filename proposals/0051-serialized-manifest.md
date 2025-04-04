@@ -54,6 +54,7 @@ Many integrations need this data and have to create virtual modules for this any
 - Have a unified way of exposing Astro config data.
 - Expose information that could be directly by our users without the use of integrations.
 - Expose information that can be used in client-side scripts.
+- Deprecations of duplicated information, which can be decided in a later stage.
 
 # Non-Goals
 
@@ -101,7 +102,6 @@ Exported bindings:
   - `base`
   - `build.format`
   - `site`
-  - `redirects`[^1]
 
 ### `astro:config/server`
 
@@ -120,26 +120,12 @@ Exported bindings:
   - `base`
   - `build.format`
   - `site`
-  - `redirects`[^1]
 
 
-To note that `/server`/`/client` can be used anywhere in the code, even in client scripts.
-
-[^1]: To evaluate, probably not needed
-
-## Deprecations
-
-We will deprecate existing means to read this information. The following will be deprecated:
-- `import.meta.env.BASE_URL`
-- `import.meta.env.SITE`
-- `import.meta.env.ASSETS_PREFIX`
-- `Astro.site`/`ctx.site`
 
 # Testing Strategy
 
-- The virtual modules will be "usable" via experimental flag. Attempting to use these virtual modules without the experimental flag turned on will result into a hard error.
-- After a grace period where we stabilise the APIs, the experimental flag will be removed.
-
+- Integration tests will be added
 
 # Drawbacks
 
@@ -160,10 +146,5 @@ I feel that Astro should provide the primitives to integrations, so they can cre
 - The experimental flag `experimental.serializeConfig` will be shipped in a minor.
 - Once the RFC is stable and approved, a new minor will remove the flag.
 
-# Unresolved Questions
-
-- The name of the module
-- The name of the sub-paths
-- The list of bindings to expose
 
 
