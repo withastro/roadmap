@@ -158,7 +158,7 @@ export default defineConfig({
 
 ##### Local
 
-This provider, unlike all the others, requires specifying fonts properties as you would do it for [`@font-face`](https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face). `src` has to be relative to the root:
+This provider, unlike all the others, requires specifying fonts properties as you would do it for [`@font-face`](https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face). `src` is an array of entrypoints:
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
@@ -170,7 +170,16 @@ export default defineConfig({
       cssVariable: "--font-custom",
       provider: "local",
       variants: [
-        { src: ["./assets/fonts/Custom.woff2"], weight: 400, style: "normal" },
+        {
+          src: [
+            "./assets/fonts/Custom.woff2", // Relative to the root
+            new URL("./test.ttf", import.meta.url),
+            "my-package/font.woff",
+            { url: "./abc.woff2", tech: "variations" },
+          ],
+          weight: 400,
+          style: "normal",
+        },
       ],
     },
   ],
