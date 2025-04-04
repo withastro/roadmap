@@ -51,12 +51,12 @@ Many integrations need this data and have to create virtual modules for this any
 - Have a unified way of exposing Astro config data.
 - Expose information that could be directly by our users without the use of integrations.
 - Expose information that can be used in client-side scripts.
-- Deprecations of duplicated information, which can be decided in a later stage.
 
 # Non-Goals
 
 - Expose non-serializable information such as integrations (they are functions).
 - Expose all information coming from the configuration.
+- Deprecations of duplicated information, which can be decided in a later stage.
 
 # Detailed Design
 
