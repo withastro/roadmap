@@ -14,18 +14,15 @@
 
 - Start Date: 2025-01-22
 - Reference Issues: 
-- Implementation PR: 
+- Implementation PR: https://github.com/withastro/astro/pull/13084
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1099
-- Stage 3 PR:
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1106
 
 # Summary
 
 Expose common Astro config properties to users and integrations
 
 # Example
-
-> [!NOTE]
-> The following example don't reflect the final naming of the module 
 
 ```js
 import { trailingSlash, i18n, build } from 'astro:config/client';
@@ -62,9 +59,6 @@ Many integrations need this data and have to create virtual modules for this any
 - Expose all information coming from the configuration.
 
 # Detailed Design
-
-> [!IMPORTANT]
-> The proposal will use some paths/names that might not be official, only to provide some scenarios or examples. Please refer to [#proposed-apis] to understand the final and proposed modules.  
 
 The main idea is to provide a virtual module with sub-paths (e.g. `astro:config/client`, `astro:config/server`), each sub path will expose information that won't be available in the other sub paths, so information won't be repeated. These modules will be compiled into code, so a piece information e.g. `trailingSlash` should be available only once in order to avoid polluting the final bundle with repeated code.
 
@@ -120,8 +114,6 @@ Exported bindings:
   - `base`
   - `build.format`
   - `site`
-
-
 
 # Testing Strategy
 
