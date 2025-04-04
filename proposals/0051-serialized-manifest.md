@@ -28,7 +28,7 @@ Expose common Astro config properties to users and integrations
 > The following example don't reflect the final naming of the module 
 
 ```js
-import { trailingSlash, i18n, build } from 'astro:config/routing';
+import { trailingSlash, i18n, build } from 'astro:config/client';
 
 console.log(trailingSlash);
 console.log(i18n.locales);
@@ -36,7 +36,7 @@ console.log(build.format);
 ```
 
 ```js
-import { srcDir, build } from 'astro:config/paths';
+import { srcDir, build } from 'astro:config/server';
 
 console.log(srcDir);
 console.log(build.client)
@@ -45,9 +45,9 @@ console.log(build.server)
 
 # Background & Motivation
 
-It happens quite often in userland to need the trailingSlash setting, or the base etc. Things that are available at import.meta.env and some that are not. The goal is to unify the way we expose this data.
+It happens quite often in userland to need the trailingSlash setting, or the base etc. Some things are available at import.meta.env and some that are not. The goal is to unify the way we expose this data.
 
-Many integrations need this data and have to create virtual modules for this anwyays.
+Many integrations need this data and have to create virtual modules for this anyway.
 
 # Goals
 
@@ -67,7 +67,7 @@ Many integrations need this data and have to create virtual modules for this anw
 
 The main idea is to provide a virtual module with sub-paths (e.g. `astro:config/client`, `astro:config/server`), each sub path will expose information that won't be available in the other sub paths, so information won't be repeated. These modules will be compiled into code, so a piece information e.g. `trailingSlash` should be available only once in order to avoid polluting the final bundle with repeated code.
 
-Some sub-paths can't be used inside client-side code, because they could expose sensitive information, such as file system paths. Hence, we should divide the information based on where they could be used. We can't track if binding e.g. `config.srcDir` is used inside a client script, but we can track if a `import { srcDir } from astro:config/paths` is used inside a client side code. 
+Some sub-paths can't be used inside client-side code, because they could expose sensitive information, such as file system paths. Hence, we should divide the information based on where they could be used. We can't track if binding e.g. `config.srcDir` is used inside a client script, but we can track if a `import { srcDir } from astro:config/server` is used inside a client side code. 
 
 ## Use the manifest
 
@@ -79,7 +79,7 @@ The source code already does a very good job to serialise the information across
 ## What to expose
 
 As a rule of thumb, the information to expose should adhere to the following guidelines:
-- Information that can be serialised. Functions, `Map`, `Set`, etc. shouldn't be exposed. As long as a field can go through `JSON.strigify`, it's a good candidate. 
+- Information that can be serialised. Functions, `Map`, `Set`, etc. shouldn't be exposed. As long as a field can go through `JSON.stringify`, it's a good candidate. 
 - Information that can be used directly by our end-users. Integration developers have access to `AstroConfig`.
 - Information that isn't present inside `AstroConfig`. As mentioned previously, the `SSRManifest` contains useful information that are often used by on-demand pages and adapters.
   An example is `SSRManifest.i18n.domainLookupTable`, which is used by adapters to understand the mapping of a domain to a locale.
@@ -138,7 +138,7 @@ We will deprecate existing means to read this information. The following will be
 # Testing Strategy
 
 - The virtual modules will be "usable" via experimental flag. Attempting to use these virtual modules without the experimental flag turned on will result into a hard error.
-- After a gracing period where we stabilise the APIs, the experimental flag will be removed.
+- After a grace period where we stabilise the APIs, the experimental flag will be removed.
 
 
 # Drawbacks
