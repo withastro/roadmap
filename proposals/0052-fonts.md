@@ -171,10 +171,11 @@ export default defineConfig({
       provider: "local",
       variants: [
         {
+          // Can be a path relative to the project root, a package import or a URL
           src: [
             "./assets/fonts/Custom.woff2", // Relative to the root
-            new URL("./test.ttf", import.meta.url),
-            "my-package/font.woff",
+            new URL("./test.ttf", import.meta.url), // URL
+            "my-package/font.woff", // Package import
             { url: "./abc.woff2", tech: "variations" },
           ],
           weight: 400,
@@ -210,7 +211,8 @@ Note that under the hood, the definition looks like:
 
 ```ts
 function adobe(config: AdobeConfig) {
-  return defineFontProvider({
+  return defineAstroFontProvider({
+    // Can be a path relative to the project root, a package import or a URL
     entrypoint: "astro/assets/fonts/adobe",
     config,
   });
