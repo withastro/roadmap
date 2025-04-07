@@ -13,12 +13,15 @@ Have first-party support for fonts in Astro.
 # Example
 
 ```js
-// astro config
+// astro.config.mjs
+import { defineConfig, fontProviders } from "astro/config";
+
 export default defineConfig({
   fonts: [
     {
       name: "Roboto",
       cssVariable: "--font-roboto",
+      provider: fontProviders.google(),
     },
   ],
 });
@@ -75,13 +78,14 @@ Fontsource is great! But it's not intuitive to preload, and more importantly, do
 The goal is to have a config that starts really simple for basic usecases, but can also be complex for advanced usecases. Here's an example of basic config:
 
 ```js
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 
 export default defineConfig({
   fonts: [
     {
       name: "Roboto",
       cssVariable: "--font-roboto",
+      provider: fontProviders.google(),
     },
   ],
 });
@@ -100,6 +104,7 @@ export default defineConfig({
     {
       name: "Roboto",
       cssVariable: "--font-roboto",
+      provider: fontProviders.google(),
     },
     {
       name: "Lato",
@@ -127,34 +132,7 @@ export default defineConfig({
 
 A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction. It's an abstraction on top of [unifont](https://github.com/unjs/unifont) providers.
 
-#### Built-in providers
-
-##### Google
-
-This is the default, and it's not configurable. Given the amount of fonts it supports, it sounds like a logic choice.
-
-```js
-export default defineConfig({
-  fonts: [
-    {
-      name: "Roboto",
-      cssVariable: "--font-roboto",
-    },
-  ],
-});
-```
-
-```js
-export default defineConfig({
-  fonts: [
-    {
-      name: "Roboto",
-      cssVariable: "--font-roboto",
-      provider: "google",
-    },
-  ],
-});
-```
+#### Available providers
 
 ##### Local
 
@@ -187,7 +165,7 @@ export default defineConfig({
 });
 ```
 
-#### Opt-in providers
+##### Remote providers
 
 Other unifont providers are exported from `astro/config` and can be passed as `provider`:
 
@@ -196,6 +174,11 @@ import { defineConfig, fontProviders } from "astro/config";
 
 export default defineConfig({
   fonts: [
+    {
+      name: "Roboto",
+      cssVariable: "--font-roboto",
+      provider: fontProviders.google(),
+    },
     {
       name: "Lato",
       cssVariable: "--font-lato",
@@ -220,6 +203,10 @@ function adobe(config: AdobeConfig) {
 
 export const fontProviders = {
   adobe,
+  bunny,
+  fontshare,
+  fontsource,
+  google,
 };
 ```
 
@@ -248,6 +235,7 @@ export default defineConfig({
     {
       name: "Roboto",
       cssVariable: "--font-roboto",
+      provider: fontProviders.google(),
     },
   ],
 });
@@ -261,6 +249,7 @@ export default defineConfig({
     {
       name: "Roboto",
       cssVariable: "--font-roboto",
+      provider: fontProviders.google(),
       weights: [400, 600],
     },
   ],
@@ -380,6 +369,7 @@ The easiest way to benefit from fallback generation is by doing the following:
 {
   family: "Roboto",
   cssVariable: "--font-roboto",
+  provider: fontProviders.google(),
   fallbacks: ["sans-serif"]
 }
 ```
@@ -390,6 +380,7 @@ This will give `Roboto, "Roboto fallback: Arial", sans-serif`. Here, `Roboto fal
 {
   family: "Roboto",
   cssVariable: "--font-roboto",
+  provider: fontProviders.google(),
   fallbacks: ["Times New Roman", "sans-serif"]
 }
 ```
@@ -405,6 +396,7 @@ You can set `automaticFallback: false` to disable this behavior. This config:
   family: "Roboto",
   cssVariable: "--font-roboto",
   fallbacks: ["Custom", "sans-serif"],
+  provider: fontProviders.google(),
   automaticFallback: false
 }
 ```
