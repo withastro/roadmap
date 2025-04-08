@@ -46,7 +46,7 @@ import type { APIContext } from "astro";
 export async function POST(req: Request, context: APIContext) {
   const cart = await context.session.get("cart");
   cart.push(req.body.item);
-  await Astro.session.set("cart", cart);
+  Astro.session.set("cart", cart);
   return Response.json(cart);
 }
 ```
@@ -64,7 +64,7 @@ export const server = {
     handler: async (input, context) => {
       const cart = await context.session.get("cart");
       cart.push(input.productId);
-      await context.session.set("cart", cart);
+      context.session.set("cart", cart);
       return cart;
     },
   }),
