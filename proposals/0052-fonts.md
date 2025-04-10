@@ -33,7 +33,7 @@ export default defineConfig({
 import { Font } from "astro:fonts"
 ---
 <head>
-	<Font family="--font-roboto" />
+	<Font cssVariable="--font-roboto" />
 	<style>
 		h1 {
 			font-family: var(--font-roboto);
@@ -277,7 +277,7 @@ And using the component as follows:
 import { Font } from "astro:assets"
 ---
 <head>
-  <Font family="--font-roboto" />
+  <Font cssVariable="--font-roboto" />
 </head>
 ```
 
@@ -298,16 +298,16 @@ Setting the config (see above) configures what fonts to download, but it doesn't
 import { Font } from "astro:assets"
 ---
 <head>
-  <Font family="--font-roboto" preload />
-  <Font family="--custom" />
+  <Font cssVariable="--font-roboto" preload />
+  <Font cssVariable="--custom" />
 </head>
 ```
 
-### Family
+### cssVariable
 
-The family will be typed using type gen, based on the user's config.
+The cssVariable will be typed using type gen, based on the user's config.
 
-### Preload
+### preload
 
 Defaults to `false`. Will output preload link tags.
 
@@ -367,7 +367,7 @@ The easiest way to benefit from fallback generation is by doing the following:
 
 ```js
 {
-  family: "Roboto",
+  name: "Roboto",
   cssVariable: "--font-roboto",
   provider: fontProviders.google(),
   fallbacks: ["sans-serif"]
@@ -378,7 +378,7 @@ This will give `Roboto, "Roboto fallback: Arial", sans-serif`. Here, `Roboto fal
 
 ```js
 {
-  family: "Roboto",
+  name: "Roboto",
   cssVariable: "--font-roboto",
   provider: fontProviders.google(),
   fallbacks: ["Times New Roman", "sans-serif"]
@@ -389,15 +389,15 @@ This will give `Roboto, "Roboto fallback: Arial", "Times New Roman", sans-serif`
 
 ### Disabling automatic fallback generation
 
-You can set `automaticFallback: false` to disable this behavior. This config:
+You can set `optimizedFallbacks: false` to disable this behavior. This config:
 
 ```js
 {
-  family: "Roboto",
+  name: "Roboto",
   cssVariable: "--font-roboto",
   fallbacks: ["Custom", "sans-serif"],
   provider: fontProviders.google(),
-  automaticFallback: false
+  optimizedFallbacks: false
 }
 ```
 
@@ -405,7 +405,7 @@ will generate:
 
 ```js
 {
-  family: "Roboto",
+  name: "Roboto",
   cssVariable: "--font-roboto",
   fallbacks: ["Custom", "sans-serif"],
 }
