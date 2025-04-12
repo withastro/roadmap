@@ -8,7 +8,7 @@
 
 # Summary
 
-This RFC proposes adding native support for importing and rendering `.svg` files as Astro components, with optimized rendering techniques to minimize performance impact. It aims to allow `.svg` files to be treated as components that accept props and be optimized for repeated use on a page using `<symbol>` and `<use>` elements.
+This RFC proposes adding native support for importing and rendering `.svg` files as Astro components. It aims to allow `.svg` files to be treated as components that accept props.
 
 # Example
 
@@ -102,35 +102,31 @@ This would generate the following output:
 
 ## Accessibility Considerations
 
-By default Astro allows you to configure the SVG to meet your accessibility needs.
+The user is required to apply the use-case specific attributes/elements in order to make the SVG accessible.
 
 # Testing Strategy
 
 In addition to standard unit and integration tests, the testing strategy should include:
 
-- **Cross-browser testing:** Ensuring that the Sprite pattern works consistently across all major browsers (e.g., Chrome, Firefox, Safari, Edge).
 - **Regression testing:** Verifying that this optimization doesn't unintentionally break any existing `.svg` imports.
 - **Performance testing:** Measuring the performance improvements in pages with many `<svg>` elements and comparing the impact of the new rendering system against inlining every SVG individually.
 
 # Drawbacks
 
-- **Increased Complexity for Debugging**: Debugging issues with SVG rendering could become more difficult due to the added abstraction of the Sprite approach. Developers may need additional documentation to understand how SVGs are being rendered and optimized, especially when diagnosing rendering problems in complex applications.
-- **Limited Use Cases:** The performance benefits of the Sprite approach may be minimal for projects that don't heavily rely on SVGs. For smaller projects or those with limited SVG usage, the optimization might introduce unnecessary complexity without providing significant gains in performance.
-- **Edge Cases with Advanced SVG Features:** Some advanced features of SVGs, like `<filter>` or `<mask>`, _may_ have issues when used within a `<symbol>` and referenced by `<use>`. These features will need thorough testing to ensure they function properly in the optimized model.
+- **Increased Payload with more SVGs**: Due to SVGs being inlined they aren't deduped leading to a larger payload when utilizing more SVGs.
 
 # Alternatives
 
 - **Status Quo:** Leave developers to their own decision for handling SVGs which has typically been either embedding into Astro components or reaching for [`astro-icon`](https://github.com/natemoo-re/astro-icon) / [`unplugin-icons`](https://github.com/unplugin/unplugin-icons).
-- **SVG Spritesheet Plugin:** Leave SVG handling to userland entirely and provide an Astro plugin that automates SVG Sprite generation. This plugin could compile multiple SVGs into a single spritesheet at build time, allowing developers to manually include optimized SVGs where needed.
 - **SVG Component:** A very similar implementation that uses an Astro `SVG` component to render a "src" which will typically be a `?raw` string from a Vite import. This implementation requires a bit more wiring up but is slightly more flexible as it allows rendering of any string. Prior art: [astro-svg-loader](https://github.com/jasikpark/astro-svg-loader).
 
 # Adoption strategy
 
 To ensure that developers can easily adopt this feature:
 
-- **Documentation:** The Astro documentation will be updated with detailed guides and examples of how to use `.svg` imports and leverage the new optimization strategies. Special focus will be placed on explaining the benefits of the Sprite pattern for performance-conscious developers.
-  - **Background:** Documentation should be included to explain when to choose the SVG format over alternative image formats.
-  - **Framework-Specific Docs:** Documentation will also need to address framework-specific usage. This will cover the limitations of the `.svg` imports in popular frameworks like React and Vue, ensuring smooth adoption for developers who are building Astro projects using these frameworks.
-  - **Code Examples:** The core team can provide boilerplate examples and starter templates that showcase the optimized `.svg` handling. These templates could be adapted for common use-cases, such as building an icon library or optimizing assets for a marketing page.
+- **Documentation:** The Astro documentation will be updated with detailed guides and examples of how to use `.svg` imports.
+- **Background:** Documentation should be included to explain when to choose the SVG format over alternative image formats.
+- **Framework-Specific Docs:** Documentation will also need to address framework-specific usage. This will cover the limitations of the `.svg` imports in popular frameworks like React and Vue, ensuring smooth adoption for developers who are building Astro projects using these frameworks.
+- **Code Examples:** The core team can provide boilerplate examples and starter templates that showcase the optimized `.svg` handling. These templates could be adapted for common use-cases, such as building an icon library or optimizing assets for a marketing page.
 - **Experimental Flag:** Initially, this feature could be released under an experimental flag in `astro.config.mjs` to gather feedback from early adopters. If the feedback is positive, the feature could later be enabled by default in a future Astro release.
 - **Migration Path:** Since this feature is backwards-compatible, no migration will be required for existing projects. Developers can opt into the new functionality by updating their `.svg` imports, but their projects will continue working without any changes if they choose not to adopt the new behavior.
