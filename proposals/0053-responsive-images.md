@@ -31,7 +31,7 @@ Responsive images will be enabled by setting the `layout` prop to `responsive`, 
 import { Image } from "astro:assets"
 import rocket from "./rocket.jpg"
 ---
-<Image src={rocket} width={800} height={600} layout="responsive" />
+<Image src={rocket} width={800} height={600} layout="constrained" />
 ```
 
 A new `layout` option for the `image` config will default all images to that layout. This can be overridden on each image.
@@ -41,7 +41,7 @@ import { defineConfig } from "astro/config";
 
 export default defineConfig({
   image: {
-    layout: "responsive",
+    layout: "constrained",
   },
 });
 ```
@@ -120,7 +120,7 @@ export const getWidths = ({
       ? [originalWidth]
       : [width, maxSize];
   }
-  if (layout === "responsive") {
+  if (layout === "constrained") {
     return (
       [
         // Always include the image at 1x and 2x the specified width
@@ -159,15 +159,15 @@ export const getSizes = (
   switch (layout) {
     // If screen is wider than the max size then image width is the max size,
     // otherwise it's the width of the screen
-    case `responsive`:
+    case "constrained":
       return `(min-width: ${width}px) ${width}px, 100vw`;
 
     // Image is always the same width, whatever the size of the screen
-    case `fixed`:
+    case "fixed":
       return `${width}px`;
 
     // Image is always the width of the screen
-    case `full-width`:
+    case "full-width":
       return `100vw`;
 
     default:
@@ -178,37 +178,30 @@ export const getSizes = (
 
 ### Image styling
 
-It is important that an image is displayed at the correct size before the source has loaded, otherwise the page will need to re-layout. This causes annoying jumps in the page layout, and poor CLS scores. Because of this, we don't rely on the intrinsic size of the loaded image, and instead use CSS to set the correct sizing. We do not rely on just the image `width` and `height`, because we want the responsive images to resize according to the container width.
-
-Shared styles will be generated for all sites that use images, which are then applied to images according to the chosen layout, using data attributes to target the styles, with CSS variables to set the image-specific options.
+In order to ensure the resizing behavior for images matches the layout, the component will also apply minimal styles to the image. This is done by adding a `data-astro-image` attribute to the image tag, which is set to the layout name. This allows the CSS to target the images according to their layout. The styles are generated in a way that allows them to be overridden by user styles, so that users can customize them if they want.
 
 ```astro
-<img [data-astro-image]="responsive" {/* ...other props */} style="--w: 800; --h: 600; --fit: cover; --pos: center;" />
+<img [data-astro-image]="constrained" {/* ...other props */} style="--fit: cover; --pos: center;" />
 ```
 
-CSS vars would be used to set the width, height and crop options for each image. The classes for each layout would be as follows:
+`object-fit` and `object-position` values are set to ensure that images are displayed correctly even if the image service does not support cropping. CSS vars would be used to set the `fit` and `position` options for each image.
+
+The styles use the [`:where()` pseudo-class](https://developer.mozilla.org/en-US/docs/Web/CSS/:where), which has a specificity of 0, meaning that it is easy to override with user styles if needed.
+
+The following is the complete shared CSS included when using the responsive image components:
 
 ```css
-[data-astro-image] {
-  width: 100%;
-  height: auto;
+:where([data-astro-image]) {
   object-fit: var(--fit);
   object-position: var(--pos);
-  aspect-ratio: var(--w) / var(--h);
 }
-/* Styles for responsive layout */
-[data-astro-image="responsive"] {
-  max-width: calc(var(--w) * 1px);
-  max-height: calc(var(--h) * 1px);
+:where([data-astro-image="full-width"]) {
+  width: 100%;
 }
-/* Styles for fixed layout */
-[data-astro-image="fixed"] {
-  width: calc(var(--w) * 1px);
-  height: calc(var(--h) * 1px);
+:where([data-astro-image="constrained"]) {
+  max-width: 100%;
 }
 ```
-
-Users can override these styles if they prefer, by passing `class` or `style` props to the component.
 
 ### Breakpoints
 
@@ -293,7 +286,7 @@ The current component allows users to implement most of these options by setting
 
 - This will initially be enabled with an `experimental.responsiveImages` config option. Configuration of defaults use prefixed option names: `image.experimentalLayout` and `image.experimentalFit`.
 - When unflagged, it will be backwards-compatible. If `layout` is not set as a prop or default config value, the component will behave exactly as now.
-- In future we may decide to make this the default, but that would be in a future major, not Astro 5.
+- In future we may decide to make this the default, but that would be in a major release.
 
 # Unresolved Questions
 
