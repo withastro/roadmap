@@ -263,18 +263,20 @@ export interface LiveDataCollection<
   };
 }
 
-export interface LoadEntryContext<TEntryFilter = never> {
-  filter: TEntryFilter extends never ? { id: string } : TEntryFilter;
+export interface LoadEntryContext<TEntryFilter = undefined> {
+  filter: TEntryFilter extends undefined
+    ? {
+        id: string;
+      }
+    : TEntryFilter;
 }
-
-export interface LoadCollectionContext<TCollectionFilter = unknown> {
+export interface LoadCollectionContext<TCollectionFilter = undefined> {
   filter?: TCollectionFilter;
 }
-
 export interface LiveLoader<
   TData extends Record<string, unknown> = Record<string, unknown>,
-  TEntryFilter extends Record<string, unknown> | never = never,
-  TCollectionFilter extends Record<string, unknown> | never = never
+  TEntryFilter extends Record<string, unknown> | undefined = undefined,
+  TCollectionFilter extends Record<string, unknown> | undefined = undefined
 > {
   /** Unique name of the loader, e.g. the npm package name */
   name: string;
