@@ -165,6 +165,8 @@ export default defineConfig({
 });
 ```
 
+`weight` and `style` will be inferred from the the first source if they are omitted.
+
 ##### Remote providers
 
 Other unifont providers are exported from `astro/config` and can be passed as `provider`:
