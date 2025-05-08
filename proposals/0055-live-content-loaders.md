@@ -242,7 +242,7 @@ export interface LiveDataEntry<
   /** The entry data */
   data: TData;
   /** Optional cache hints */
-  cache?: {
+  cacheHint?: {
     /** Cache tags */
     tags?: string[];
     /** Maximum age of the response in seconds */
@@ -255,7 +255,7 @@ export interface LiveDataCollection<
 > {
   entries: Array<LiveDataEntry<TData>>;
   /** Optional cache hints */
-  cache?: {
+  cacheHint?: {
     /** Cache tags */
     tags?: string[];
     /** Maximum age of the response in seconds */
@@ -299,7 +299,7 @@ Users will still be able to define a Zod schema inside `defineCollection` to val
 
 The returned data is not cached by Astro, but a loader can provide hints to assist in caching the response. This would be designed to integrate with the proposed [route caching API](https://github.com/withastro/roadmap/issues/1140), but could also be used to manually set response headers. The scope of this RFC does not include details on the route cache integration, but will illustrate how the loader can provide hints that can then be used by the route cache or other caching mechanisms.
 
-Loader responses can include a `cache` object that contains the following properties:
+Loader responses can include a `cacheHint` object that contains the following properties:
 
 - `tags`: an array of strings that can be used to tag the response. This is useful for cache invalidation.
 - `maxAge`: a number that specifies the maximum age of the response in seconds. This is useful for setting the cache expiry time.
@@ -314,7 +314,7 @@ return {
     id: product.id,
     data: product,
   })),
-  cache: {
+  cacheHint: {
     tags: ["products", "clothes"],
     maxAge: 60 * 60, // 1 hour
   },
@@ -323,14 +323,14 @@ return {
 
 This would allow the user to tag the response with the `products` and `clothes` tags, and set the expiry time to 1 hour. The user could then use these tags to invalidate the cache when the data changes.
 
-The loader can also provide a `cache` object for an individual entry, allowing fine-grained cache control:
+The loader can also provide a `cacheHint` object for an individual entry, allowing fine-grained cache control:
 
 ```ts
 return {
   id: filter.id,
   data: product,
-  cache: {
-    tags: ["products", "clothes", `product-${filter.id}`],
+  cacheHint: {
+    tags: [`product-${filter.id}`],
     maxAge: 60 * 60, // 1 hour
   },
 };
@@ -347,8 +347,8 @@ import Product from "../components/Product.astro";
 
 const product = await getEntry("products", Astro.params.id);
 
-Astro.response.headers.set("Cache-Tag", product.cache.tags.join(","));
-Astro.response.headers.set("CDN-Cache-Control", `s-maxage=${product.cache.maxAge}`);
+Astro.response.headers.set("Cache-Tag", product.cacheHint.tags.join(","));
+Astro.response.headers.set("CDN-Cache-Control", `s-maxage=${product.cacheHint.maxAge}`);
 ---
 <Product product={product.data} />
 ```
