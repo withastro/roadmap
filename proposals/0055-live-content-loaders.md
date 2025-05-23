@@ -21,7 +21,7 @@
 
 # Summary
 
-Adds support for live data to content collections. Defines a new type of content loader that fetches data at runtime rather than build time, allowing users to get the data with a similar API.
+Adds support for live data to content collections. Defines a new type of content loader that fetches data at runtime rather than build time, allowing users to get the data with dedicated functions that make the runtime behavior explicit.
 
 # Example
 
@@ -47,33 +47,57 @@ export function storeLoader({
     name: "store-loader",
     loadCollection: async ({ logger, filter }) => {
       logger.info(`Loading collection from ${field}`);
-      // load from API
-      const products = await loadStoreData({ field, key, filter });
-      const entries = products.map((product) => ({
-        id: product.id,
-        data: product,
-      }));
-      return {
-        entries,
-      };
+      try {
+        // load from API
+        const products = await loadStoreData({ field, key, filter });
+        const entries = products.map((product) => ({
+          id: product.id,
+          data: product,
+        }));
+        return {
+          entries,
+        };
+      } catch (error) {
+        logger.error(`Failed to load collection: ${error.message}`);
+        return {
+          error: {
+            message: `Failed to load products: ${error.message}`,
+            code: "COLLECTION_LOAD_ERROR",
+          },
+        };
+      }
     },
     loadEntry: async ({ logger, filter }) => {
       logger.info(`Loading entry from ${field}`);
-      // load from API
-      const product = await loadStoreData({
-        field,
-        key,
-        filter,
-      });
+      try {
+        // load from API
+        const product = await loadStoreData({
+          field,
+          key,
+          filter,
+        });
 
-      if (!product) {
-        logger.error(`Product not found`);
-        return;
+        if (!product) {
+          return {
+            error: {
+              message: `Product not found`,
+              code: "ENTRY_NOT_FOUND",
+            },
+          };
+        }
+        return {
+          id: filter.id,
+          data: product,
+        };
+      } catch (error) {
+        logger.error(`Failed to load entry: ${error.message}`);
+        return {
+          error: {
+            message: `Failed to load product: ${error.message}`,
+            code: "ENTRY_LOAD_ERROR",
+          },
+        };
       }
-      return {
-        id: filter.id,
-        data: product,
-      };
     },
   };
 }
@@ -95,23 +119,30 @@ const products = defineCollection({
 export const collections = { products };
 ```
 
-The loader can be used in the same way as a normal content collection:
+The loader is accessed using new dedicated functions that make the runtime behavior explicit:
 
 ```astro
 ---
-import { getCollection, getEntry } from "astro:content";
+import { getLiveCollection, getLiveEntry } from "astro:content";
 
-// Get all entries in a collection, like other collections
-const allProducts = await getCollection("products");
+// Get all entries in a collection
+const { data: allProducts, error } = await getLiveCollection("products");
+if (error) {
+  // Handle error gracefully
+  return Astro.redirect('/500');
+}
 
 // Live collections optionally allow extra filters to be passed in, defined by the loader
-const clothes = await getCollection("products", { category: "clothes" });
+const { data: clothes } = await getLiveCollection("products", { category: "clothes" });
 
-// Get entrey by ID like other collections
-const productById = await getEntry("products", Astro.params.id);
+// Get entry by ID
+const { data: productById } = await getLiveEntry("products", Astro.params.id);
 
 // Query a single entry using the object syntax
-const productBySlug = await getEntry("products", { slug: Astro.params.slug });
+const { data: productBySlug, error: slugError } = await getLiveEntry("products", { slug: Astro.params.slug });
+if (slugError) {
+  return Astro.redirect('/404');
+}
 ---
 ```
 
@@ -123,14 +154,17 @@ This means that content collections are not suitable for pages that update frequ
 
 This proposal introduces a new kind of loader that fetches data from an API at runtime, rather than build time. As with other content loaders, these loaders abstract the loading logic, meaning users don't need to understand the details of how data is loaded. These loaders can be distributed as node modules, or injected by integrations.
 
+The API uses dedicated functions (`getLiveCollection` and `getLiveEntry`) to make it explicit that these operations perform network requests at runtime, helping developers understand the performance implications and error handling requirements.
+
 # Goals
 
 - a new type of **live content loader** that is executed at runtime
-- integration with user-facing `getEntry` and `getCollection` functions, allowing developers to use **a familiar, common API** to fetch data
+- dedicated user-facing functions `getLiveEntry` and `getLiveCollection` that make the **runtime behavior explicit**
+- **built-in error handling** with consistent error response format
 - loader-specific **query and filters**, which a loader can define and pass to the API
 - **type-safe** data and query options, defined by the loader as generic types
-- support for user-defined **Zod schemas**, executed at runtime, to validate or transform the data returned by the loader.
-- support for runtime **markdown rendering**, using a helper function provided in the loader context.
+- support for user-defined **Zod schemas**, executed at runtime, to validate or transform the data returned by the loader
+- support for runtime **markdown rendering**, using a helper function provided in the loader context
 - optional **integration with [route caching](https://github.com/withastro/roadmap/issues/1140)**, allowing loaders to define cache tags and expiry times associated with the data which are then available to the user
 
 # Non-Goals
@@ -144,13 +178,51 @@ This proposal introduces a new kind of loader that fetches data from an API at r
 
 # Detailed Design
 
-While the user-facing API is similar to the existing content loaders, the implementation is significantly different.
+The user-facing API uses dedicated functions `getLiveCollection` and `getLiveEntry` to make it clear these are runtime operations that may fail and have different performance characteristics than regular content collections.
+
+## User-facing API
+
+The new functions are exported from `astro:content` alongside the existing functions:
+
+```ts
+import {
+  getCollection,
+  getEntry,
+  getLiveCollection,
+  getLiveEntry,
+} from "astro:content";
+```
+
+These functions return a result object with either `data` or `error`, making error handling explicit and consistent:
+
+```ts
+// Success case
+const { data, error } = await getLiveCollection("products");
+if (error) {
+  // Handle error
+  console.error(error.message);
+  return Astro.redirect("/error");
+}
+// Use data safely
+data.forEach((product) => {
+  // ...
+});
+
+// With filters
+const { data: electronics } = await getLiveCollection("products", {
+  category: "electronics",
+});
+
+// Single entry
+const { data: product, error } = await getLiveEntry(
+  "products",
+  Astro.params.id
+);
+```
 
 ## Loader API
 
-A live loader is an object with two methods: `loadCollection` and `loadEntry`. For libraries that distribute a loader, the convention for these will be for users to call a function that returns a loader object, which is then passed to the `defineCollection` function. This allows the user to pass in any configuration options they need. The loader object is then passed to the `defineCollection` function.
-
-The `loadCollection` and `loadEntry` methods are called when the user calls `getCollection` or `getEntry`. They return the requested data from the function, unlike existing loaders which are responsible for storing the data in the content layer data store.
+A live loader is an object with two methods: `loadCollection` and `loadEntry`. These methods should handle errors gracefully and return either data or an error object:
 
 ```ts
 // storeloader.ts
@@ -159,20 +231,48 @@ export function storeLoader({ field, key }): LiveLoader {
   return {
     name: "store-loader",
     loadCollection: async ({ filter }) => {
-      // ...
-      return {
-        entries: products.map((product) => ({
-          id: product.id,
-          data: product,
-        })),
-      };
+      try {
+        const products = await fetchProducts(filter);
+        return {
+          entries: products.map((product) => ({
+            id: product.id,
+            data: product,
+          })),
+        };
+      } catch (error) {
+        return {
+          error: {
+            message: `Failed to load products: ${error.message}`,
+            code: "COLLECTION_LOAD_ERROR",
+            cause: error,
+          },
+        };
+      }
     },
     loadEntry: async ({ filter }) => {
-      // ...
-      return {
-        id: filter.id,
-        data: product,
-      };
+      try {
+        const product = await fetchProduct(filter);
+        if (!product) {
+          return {
+            error: {
+              message: "Product not found",
+              code: "ENTRY_NOT_FOUND",
+            },
+          };
+        }
+        return {
+          id: filter.id,
+          data: product,
+        };
+      } catch (error) {
+        return {
+          error: {
+            message: `Failed to load product: ${error.message}`,
+            code: "ENTRY_LOAD_ERROR",
+            cause: error,
+          },
+        };
+      }
     },
   };
 }
@@ -188,15 +288,15 @@ The new `live.config.ts` file has similar syntax to the existing `content.config
 
 For existing collections, `getCollection` accepts an optional function to filter the collection. This filtering is performed in-memory on the data returned from the store. This is not an efficient approach for live loaders, which are likely to be making network requests for the data at request time. Loading all of the entries and then filtering them on the client would cause over-fetching, so it is preferable to filter the data natively in the API.
 
-For this reason, the `getCollection` and `getEntry` methods accept a query object, which is passed to the loader `loadEntry` and `loadCollection` functions. This is an arbitrary object, the type of which is defined by the loader. The loader can then use this filter to fetch the data from the API, according to the API's query syntax. The `getEntry` function also has a shorthand syntax for querying a single entry by ID by passing a string that matches the existing `getEntry` syntax. This is passed to the loader as an object with a single `id` property.
+For this reason, the `getLiveCollection` and `getLiveEntry` methods accept a query object, which is passed to the loader `loadEntry` and `loadCollection` functions. This is an arbitrary object, the type of which is defined by the loader. The loader can then use this filter to fetch the data from the API, according to the API's query syntax. The `getLiveEntry` function also has a shorthand syntax for querying a single entry by ID by passing a string that matches the existing `getEntry` syntax. This is passed to the loader as an object with a single `id` property.
 
 ## Type Safety
 
 The `LiveLoader` type is a generic type that takes three parameters:
 
 - `TData`: the type of the data returned by the loader
-- `TEntryFilter`: the type of the filter object passed to `getEntry`
-- `TCollectionFilter`: the type of the filter object passed to `getCollection`
+- `TEntryFilter`: the type of the filter object passed to `getLiveEntry`
+- `TCollectionFilter`: the type of the filter object passed to `getLiveCollection`
 
 These types will be used to type the `loadCollection` and `loadEntry` methods.
 
@@ -234,6 +334,15 @@ export function storeLoader({
 The `LiveLoader` type is defined as follows:
 
 ```ts
+export interface LiveLoaderError {
+  /** Error message */
+  message: string;
+  /** Error code for programmatic handling */
+  code?: string;
+  /** Original error if applicable */
+  cause?: unknown;
+}
+
 export interface LiveDataEntry<
   TData extends Record<string, unknown> = Record<string, unknown>
 > {
@@ -263,6 +372,24 @@ export interface LiveDataCollection<
   };
 }
 
+export interface LiveDataEntryResult<
+  TData extends Record<string, unknown> = Record<string, unknown>
+> {
+  data?: LiveDataEntry<TData>;
+  error?: LiveLoaderError;
+}
+
+export interface LiveDataCollectionResult<
+  TData extends Record<string, unknown> = Record<string, unknown>
+> {
+  data?: Array<LiveDataEntry<TData>>;
+  error?: LiveLoaderError;
+  cacheHint?: {
+    tags?: string[];
+    maxAge?: number;
+  };
+}
+
 export interface LoadEntryContext<TEntryFilter = undefined> {
   filter: TEntryFilter extends undefined
     ? {
@@ -283,17 +410,62 @@ export interface LiveLoader<
   /** Load a single entry */
   loadEntry: (
     context: LoadEntryContext<TEntryFilter>
-  ) => Promise<LiveDataEntry<TData> | undefined>;
+  ) => Promise<LiveDataEntry<TData> | { error: LiveLoaderError } | undefined>;
   /** Load a collection of entries */
   loadCollection: (
     context: LoadCollectionContext<TCollectionFilter>
-  ) => Promise<LiveDataCollection<TData>>;
+  ) => Promise<LiveDataCollection<TData> | { error: LiveLoaderError }>;
 }
 ```
 
-The user-facing `getCollection` and `getEntry` methods exported from `astro:content` will also be typed with these types, so that the user can call them in a type-safe way.
+The user-facing `getLiveCollection` and `getLiveEntry` methods exported from `astro:content` will be typed to return the result format with separate `data` and `error` properties.
 
-Users will still be able to define a Zod schema inside `defineCollection` to validate the data returned by the loader. If provided, this schema will also be used to infer the returned type of `getCollection` and `getEntry` for the collection, taking precedence over the loader type. This means that users can use the loader to fetch data from an API, and then use Zod to validate or transform the data before it is returned.
+Users will still be able to define a Zod schema inside `defineCollection` to validate the data returned by the loader. If provided, this schema will also be used to infer the returned type of `getLiveCollection` and `getLiveEntry` for the collection, taking precedence over the loader type. This means that users can use the loader to fetch data from an API, and then use Zod to validate or transform the data before it is returned.
+
+## Error Handling
+
+The consistent error handling approach provides several benefits:
+
+1. **Explicit error handling**: Developers must consider the error case
+2. **Type safety**: TypeScript ensures error handling code is present
+3. **Consistency**: All live loaders follow the same pattern
+4. **Flexibility**: Loaders can provide custom error codes and messages
+
+Example error handling patterns:
+
+```astro
+---
+import { getLiveEntry, getLiveCollection } from "astro:content";
+
+// Basic error handling
+const { data: products, error } = await getLiveCollection("products");
+if (error) {
+  // Log for debugging
+  console.error(`Failed to load products: ${error.message}`);
+
+  // Handle based on error code
+  if (error.code === 'RATE_LIMITED') {
+    return Astro.redirect('/too-many-requests');
+  }
+
+  // Generic error page
+  return Astro.redirect('/500');
+}
+
+// Fallback to cached data
+const { data: liveData, error } = await getLiveEntry("products", id);
+const product = liveData || getCachedProduct(id);
+
+// Custom error component
+const { data, error } = await getLiveCollection("products");
+---
+
+{error ? (
+  <ErrorMessage message={error.message} />
+) : (
+  <ProductList products={data} />
+)}
+```
 
 ## Caching
 
@@ -336,19 +508,23 @@ return {
 };
 ```
 
-When the user calls `getCollection` or `getEntry`, the response will include a cache object that contains the tags and expiry time. The user can then use this information to cache the response in their own caching layer, or pass it to the route cache.
-
-This example shows how cache tags and expiry time in the response headers:
+When the user calls `getLiveCollection` or `getLiveEntry`, the response will include cache hints that can be used. This example shows how to apply cache tags and expiry time in the response headers:
 
 ```astro
 ---
-import { getEntry } from "astro:content";
+import { getLiveEntry } from "astro:content";
 import Product from "../components/Product.astro";
 
-const product = await getEntry("products", Astro.params.id);
+const { data: product, error, cacheHint } = await getLiveEntry("products", Astro.params.id);
 
-Astro.response.headers.set("Cache-Tag", product.cacheHint.tags.join(","));
-Astro.response.headers.set("CDN-Cache-Control", `s-maxage=${product.cacheHint.maxAge}`);
+if (error) {
+  return Astro.redirect('/404');
+}
+
+if (cacheHint) {
+  Astro.response.headers.set("Cache-Tag", cacheHint.tags.join(","));
+  Astro.response.headers.set("CDN-Cache-Control", `s-maxage=${cacheHint.maxAge}`);
+}
 ---
 <Product product={product.data} />
 ```
@@ -359,24 +535,29 @@ Much of the testing strategy will be similar to the existing content loaders, as
 
 End-to-end tests will be added to test the bundling and runtime execution of the loaders.
 
-Type tests will be added to ensure that the generated types are correct, and that the user can call the `getCollection` and `getEntry` methods with the correct types.
+Type tests will be added to ensure that the generated types are correct, and that the user can call the `getLiveCollection` and `getLiveEntry` methods with the correct types.
+
+Error handling tests will ensure that errors are properly propagated and that the result objects maintain type safety.
 
 # Drawbacks
 
-- This is a significant addition to the content collections API, and will work to implement and document.
+- This is a significant addition to the content collections API, and will require work to implement and document.
 - This is a new API for loader developers to learn, and existing loaders cannot be trivially converted. While the API and mental model are simpler than the existing content loaders, it is still a new API that will require some work for developers to implement.
-- Unlike the content layer APIs, there will not be any built-in loaders for this API, so it will be up to the community to implement them. There will be limited value to this featured until there are a number of loaders available.
-- The user-facing API is similar but not identical to the existing content loaders, which may cause confusion for users. The behavior is also different, as the data is not stored in the content layer data store. This means that users will need to understand the difference between the two APIs.
+- Unlike the content layer APIs, there will not be any built-in loaders for this API, so it will be up to the community to implement them. There will be limited value to this feature until there are a number of loaders available.
+- The dedicated functions (`getLiveCollection`/`getLiveEntry`) make it clear that these are different operations, but developers need to learn when to use which functions.
 
 # Alternatives
 
 - **Do nothing**: For regularly-updated data they will need to use any APIs directly in the frontmatter. This is the current approach, and while it works, it is not ideal. It means that users need to implement their own loading logic. This tends to involve a lot of boilerplate, and there is no common API for accessing the data.
 - **Add support for updating the content layer data store at runtime**: This would allow users to update the data in the content layer data store, for example via a webhook. This would be significantly more complex and would require a lot of work to implement. It would also require users provision third-party database services to support this in a serverless environment.
+- **Use the same function names with different behavior**: This was the original proposal, but it could cause confusion about performance characteristics and error handling requirements. The dedicated functions make the runtime behavior explicit.
 
 # Adoption strategy
 
 - This would be released as an experimental feature, with a flag to enable it.
 - As live collections are defined in a new file, existing sites will not be affected by this change unless they add new collections that use it.
+- Clear documentation will highlight the differences between `getCollection`/`getEntry` and `getLiveCollection`/`getLiveEntry`.
+- Migration guides will help developers understand when to use each approach.
 
 # Unresolved Questions
 
