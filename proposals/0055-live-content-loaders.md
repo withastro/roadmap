@@ -60,10 +60,9 @@ export function storeLoader({
       } catch (error) {
         logger.error(`Failed to load collection: ${error.message}`);
         return {
-          error: {
-            message: `Failed to load products: ${error.message}`,
-            code: "COLLECTION_LOAD_ERROR",
-          },
+          error: new Error(`Failed to load products: ${error.message}`, {
+            cause: error,
+          }),
         };
       }
     },
@@ -79,10 +78,7 @@ export function storeLoader({
 
         if (!product) {
           return {
-            error: {
-              message: `Product not found`,
-              code: "ENTRY_NOT_FOUND",
-            },
+            error: new Error("Product not found"),
           };
         }
         return {
@@ -92,10 +88,9 @@ export function storeLoader({
       } catch (error) {
         logger.error(`Failed to load entry: ${error.message}`);
         return {
-          error: {
-            message: `Failed to load product: ${error.message}`,
-            code: "ENTRY_LOAD_ERROR",
-          },
+          error: new Error(`Failed to load product: ${error.message}`, {
+            cause: error,
+          }),
         };
       }
     },
@@ -241,11 +236,9 @@ export function storeLoader({ field, key }): LiveLoader {
         };
       } catch (error) {
         return {
-          error: {
-            message: `Failed to load products: ${error.message}`,
-            code: "COLLECTION_LOAD_ERROR",
+          error: new Error(`Failed to load products: ${error.message}`, {
             cause: error,
-          },
+          }),
         };
       }
     },
@@ -254,10 +247,7 @@ export function storeLoader({ field, key }): LiveLoader {
         const product = await fetchProduct(filter);
         if (!product) {
           return {
-            error: {
-              message: "Product not found",
-              code: "ENTRY_NOT_FOUND",
-            },
+            error: new Error("Product not found"),
           };
         }
         return {
@@ -266,11 +256,9 @@ export function storeLoader({ field, key }): LiveLoader {
         };
       } catch (error) {
         return {
-          error: {
-            message: `Failed to load product: ${error.message}`,
-            code: "ENTRY_LOAD_ERROR",
+          error: new Error(`Failed to load product: ${error.message}`, {
             cause: error,
-          },
+          }),
         };
       }
     },
@@ -410,11 +398,11 @@ export interface LiveLoader<
   /** Load a single entry */
   loadEntry: (
     context: LoadEntryContext<TEntryFilter>
-  ) => Promise<LiveDataEntry<TData> | { error: LiveLoaderError } | undefined>;
+  ) => Promise<LiveDataEntry<TData> | { error: Error } | undefined>;
   /** Load a collection of entries */
   loadCollection: (
     context: LoadCollectionContext<TCollectionFilter>
-  ) => Promise<LiveDataCollection<TData> | { error: LiveLoaderError }>;
+  ) => Promise<LiveDataCollection<TData> | { error: Error }>;
 }
 ```
 
