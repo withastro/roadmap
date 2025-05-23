@@ -392,17 +392,18 @@ export interface LiveLoader<
   TData extends Record<string, unknown> = Record<string, unknown>,
   TEntryFilter extends Record<string, unknown> | undefined = undefined,
   TCollectionFilter extends Record<string, unknown> | undefined = undefined
+  TError extends Error = Error
 > {
   /** Unique name of the loader, e.g. the npm package name */
   name: string;
   /** Load a single entry */
   loadEntry: (
     context: LoadEntryContext<TEntryFilter>
-  ) => Promise<LiveDataEntry<TData> | { error: Error } | undefined>;
+  ) => Promise<LiveDataEntry<TData> | { error: TError } | undefined>;
   /** Load a collection of entries */
   loadCollection: (
     context: LoadCollectionContext<TCollectionFilter>
-  ) => Promise<LiveDataCollection<TData> | { error: Error }>;
+  ) => Promise<LiveDataCollection<TData> | { error: TError }>;
 }
 ```
 
@@ -412,12 +413,7 @@ Users will still be able to define a Zod schema inside `defineCollection` to val
 
 ## Error Handling
 
-The consistent error handling approach provides several benefits:
-
-1. **Explicit error handling**: Developers must consider the error case
-2. **Type safety**: TypeScript ensures error handling code is present
-3. **Consistency**: All live loaders follow the same pattern
-4. **Flexibility**: Loaders can provide custom error codes and messages
+Live loaders should handle errors gracefully and return an object with an `error` property. The error object should also include the original error if applicable, using the `cause` property.
 
 Example error handling patterns:
 
@@ -427,11 +423,11 @@ import { getLiveEntry, getLiveCollection } from "astro:content";
 
 // Basic error handling
 const { entries: products, error } = await getLiveCollection("products");
+
 if (error) {
-  // Log for debugging
   console.error(`Failed to load products: ${error.message}`);
 
-  // Handle based on error code
+  // Handle based on error code of custom error
   if (error.code === 'RATE_LIMITED') {
     return Astro.redirect('/too-many-requests');
   }
@@ -439,10 +435,6 @@ if (error) {
   // Generic error page
   return Astro.redirect('/500');
 }
-
-// Fallback to cached entries
-const { entries: liveData, error } = await getLiveEntry("products", id);
-const product = liveData || getCachedProduct(id);
 
 // Custom error component
 const { entries, error } = await getLiveCollection("products");
