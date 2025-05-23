@@ -126,20 +126,20 @@ The loader is accessed using new dedicated functions that make the runtime behav
 import { getLiveCollection, getLiveEntry } from "astro:content";
 
 // Get all entries in a collection
-const { data: allProducts, error } = await getLiveCollection("products");
+const { entries: allProducts, error } = await getLiveCollection("products");
 if (error) {
   // Handle error gracefully
   return Astro.redirect('/500');
 }
 
 // Live collections optionally allow extra filters to be passed in, defined by the loader
-const { data: clothes } = await getLiveCollection("products", { category: "clothes" });
+const { entries: clothes } = await getLiveCollection("products", { category: "clothes" });
 
 // Get entry by ID
-const { data: productById } = await getLiveEntry("products", Astro.params.id);
+const { entry: productById } = await getLiveEntry("products", Astro.params.id);
 
 // Query a single entry using the object syntax
-const { data: productBySlug, error: slugError } = await getLiveEntry("products", { slug: Astro.params.slug });
+const { entry: productBySlug, error: slugError } = await getLiveEntry("products", { slug: Astro.params.slug });
 if (slugError) {
   return Astro.redirect('/404');
 }
@@ -197,24 +197,24 @@ These functions return a result object with either `data` or `error`, making err
 
 ```ts
 // Success case
-const { data, error } = await getLiveCollection("products");
+const { entries, error } = await getLiveCollection("products");
 if (error) {
   // Handle error
   console.error(error.message);
   return Astro.redirect("/error");
 }
 // Use data safely
-data.forEach((product) => {
+entries.forEach((product) => {
   // ...
 });
 
 // With filters
-const { data: electronics } = await getLiveCollection("products", {
+const { entries: electronics } = await getLiveCollection("products", {
   category: "electronics",
 });
 
 // Single entry
-const { data: product, error } = await getLiveEntry(
+const { entry: product, error } = await getLiveEntry(
   "products",
   Astro.params.id
 );
@@ -375,14 +375,14 @@ export interface LiveDataCollection<
 export interface LiveDataEntryResult<
   TData extends Record<string, unknown> = Record<string, unknown>
 > {
-  data?: LiveDataEntry<TData>;
+  entry?: LiveDataEntry<TData>;
   error?: LiveLoaderError;
 }
 
 export interface LiveDataCollectionResult<
   TData extends Record<string, unknown> = Record<string, unknown>
 > {
-  data?: Array<LiveDataEntry<TData>>;
+  entries?: Array<LiveDataEntry<TData>>;
   error?: LiveLoaderError;
   cacheHint?: {
     tags?: string[];
@@ -438,7 +438,7 @@ Example error handling patterns:
 import { getLiveEntry, getLiveCollection } from "astro:content";
 
 // Basic error handling
-const { data: products, error } = await getLiveCollection("products");
+const { entries: products, error } = await getLiveCollection("products");
 if (error) {
   // Log for debugging
   console.error(`Failed to load products: ${error.message}`);
@@ -452,18 +452,18 @@ if (error) {
   return Astro.redirect('/500');
 }
 
-// Fallback to cached data
-const { data: liveData, error } = await getLiveEntry("products", id);
+// Fallback to cached entries
+const { entries: liveData, error } = await getLiveEntry("products", id);
 const product = liveData || getCachedProduct(id);
 
 // Custom error component
-const { data, error } = await getLiveCollection("products");
+const { entries, error } = await getLiveCollection("products");
 ---
 
 {error ? (
   <ErrorMessage message={error.message} />
 ) : (
-  <ProductList products={data} />
+  <ProductList products={entries} />
 )}
 ```
 
@@ -515,7 +515,7 @@ When the user calls `getLiveCollection` or `getLiveEntry`, the response will inc
 import { getLiveEntry } from "astro:content";
 import Product from "../components/Product.astro";
 
-const { data: product, error, cacheHint } = await getLiveEntry("products", Astro.params.id);
+const { entries: product, error, cacheHint } = await getLiveEntry("products", Astro.params.id);
 
 if (error) {
   return Astro.redirect('/404');
