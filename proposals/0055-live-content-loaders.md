@@ -399,11 +399,11 @@ export interface LiveLoader<
   /** Load a single entry */
   loadEntry: (
     context: LoadEntryContext<TEntryFilter>
-  ) => Promise<LiveDataEntry<TData> | { error: TError } | undefined>;
+  ) => Promise<LiveDataEntry<TData> | { error: TError | AstroError } | undefined>;
   /** Load a collection of entries */
   loadCollection: (
     context: LoadCollectionContext<TCollectionFilter>
-  ) => Promise<LiveDataCollection<TData> | { error: TError }>;
+  ) => Promise<LiveDataCollection<TData> | { error: TError | AstroError }>;
 }
 ```
 
@@ -421,9 +421,14 @@ Example error handling patterns:
 ---
 import { getLiveEntry, getLiveCollection } from "astro:content";
 
-// Basic error handling
 const { entries: products, error } = await getLiveCollection("products");
 
+// Use Astro's error handling
+if (error) {
+  throw error;
+}
+
+// Custom error handling
 if (error) {
   console.error(`Failed to load products: ${error.message}`);
 
@@ -436,7 +441,9 @@ if (error) {
   return Astro.redirect('/500');
 }
 
-// Custom error component
+
+
+// Display errors in the page
 const { entries, error } = await getLiveCollection("products");
 ---
 
