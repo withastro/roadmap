@@ -21,7 +21,7 @@
 
 # Summary
 
-Adds support for live data to content collections. Defines a new type of content loader that fetches data at runtime rather than build time, allowing users to get the data with dedicated functions that make the runtime behavior explicit.
+Adds support for live content collections, with a new type of loader that fetches data at runtime rather than build time.
 
 # Example
 
@@ -280,11 +280,12 @@ For this reason, the `getLiveCollection` and `getLiveEntry` methods accept a que
 
 ## Type Safety
 
-The `LiveLoader` type is a generic type that takes three parameters:
+The `LiveLoader` type is a generic type that takes four parameters:
 
 - `TData`: the type of the data returned by the loader
 - `TEntryFilter`: the type of the filter object passed to `getLiveEntry`
 - `TCollectionFilter`: the type of the filter object passed to `getLiveCollection`
+- `TError`: the type of the error returned by the loader
 
 These types will be used to type the `loadCollection` and `loadEntry` methods.
 
@@ -301,10 +302,25 @@ interface StoreEntryFilter {
   slug?: string;
 }
 
+class StoreLoaderError extends Error {
+  constructor(message: string, cause?: unknown) {
+    super(message);
+    this.name = "StoreLoaderError";
+    if (cause) {
+      this.cause = cause;
+    }
+  }
+}
+
 export function storeLoader({
   field,
   key,
-}): LiveLoader<Product, StoreEntryFilter, StoreCollectionFilter> {
+}): LiveLoader<
+  Product,
+  StoreEntryFilter,
+  StoreCollectionFilter,
+  StoreLoaderError
+> {
   return {
     name: "store-loader",
     // `filter` is typed as `StoreCollectionFilter`
@@ -362,16 +378,18 @@ export interface LiveDataCollection<
 
 export interface LiveDataEntryResult<
   TData extends Record<string, unknown> = Record<string, unknown>
+  TError extends Error = Error
 > {
   entry?: LiveDataEntry<TData>;
-  error?: LiveLoaderError;
+  error?: TError;
 }
 
 export interface LiveDataCollectionResult<
   TData extends Record<string, unknown> = Record<string, unknown>
+  TError extends Error = Error
 > {
   entries?: Array<LiveDataEntry<TData>>;
-  error?: LiveLoaderError;
+  error?: TError;
   cacheHint?: {
     tags?: string[];
     maxAge?: number;
