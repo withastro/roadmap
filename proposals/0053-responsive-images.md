@@ -178,17 +178,19 @@ export const getSizes = (
 
 ### Image styling
 
-In order to ensure the resizing behavior for images matches the layout, the component will also apply minimal styles to the image. This is done by adding a `data-astro-image` attribute to the image tag, which is set to the layout name. This allows the CSS to target the images according to their layout. The styles are generated in a way that allows them to be overridden by user styles, so that users can customize them if they want.
+In order to ensure the resizing behavior for images matches the layout, the component will support applying minimal styles to the image. This is enabled by setting the `image.responsiveStyles` config option to `true`.
+
+The img tag has a `data-astro-image` set to the layout name, which a allows the CSS to target the images according to their layout. The styles are generated in a way that allows them to be overridden by user styles, so that users can customize them if they want.
 
 ```astro
-<img [data-astro-image]="constrained" {/* ...other props */} style="--fit: cover; --pos: center;" />
+<img data-astro-image="constrained" {/* ...other props */} style="--fit: cover; --pos: center;" />
 ```
 
 `object-fit` and `object-position` values are set to ensure that images are displayed correctly even if the image service does not support cropping. CSS vars would be used to set the `fit` and `position` options for each image.
 
 The styles use the [`:where()` pseudo-class](https://developer.mozilla.org/en-US/docs/Web/CSS/:where), which has a specificity of 0, meaning that it is easy to override with user styles if needed.
 
-The following is the complete shared CSS included when using the responsive image components:
+When `image.responsiveStyles` is `true`, the following shared CSS is included when using the responsive image components:
 
 ```css
 :where([data-astro-image]) {
