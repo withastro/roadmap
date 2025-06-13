@@ -102,11 +102,11 @@ A new `src/live.config.ts` file is introduced that uses the same syntax as the `
 
 ```ts
 // src/live.config.ts
-import { defineCollection } from "astro:content";
+import { defineLiveCollection } from "astro:content";
 
 import { storeLoader } from "@mystore/astro-loader";
 
-const products = defineCollection({
+const products = defineLiveCollection({
   type: "live",
   loader: storeLoader({ field: "products", key: process.env.STORE_KEY }),
 });
@@ -427,7 +427,7 @@ export interface LiveLoader<
 
 The user-facing `getLiveCollection` and `getLiveEntry` methods exported from `astro:content` will be typed to return the result format with separate `data` and `error` properties.
 
-Users will still be able to define a Zod schema inside `defineCollection` to validate the data returned by the loader. If provided, this schema will also be used to infer the returned type of `getLiveCollection` and `getLiveEntry` for the collection, taking precedence over the loader type. This means that users can use the loader to fetch data from an API, and then use Zod to validate or transform the data before it is returned.
+Users will still be able to define a Zod schema inside `defineLiveCollection` to validate the data returned by the loader. If provided, this schema will also be used to infer the returned type of `getLiveCollection` and `getLiveEntry` for the collection, taking precedence over the loader type. This means that users can use the loader to fetch data from an API, and then use Zod to validate or transform the data before it is returned.
 
 ## Error Handling
 
