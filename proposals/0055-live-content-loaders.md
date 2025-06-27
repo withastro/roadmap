@@ -107,7 +107,6 @@ import { defineLiveCollection } from "astro:content";
 import { storeLoader } from "@mystore/astro-loader";
 
 const products = defineLiveCollection({
-  type: "live",
   loader: storeLoader({ field: "products", key: process.env.STORE_KEY }),
 });
 
