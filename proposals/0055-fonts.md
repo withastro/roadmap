@@ -434,6 +434,13 @@ Note that font files requests are never cached to make it easier to debug. Cachi
 
 We go through all fonts data, download the files to `node_modules/.astro/fonts` and copy them to the client output directory. We avoid downloading files if they already exist.
 
+## Integration with other features
+
+In order to support CSP (experimental as of 2025-08-13), we need to make the `font-src` a first class citizen by:
+
+- Adding a new `fontDirectiveResources` option in the Astro config
+- Adding a new `insertFontResource()` runtime API
+
 # Testing Strategy
 
 - Integration tests
