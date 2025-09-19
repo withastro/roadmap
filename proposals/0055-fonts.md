@@ -305,6 +305,16 @@ import { Font } from "astro:assets"
 </head>
 ```
 
+### `getFontData()`
+
+For more advanced needs, the `getFontData()` helper allows retrieving lower level data for a given `cssVariable`:
+
+```ts
+import { getFontData } from "astro:assets"
+
+const data = getFontData("--font-roboto")
+```
+
 ### cssVariable
 
 The cssVariable will be typed using type gen, based on the user's config.
