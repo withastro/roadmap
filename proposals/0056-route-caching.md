@@ -135,9 +135,11 @@ Caching is essential for performant server-rendered applications, but current so
 - **Strong consistency guarantees**: Cache invalidation follows eventual consistency model
 - **Distributed caching for Node.js**: Node adapter uses in-memory cache, unsuitable for multi-instance deployments without external cache
 - **Static/prerendered page caching**: This is for on-demand SSR routes only; static and prerendered routes are already cached by default and don't need route-level cache control
+- **Partial page caching**: This focuses on full-page route caching, not fragment or component-level caching
 - **Browser caching**: This focuses on CDN and server-side caching, not browser caching. Only `Last-Modified` and `ETag` headers are sent to browsers for conditional requests
-- **Response body caching API**: This focuses on HTTP-level caching, not application-level data caching
+- **Fetch cache**: This focuses on HTTP-level response caching, not API request caching
 - **Building or maintaining all CDN-specific drivers**: We'll provide a driver interface and some select implementations, but rely on community or CDN vendors to maintain platform-specific implementations
+- **General-purpose cache**: This is not a general-purpose key-value cache, but a specialized HTTP response cache
 
 # Detailed Design
 
@@ -228,7 +230,7 @@ interface CacheProvider {
 
   /**
    * Optional: Middleware-style hook for runtime caching
-   * Used by runtime providers (node-memory, cloudflare-workers)
+   * Used by runtime providers (@astrojs/node/cache, @astrojs/cloudflare/cache)
    *
    * Follows the same API as Astro middleware:
    * - Check cache using context.request
@@ -462,10 +464,10 @@ Providers can override this to use platform-specific headers. For example:
 
 Astro will ship with built-in providers for common platforms:
 
-- `vercel` - Vercel CDN (default for `@astrojs/vercel` adapter)
-- `netlify` - Netlify CDN (default for `@astrojs/netlify` adapter)
-- `cloudflare-workers` - Cloudflare Workers Cache API (default for `@astrojs/cloudflare` adapter)
-- `node-memory` - In-memory LRU cache (default for `@astrojs/node` adapter)
+- `@astrojs/vercel/cache` - Vercel CDN (default for `@astrojs/vercel` adapter)
+- `@astrojs/netlify/cache` - Netlify CDN (default for `@astrojs/netlify` adapter)
+- `@astrojs/cloudflare/cache` - Cloudflare Workers Cache API (default for `@astrojs/cloudflare` adapter)
+- `@astrojs/node/cache` - In-memory LRU cache (default for `@astrojs/node` adapter)
 
 ### Driver Packages
 
@@ -495,7 +497,7 @@ tags → Cache-Tag: products, product:123
 lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
 
-**Netlify Provider (`netlify`):**
+**Netlify Provider:**
 
 ```
 maxAge + swr → Netlify-CDN-Cache-Control: public, max-age=300, stale-while-revalidate=3600, durable
@@ -503,7 +505,7 @@ tags → Netlify-Cache-Tag: products, product:123
 lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
 
-**Cloudflare Workers Provider (`cloudflare-workers`):**
+**Cloudflare Workers Provider:**
 Uses the Workers Cache API directly when SSR runs in a Cloudflare Worker:
 
 ```ts
@@ -525,7 +527,7 @@ lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 
 Invalidation via Cloudflare's purge API requires zone ID and API token.
 
-**Fastly Provider (`fastly`):**
+**Fastly Provider:**
 
 ```
 maxAge + swr → Surrogate-Control: max-age=300, stale-while-revalidate=3600
@@ -535,7 +537,7 @@ lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 
 Note: Fastly uses `Surrogate-Control` and `Surrogate-Key` headers (proprietary Fastly headers). While Fastly co-authored RFC 9213 (CDN-Cache-Control), their documentation recommends using Surrogate-Control. Individual keys limited to 1024 bytes, total header limited to 16,384 bytes. Purge typically happens in ~1ms via batch API.
 
-**Akamai Provider (`akamai`):**
+**Akamai Provider:**
 
 ```
 maxAge + swr → CDN-Cache-Control: public, max-age=300, stale-while-revalidate=3600
@@ -545,7 +547,7 @@ lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 
 Note: Akamai supports the standardized `CDN-Cache-Control` header (RFC 9213) for Targeted Cache Control. Individual tags limited to 128 characters, total header limited to 8192 bytes. Tags are case-sensitive.
 
-**Node Memory Provider (`node-memory`):**
+**Node Memory Provider:**
 
 In-memory LRU cache using `lru-cache` library with stale-while-revalidate support. As a runtime provider, it reads the `CDN-Cache-Control` and `Cache-Tag` headers set by the default header generation to determine caching behavior.
 
@@ -629,7 +631,7 @@ Adapters provide default cache drivers via the integration API, similar to how t
 
 **Driver Loading:**
 
-Similar to sessions, cache drivers are loaded at runtime. Built-in drivers (`vercel`, `netlify`, `cloudflare-workers`, `node-memory`) are available by name. Driver packages are referenced by their package name and dynamically imported.
+Similar to sessions, cache drivers are loaded at runtime. Driver packages are referenced by their module ID, and dynamically imported. The Netlify, Vercel, Cloudflare Workers, and Node memory drivers are published as subpath exports of their respective adapter packages.
 
 **Adapter providing a default:**
 
@@ -645,7 +647,7 @@ export function vercel() {
           // ...other adapter properties
           // Provide default cache driver
           cache: {
-            driver: "vercel", // Built-in Vercel driver
+            driver: "@astrojs/vercel/cache", // Default
           },
         });
       },
@@ -696,7 +698,6 @@ Astro dynamically imports the package when referenced by name in the config.
 
 1. User-configured `cache.driver` in `astro.config.ts` (highest priority)
 2. Adapter-provided default via `setAdapter()`
-3. Generic `node-memory` driver (fallback)
 
 ## Dependency Tracking
 
@@ -758,8 +759,6 @@ cache.invalidate(entry);
 cache.invalidate({ tags: entry.cacheHint.tags });
 ```
 
-tags
-
 ## Configuration
 
 Route caching works automatically when using an adapter that supports it. Adapters provide sensible defaults, but users can customize or override them.
@@ -771,7 +770,7 @@ Route caching works automatically when using an adapter that supports it. Adapte
 ```ts
 // astro.config.ts
 export default defineConfig({
-  adapter: vercel(), // Uses 'vercel' provider by default
+  adapter: vercel(), // Uses '@astrojs/vercel/cache' provider by default
 });
 ```
 
@@ -815,7 +814,7 @@ export default defineConfig({
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: "node-memory", // Explicitly use default
+    driver: "@astrojs/node/cache", // Default for Node adapter
     options: {
       max: 1000, // Max cache entries
       ttl: 300000, // Default TTL in ms
@@ -947,14 +946,14 @@ export default defineConfig({
 ### Scenario 3: Cloudflare Workers
 
 **Setup:** SSR running directly in Cloudflare Workers
-**Driver:** `cloudflare-workers` (automatic default)
+**Driver:** `@astrojs/cloudflare/cache` (automatic default)
 **Configuration:** None required, uses KV for tag mapping
 **Behavior:** Uses Workers Cache API directly, stores tag mappings in KV
 
 ```ts
 // astro.config.ts
 export default defineConfig({
-  adapter: cloudflare(), // Automatically uses cloudflare-workers driver
+  adapter: cloudflare(), // Automatically uses @astrojs/cloudflare/cache driver
 });
 ```
 
@@ -982,7 +981,7 @@ export default defineConfig({
 ### Scenario 5: Simple Node.js Deployment (Single Instance)
 
 **Setup:** Single Node.js server, no CDN
-**Driver:** `node-memory` (automatic default)
+**Driver:** `@astrojs/node/cache` (automatic default)
 **Configuration:** Optional tuning of cache size
 **Behavior:** In-memory LRU cache, lost on restart
 
