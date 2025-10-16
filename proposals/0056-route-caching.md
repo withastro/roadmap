@@ -62,7 +62,7 @@ export const POST: APIRoute = ({ cache }) => {
 // src/pages/api/webhook.ts
 export const POST: APIRoute = ({ cache }) => {
   // Invalidate by tag
-  cache.invalidate({ tag: "product:laptop" });
+  cache.invalidate({ tag: "products" });
 
   return Response.json({ ok: true });
 };
@@ -101,6 +101,23 @@ export const POST: APIRoute = async ({ cache, request }) => {
 
   return Response.json({ ok: true });
 };
+```
+
+## Define cache in config
+
+```ts
+// astro.config.ts
+export default defineConfig({
+  adapter: node(),
+  cache: {
+    routes: {
+      "/": { maxAge: 0, swr: 60 },
+      "/blog/**": { maxAge: 300 },
+      "/products/**": { maxAge: 300, swr: 3600, tags: ["products"] },
+      "/api/**": { maxAge: 600 },
+    },
+  },
+});
 ```
 
 # Background & Motivation
