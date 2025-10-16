@@ -16,7 +16,7 @@
 - Reference Issues: https://github.com/withastro/roadmap/discussions/1131, https://github.com/withastro/roadmap/discussions/181
 - Implementation PR: <!-- leave empty -->
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1140
-- Stage 3 PR: <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1245
 
 # Summary
 
