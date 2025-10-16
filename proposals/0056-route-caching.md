@@ -488,15 +488,25 @@ Astro will ship with built-in providers for common platforms:
 
 ### Driver Packages
 
-Driver packages can be distributed as npm packages:
+Driver packages can be distributed as npm packages. They are shown with the `@astrojs` scope for illustration, but could be published by providers themselves.
 
-- `@astrojs/cache-cloudflare-cdn` - Cloudflare as proxy in front of other origins
+- `@astrojs/cache-cloudflare-cdn` - Cloudflare as proxy in front of other origins. Distributed separately from the Cloudflare adapter, because it would usually be used with the Node adapter.
 - `@astrojs/cache-fastly` - Fastly CDN support
 - `@astrojs/cache-akamai` - Akamai edge caching
 - Custom providers for other CDNs or caching solutions
 - Custom runtime providers using external stores (Redis, Memcached, etc.)
 
-Driver packages export a cache provider that can be referenced by package name in the config and dynamically imported at runtime.
+Driver packages export a function that accepts driver-specific options and returns a cache provider configuration. This pattern provides type-safe configuration and follows Astro's established patterns (similar to the fonts API):
+
+```ts
+// @astrojs/cache-fastly
+export function cacheFastly(options: FastlyOptions) {
+  return {
+    entrypoint: new URL("./provider.js", import.meta.url),
+    options,
+  };
+}
+```
 
 ## Adapter Abstraction
 
@@ -644,28 +654,36 @@ for (const [key, value] of cache.entries()) {
 
 ### Adapter Integration
 
-Adapters provide default cache drivers via the integration API, similar to how they provide session drivers. Users can override the default driver in their config.
+Adapters provide default cache drivers via the integration API, similar to how they provide default session drivers. Users can override the default driver in their config.
 
 **Driver Loading:**
 
-Similar to sessions, cache drivers are loaded at runtime. Driver packages are referenced by their module ID, and dynamically imported. The Netlify, Vercel, Cloudflare Workers, and Node memory drivers are published as subpath exports of their respective adapter packages.
+Cache driver functions return a configuration object containing an entrypoint and options. The entrypoint points to the provider implementation that is dynamically imported at runtime. The Netlify, Vercel, Cloudflare Workers, and Node memory drivers are published as subpath exports of their respective adapter packages because they are only ever used alongside those adapters.
 
 **Adapter providing a default:**
 
 ```ts
 // Example: @astrojs/vercel adapter
+import { cacheVercel } from "@astrojs/vercel/cache";
+
 export function vercel() {
   return {
     name: "@astrojs/vercel",
     hooks: {
+      "astro:config:setup": ({ config, updateConfig }) => {
+        // Only provide default if user hasn't configured a driver
+        if (!config.cache?.driver) {
+          updateConfig({
+            cache: {
+              driver: cacheVercel(),
+            },
+          });
+        }
+      },
       "astro:config:done": ({ setAdapter }) => {
         setAdapter({
           name: "@astrojs/vercel",
           // ...other adapter properties
-          // Provide default cache driver
-          cache: {
-            driver: "@astrojs/vercel/cache", // Default
-          },
         });
       },
     },
@@ -677,26 +695,35 @@ export function vercel() {
 
 ```ts
 // astro.config.ts
+import { cacheFastly } from "@astrojs/cache-fastly";
+
 export default defineConfig({
   adapter: node(),
   cache: {
     // Override Node's default in-memory cache with Fastly
-    driver: "@astrojs/cache-fastly",
-    options: {
+    driver: cacheFastly({
       serviceId: process.env.FASTLY_SERVICE_ID,
       token: process.env.FASTLY_TOKEN,
-    },
+    }),
   },
 });
 ```
 
 **Driver packages:**
 
-Driver packages like `@astrojs/cache-fastly` export a cache provider implementation:
+Driver packages export a configuration function that accepts type-safe options and returns a provider configuration. The provider implementation is then dynamically imported at runtime:
 
 ```ts
-// @astrojs/cache-fastly/index.ts
-export default function fastlyProvider(options) {
+// fastly/index.ts
+export function cacheFastly(options: FastlyOptions) {
+  return {
+    entrypoint: new URL("./provider.js", import.meta.url),
+    options,
+  };
+}
+
+// fastly/provider.ts
+export default function fastlyProvider(options: FastlyOptions) {
   return {
     name: "fastly",
     setHeaders(cacheOptions) {
@@ -709,11 +736,9 @@ export default function fastlyProvider(options) {
 }
 ```
 
-Astro dynamically imports the package when referenced by name in the config.
-
 **Precedence:**
 
-1. User-configured `cache.driver` in `astro.config.ts` (highest priority)
+1. User-configured `cache.driver` in `astro.config.ts`
 2. Adapter-provided default via `setAdapter()`
 
 ## Dependency Tracking
@@ -795,15 +820,16 @@ export default defineConfig({
 
 ```ts
 // astro.config.ts
+import { cacheCloudflare } from "@astrojs/cache-cloudflare-cdn";
+
 export default defineConfig({
   adapter: node(),
   cache: {
     // Node app behind Cloudflare CDN
-    driver: "@astrojs/cache-cloudflare-cdn",
-    options: {
+    driver: cacheCloudflare({
       zoneId: process.env.CF_ZONE_ID,
       token: process.env.CF_TOKEN,
-    },
+    }),
   },
 });
 ```
@@ -812,14 +838,15 @@ export default defineConfig({
 
 ```ts
 // astro.config.ts
+import { cacheFastly } from "@astrojs/cache-fastly";
+
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: "@astrojs/cache-fastly",
-    options: {
+    driver: cacheFastly({
       serviceId: process.env.FASTLY_SERVICE_ID,
       token: process.env.FASTLY_TOKEN,
-    },
+    }),
   },
 });
 ```
@@ -828,14 +855,15 @@ export default defineConfig({
 
 ```ts
 // astro.config.ts
+import { cacheMemory } from "@astrojs/node/cache";
+
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: "@astrojs/node/cache", // Default for Node adapter
-    options: {
+    driver: cacheMemory({
       max: 1000, // Max cache entries
       ttl: 300000, // Default TTL in ms
-    },
+    }),
   },
 });
 ```
@@ -948,14 +976,15 @@ export default defineConfig({
 
 ```ts
 // astro.config.ts
+import { cacheCloudflare } from "@astrojs/cache-cloudflare-cdn";
+
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: "@astrojs/cache-cloudflare-cdn",
-    options: {
+    driver: cacheCloudflare({
       zoneId: process.env.CF_ZONE_ID,
       token: process.env.CF_TOKEN,
-    },
+    }),
   },
 });
 ```
@@ -983,14 +1012,15 @@ export default defineConfig({
 
 ```ts
 // astro.config.ts
+import { cacheFastly } from "@astrojs/cache-fastly";
+
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: "@astrojs/cache-fastly",
-    options: {
+    driver: cacheFastly({
       serviceId: process.env.FASTLY_SERVICE_ID,
       token: process.env.FASTLY_TOKEN,
-    },
+    }),
   },
 });
 ```
@@ -1005,15 +1035,16 @@ export default defineConfig({
 ```ts
 // astro.config.ts
 import node from "@astrojs/node";
+import { cacheMemory } from "@astrojs/node/cache";
 
 export default defineConfig({
   adapter: node(),
   // Optional: tune cache settings
   cache: {
-    options: {
+    driver: cacheMemory({
       max: 1000,
       ttl: 300000,
-    },
+    }),
   },
 });
 ```
@@ -1081,16 +1112,18 @@ Implement caching entirely in middleware rather than as a first-class API. This 
 1. **Experimental release**: Ship behind experimental flag, disabled by default. Cache configuration will be inside the `experimental` object:
 
 ```ts
+import { cacheVercel } from "@astrojs/vercel/cache";
+
 export default defineConfig({
   adapter: vercel(),
   experimental: {
     cache: {
-      driver: 'vercel', // or adapter default
+      driver: cacheVercel(), // or use adapter default by omitting
       routes: {
-        '/blog/**': { maxAge: 300 }
-      }
-    }
-  }
+        "/blog/**": { maxAge: 300 },
+      },
+    },
+  },
 });
 ```
 
