@@ -321,7 +321,21 @@ The cssVariable will be typed using type gen, based on the user's config.
 
 ### preload
 
-Defaults to `false`. Will output preload link tags.
+Allows emitting preload link tags, depending on its value:
+
+- `false` (default): nothing
+- `true`: preload all
+- Granular preloads: only matching preloads:
+
+```astro
+---
+import { Font } from "astro:assets"
+---
+
+<Font cssVariable="--font-test" preload={[{ weight: 400, subset: "latin", style: "normal" }]} />
+```
+
+This is useful when a given font family loads many font files, which are not useful on all pages. For example on an internationalized site you may choose to only load a specific subset for a given locale. 
 
 ## Usage
 
