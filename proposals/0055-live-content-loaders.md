@@ -158,7 +158,7 @@ The API uses dedicated functions (`getLiveCollection` and `getLiveEntry`) to mak
 - loader-specific **query and filters**, which a loader can define and pass to the API
 - **type-safe** data and query options, defined by the loader as generic types
 - support for user-defined **Zod schemas**, executed at runtime, to validate or transform the data returned by the loader
-- support for runtime **markdown rendering**, using a helper function provided in the loader context
+- support for **rendered content** via a `rendered` property that loaders can return, allowing use of the `render()` function and `<Content />` component
 - optional **integration with [route caching](https://github.com/withastro/roadmap/issues/1140)**, allowing loaders to define cache tags and expiry times associated with the data which are then available to the user
 
 # Non-Goals
@@ -167,6 +167,7 @@ The API uses dedicated functions (`getLiveCollection` and `getLiveEntry`) to mak
 - rendering of MDX or other content-like code. This isn't something that can be done at runtime.
 - support for image processing, either in the Zod schema or Markdown. This is not something that can be done at runtime.
 - loader-defined Zod schemas. Instead, loaders define types using TypeScript generics. Users can define their own Zod schemas to validate or transform the data returned by the loader, which Astro will execute at runtime.
+- schema functions with `SchemaContext`. Live collections only support schema objects, not schema functions that receive context like `({ image }) => z.object({...})`. This is because runtime data fetching cannot use build-time asset processing utilities.
 - updating the content layer data store. Live loaders return data directly and do not update the store.
 - support for existing loaders. They will have a different API. Developers could in theory use shared logic, but the loader API will be different
 
@@ -346,69 +347,68 @@ export interface LiveLoaderError {
   cause?: unknown;
 }
 
+export interface CacheHint {
+  /** Cache tags */
+  tags?: Array<string>;
+  /** Last modified time of the content */
+  lastModified?: Date;
+}
+
 export interface LiveDataEntry<
-  TData extends Record<string, unknown> = Record<string, unknown>
+  TData extends Record<string, any> = Record<string, unknown>
 > {
   /** The ID of the entry. Unique per collection. */
   id: string;
   /** The entry data */
   data: TData;
-  /** Optional cache hints */
-  cacheHint?: {
-    /** Cache tags */
-    tags?: string[];
-    /** Maximum age of the response in seconds */
-    maxAge?: number;
+  /** Optional rendered content */
+  rendered?: {
+    html: string;
   };
+  /** Optional cache hints */
+  cacheHint?: CacheHint;
 }
 
 export interface LiveDataCollection<
-  TData extends Record<string, unknown> = Record<string, unknown>
+  TData extends Record<string, any> = Record<string, unknown>
 > {
   entries: Array<LiveDataEntry<TData>>;
   /** Optional cache hints */
-  cacheHint?: {
-    /** Cache tags */
-    tags?: string[];
-    /** Maximum age of the response in seconds */
-    maxAge?: number;
-  };
+  cacheHint?: CacheHint;
 }
 
 export interface LiveDataEntryResult<
-  TData extends Record<string, unknown> = Record<string, unknown>
+  TData extends Record<string, any> = Record<string, unknown>,
   TError extends Error = Error
 > {
   entry?: LiveDataEntry<TData>;
-  error?: TError;
+  error?: TError | LiveCollectionError;
+  cacheHint?: CacheHint;
 }
 
 export interface LiveDataCollectionResult<
-  TData extends Record<string, unknown> = Record<string, unknown>
+  TData extends Record<string, any> = Record<string, unknown>,
   TError extends Error = Error
 > {
   entries?: Array<LiveDataEntry<TData>>;
-  error?: TError;
-  cacheHint?: {
-    tags?: string[];
-    maxAge?: number;
-  };
+  error?: TError | LiveCollectionError;
+  cacheHint?: CacheHint;
 }
 
-export interface LoadEntryContext<TEntryFilter = undefined> {
-  filter: TEntryFilter extends undefined
+export interface LoadEntryContext<TEntryFilter = never> {
+  filter: TEntryFilter extends never
     ? {
         id: string;
       }
     : TEntryFilter;
 }
-export interface LoadCollectionContext<TCollectionFilter = undefined> {
+export interface LoadCollectionContext<TCollectionFilter = unknown> {
   filter?: TCollectionFilter;
 }
 export interface LiveLoader<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TEntryFilter extends Record<string, unknown> | undefined = undefined,
-  TCollectionFilter extends Record<string, unknown> | undefined = undefined
+  TData extends Record<string, any> = Record<string, unknown>,
+  TEntryFilter extends Record<string, any> | never = never,
+  TCollectionFilter extends Record<string, any> | never = never,
   TError extends Error = Error
 > {
   /** Unique name of the loader, e.g. the npm package name */
@@ -416,11 +416,11 @@ export interface LiveLoader<
   /** Load a single entry */
   loadEntry: (
     context: LoadEntryContext<TEntryFilter>
-  ) => Promise<LiveDataEntry<TData> | { error: TError | AstroError } | undefined>;
+  ) => Promise<LiveDataEntry<TData> | undefined | { error: TError }>;
   /** Load a collection of entries */
   loadCollection: (
     context: LoadCollectionContext<TCollectionFilter>
-  ) => Promise<LiveDataCollection<TData> | { error: TError | AstroError }>;
+  ) => Promise<LiveDataCollection<TData> | { error: TError }>;
 }
 ```
 
@@ -428,9 +428,68 @@ The user-facing `getLiveCollection` and `getLiveEntry` methods exported from `as
 
 Users will still be able to define a Zod schema inside `defineLiveCollection` to validate the data returned by the loader. If provided, this schema will also be used to infer the returned type of `getLiveCollection` and `getLiveEntry` for the collection, taking precedence over the loader type. This means that users can use the loader to fetch data from an API, and then use Zod to validate or transform the data before it is returned.
 
+### Schema Restrictions
+
+Unlike build-time content collections, live collections **do not support schema functions**. The schema must be a Zod schema object, not a function that receives the `image` helper:
+
+```ts
+// Supported - Schema object
+const products = defineLiveCollection({
+  loader: storeLoader({ ... }),
+  schema: z.object({
+    title: z.string(),
+    price: z.number(),
+  }),
+});
+
+// ❌ Not supported - Schema function
+const products = defineLiveCollection({
+  loader: storeLoader({ ... }),
+  schema: ({ image }) => z.object({  // Error: schema functions not allowed
+    title: z.string(),
+    cover: image(),
+  }),
+});
+```
+
+This restriction exists because the `image()` function is designed for build-time asset processing. Live collections fetch data at runtime, when build-time asset processing is not available. Image references in live collections should come pre-processed from the API or be handled client-side
+
 ## Error Handling
 
 Live loaders should handle errors gracefully and return an object with an `error` property. The error object should also include the original error if applicable, using the `cause` property.
+
+### Built-in Error Classes
+
+Astro provides built-in error classes for common live collection scenarios:
+
+- **`LiveCollectionError`**: Base error class for all live collection errors
+- **`LiveEntryNotFoundError`**: Returned when an entry cannot be found
+- **`LiveCollectionValidationError`**: Returned when data fails schema validation
+- **`LiveCollectionCacheHintError`**: Returned when cache hints are invalid
+
+All error classes have a static `is()` method for type-safe error checking:
+
+```astro
+---
+import { getLiveEntry } from "astro:content";
+import { LiveEntryNotFoundError } from "astro/loaders";
+
+const { entry, error } = await getLiveEntry("products", Astro.params.id);
+
+if (LiveEntryNotFoundError.is(error)) {
+  console.error(`Product not found: ${error.message}`);
+  Astro.response.status = 404;
+  return Astro.redirect('/404');
+}
+
+if (error) {
+  console.error(`Unexpected error: ${error.message}`);
+  return Astro.redirect('/500');
+}
+---
+```
+
+### Error Handling Patterns
 
 Example error handling patterns:
 
@@ -473,12 +532,12 @@ const { entries, error } = await getLiveCollection("products");
 
 ## Caching
 
-The returned data is not cached by Astro, but a loader can provide hints to assist in caching the response. This would be designed to integrate with the proposed [route caching API](https://github.com/withastro/roadmap/issues/1140), but could also be used to manually set response headers. The scope of this RFC does not include details on the route cache integration, but will illustrate how the loader can provide hints that can then be used by the route cache or other caching mechanisms.
+The returned data is not cached by Astro, but a loader can provide hints to assist in caching the response. This would be designed to integrate with the proposed [route caching API](https://github.com/withastro/roadmap/pull/1245), but could also be used to manually set response headers. The scope of this RFC does not include details on the route cache integration, but will illustrate how the loader can provide hints that can then be used by the route cache or other caching mechanisms.
 
 Loader responses can include a `cacheHint` object that contains the following properties:
 
 - `tags`: an array of strings that can be used to tag the response. This is useful for cache invalidation.
-- `maxAge`: a number that specifies the maximum age of the response in seconds. This is useful for setting the cache expiry time.
+- `lastModified`: a Date object that specifies when the content was last modified. This is useful for HTTP cache headers like `Last-Modified` and `If-Modified-Since`.
 
 The loader does not define how these should be used, and the user is free to use them in any way they like.
 
@@ -492,12 +551,12 @@ return {
   })),
   cacheHint: {
     tags: ["products", "clothes"],
-    maxAge: 60 * 60, // 1 hour
+    lastModified: new Date(product.updatedAt),
   },
 };
 ```
 
-This would allow the user to tag the response with the `products` and `clothes` tags, and set the expiry time to 1 hour. The user could then use these tags to invalidate the cache when the data changes.
+This would allow the user to tag the response with the `products` and `clothes` tags, and indicate when the content was last modified. The user could then use these tags to invalidate the cache when the data changes.
 
 The loader can also provide a `cacheHint` object for an individual entry, allowing fine-grained cache control:
 
@@ -507,12 +566,12 @@ return {
   data: product,
   cacheHint: {
     tags: [`product-${filter.id}`],
-    maxAge: 60 * 60, // 1 hour
+    lastModified: new Date(product.updatedAt),
   },
 };
 ```
 
-When the user calls `getLiveCollection` or `getLiveEntry`, the response will include cache hints that can be used. This example shows how to apply cache tags and expiry time in the response headers:
+When the user calls `getLiveCollection` or `getLiveEntry`, the response will include cache hints that can be used. This example shows how to apply cache tags and last modified time in the response headers:
 
 ```astro
 ---
@@ -527,11 +586,64 @@ if (error) {
 
 if (cacheHint) {
   Astro.response.headers.set("Cache-Tag", cacheHint.tags.join(","));
-  Astro.response.headers.set("CDN-Cache-Control", `s-maxage=${cacheHint.maxAge}`);
+  if (cacheHint.lastModified) {
+    Astro.response.headers.set("Last-Modified", cacheHint.lastModified.toUTCString());
+  }
 }
 ---
 <Product product={product.data} />
 ```
+
+## Rendered Content
+
+Loaders can optionally return a `rendered` property containing HTML content. This allows entries to be rendered using the same `render()` function and `<Content />` component as build-time collections:
+
+```ts
+// articleloader.ts
+export function articleLoader(config: { apiKey: string }): LiveLoader<Article> {
+  return {
+    name: "article-loader",
+    loadEntry: async ({ filter }) => {
+      const article = await fetchFromCMS({
+        apiKey: config.apiKey,
+        type: "article",
+        id: filter.id,
+      });
+
+      return {
+        id: article.id,
+        data: article,
+        rendered: {
+          // Assuming the CMS returns HTML content
+          html: article.htmlContent,
+        },
+      };
+    },
+    // ...
+  };
+}
+```
+
+The rendered content can then be used in pages:
+
+```astro
+---
+import { getLiveEntry, render } from "astro:content";
+
+const { entry, error } = await getLiveEntry("articles", Astro.params.id);
+
+if (error) {
+  return Astro.rewrite('/404');
+}
+
+const { Content } = await render(entry);
+---
+
+<h1>{entry.data.title}</h1>
+<Content />
+```
+
+If a loader does not return a `rendered` property, the `<Content />` component will render nothing.
 
 # Testing Strategy
 
@@ -567,4 +679,4 @@ Error handling tests will ensure that errors are properly propagated and that th
 
 - The proposed **name of the file** is potentially confusing. While the name `live.config.ts` is analogous to the existing `content.config.ts` file, neither are really configuration files, and have more in common with actions or middleware files. Would it better to not use `config` in the name, or would that be confusing when compared to the existing file? Possible alternatives: `src/live.ts`, `src/live-content.ts`, `src/live-content.config.ts`, `src/content.live.ts`...
 
-- The way to handle **rendering Markdown**, or even whether to support it. The most likely approach is to add a `renderMarkdown` helper function to the loader context that can be used to render Markdown to HTML, which would be stored in the `entry.rendered.html` field, similar to existing collections. This would allow use of the same `render()` function as existing collections. This would use a pre-configured instance of the renderer from the built-in `@astrojs/markdown-remark` package, using the user's Markdown config. This helper would be also likely be added to existing content layer loaders, as users have complained that is hard to do manually. This may be extending the scope too far, but it is a common use case for loaders. We may not want to encourage rendering Markdown inside loaders, as it could lead to performance issues. It may be confusing that image processing is unsupported, and nor is MDX.
+- Whether to provide a **`renderMarkdown` helper function** in the loader context. While the `rendered` property is supported and loaders can return pre-rendered HTML, there's a question about whether Astro should provide a helper to render Markdown at runtime within loaders. The most likely approach would be to add a `renderMarkdown(content: string)` helper function to the loader context that uses a pre-configured instance of the renderer from the built-in `@astrojs/markdown-remark` package. This helper could also be added to existing content layer loaders, as users have requested it. However, there are concerns: (1) it may encourage performance-intensive operations in loaders, (2) it may be confusing that image processing is unsupported, (3) it would not support MDX, and it would likely not be possible to use the user's configured Markdown options as these would not be serializable. Overall, while it could be a useful convenience, it may introduce more complexity and potential for misuse than the benefits it provides.
