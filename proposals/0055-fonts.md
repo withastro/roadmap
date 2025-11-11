@@ -291,6 +291,36 @@ The following CSS variable would be generated:
 }
 ```
 
+Using a single font family, it is not possible to only download font files for weights normal `500`, italic `500` and normal `600`. This is because a font family is defined by a combination of weights and styles, so you'd necessarily have to also download italic `600`.
+
+For more advanced cases, families that have the same `cssVariable`, `name` and `provider` will be merged. That means you could achieve the desired result like this:
+
+```js
+// astro.config.mjs
+import { defineConfig, fontProviders } from "astro/config"
+
+export default defineConfig({
+  experimental: {
+    fonts: [
+      {
+        name: "Roboto",
+        cssVariable: "--roboto",
+        provider: fontProviders.google(),
+        weights: [500, 600],
+        styles: ["normal"]
+      },
+      {
+        name: "Roboto",
+        cssVariable: "--roboto",
+        provider: fontProviders.google(),
+        weights: [500],
+        styles: ["italic"]
+      }
+    ]
+  }
+})
+```
+
 ### Font component
 
 Setting the config (see above) configures what fonts to download, but it doesn't include font automatically on pages. Instead, we provide a `<Font />` component that can be used to compose where and how to load fonts.
