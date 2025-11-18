@@ -224,7 +224,7 @@ Astro provides sensible defaults:
 
 - Weight: `400`
 - Styles: `normal` and `italic`
-- Subsets: `cyrillic-ext`, `cyrillic`, `greek-ext`, `greek`, `vietnamese`, `latin-ext` and `latin`
+- Subsets: `latin`
 - Fallbacks: `sans-serif`
 
 ### Families
