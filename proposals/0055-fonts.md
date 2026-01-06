@@ -226,6 +226,7 @@ Astro provides sensible defaults:
 - Styles: `normal` and `italic`
 - Subsets: `latin`
 - Fallbacks: `sans-serif`
+- Formats: `woff2`
 
 ### Families
 
@@ -243,7 +244,7 @@ export default defineConfig({
 });
 ```
 
-It can specify options such as `weights` and `subsets`:
+It can specify options such as `weights`, `subsets` and `formats`:
 
 ```js
 export default defineConfig({
