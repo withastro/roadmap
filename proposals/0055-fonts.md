@@ -195,21 +195,17 @@ export default defineConfig({
 Note that under the hood, the definition looks like:
 
 ```ts
-function adobe(config: AdobeConfig) {
-  return defineAstroFontProvider({
-    // Can be a path relative to the project root, a package import or a URL
-    entrypoint: "astro/assets/fonts/adobe",
-    config,
-  });
-}
+import type { FontProvider } from 'astro'
 
-export const fontProviders = {
-  adobe,
-  bunny,
-  fontshare,
-  fontsource,
-  google,
-};
+function myProvider(config: {/* ... */}): FontProvider {
+  return {
+    name: 'myProvider'
+    config,
+    resolveFont: () => ({
+      fonts: [{ src: [{ name: 'Roboto' }] }]
+    })
+  };
+}
 ```
 
 #### Why this API?
