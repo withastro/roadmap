@@ -130,7 +130,7 @@ export default defineConfig({
 
 #### Definition
 
-A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction. It's an abstraction on top of [unifont](https://github.com/unjs/unifont) providers.
+A provider allows to retrieve font faces data from a font family name from a given CDN or abstraction.
 
 #### Available providers
 
@@ -169,7 +169,7 @@ export default defineConfig({
 
 ##### Remote providers
 
-Other unifont providers are exported from `astro/config` and can be passed as `provider`:
+Other providers are exported from `astro/config` and can be passed as `provider`:
 
 ```js
 import { defineConfig, fontProviders } from "astro/config";
@@ -470,7 +470,7 @@ will generate:
 
 ## How it works under the hood
 
-- Once the config is fully resolved, we get fonts face data using `unifont`
+- Once the config is fully resolved, we get fonts face data using [unifont](https://github.com/unjs/unifont)
 - We generate fallbacks using `capsize` and pass all the data we need through a virtual import, used by the `<Font />` component
 - We inject a vite middleware in development to download fonts as they are requested in development
 - During build, we download all fonts and save them to `config.outDir` (or `config.build.client` with a server build output)
