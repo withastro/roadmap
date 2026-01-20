@@ -332,21 +332,11 @@ import { Font } from "astro:assets"
 </head>
 ```
 
-### `getFontData()`
-
-For more advanced needs, the `getFontData()` helper allows retrieving lower level data for a given `cssVariable`:
-
-```ts
-import { getFontData } from "astro:assets"
-
-const data = getFontData("--font-roboto")
-```
-
-### cssVariable
+#### cssVariable
 
 The cssVariable will be typed using type gen, based on the user's config.
 
-### preload
+#### preload
 
 Allows emitting preload link tags, depending on its value:
 
@@ -363,6 +353,16 @@ import { Font } from "astro:assets"
 ```
 
 This is useful when a given font family loads many font files, which are not useful on all pages. For example on an internationalized site you may choose to only load a specific subset for a given locale. 
+
+### `fontData`
+
+For more advanced needs, the `fontData` objects allows retrieving lower level data for a given `cssVariable`:
+
+```ts
+import { fontData } from "astro:assets"
+
+const data = fontData["--font-roboto"]
+```
 
 ## Usage
 
