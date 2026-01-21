@@ -117,10 +117,12 @@ export default defineConfig({
     {
       name: "Custom",
       cssVariable: "--that-can-be-anything",
-      provider: "local",
-      variants: [
-        { src: ["./assets/fonts/Custom.woff2"], weight: 400, style: "normal" },
-      ],
+      provider: fontProviders.local(),
+      options: {
+        variants: [
+          { src: ["./assets/fonts/Custom.woff2"], weight: 400, style: "normal" },
+        ],
+      },
     },
   ],
 });
@@ -146,20 +148,22 @@ export default defineConfig({
     {
       name: "Custom",
       cssVariable: "--font-custom",
-      provider: "local",
-      variants: [
-        {
-          // Can be a path relative to the project root, a package import or a URL
-          src: [
-            "./assets/fonts/Custom.woff2", // Relative to the root
-            new URL("./test.ttf", import.meta.url), // URL
-            "my-package/font.woff", // Package import
-            { url: "./abc.woff2", tech: "variations" },
-          ],
-          weight: 400,
-          style: "normal",
-        },
-      ],
+      provider: fontProviders.local(),
+      options: {
+        variants: [
+          {
+            // Can be a path relative to the project root, a package import or a URL
+            src: [
+              "./assets/fonts/Custom.woff2", // Relative to the root
+              new URL("./test.ttf", import.meta.url), // URL
+              "my-package/font.woff", // Package import
+              { url: "./abc.woff2", tech: "variations" },
+            ],
+            weight: 400,
+            style: "normal",
+          },
+        ],
+      },
     },
   ],
 });
@@ -255,7 +259,7 @@ export default defineConfig({
 });
 ```
 
-It can also specify a `provider` (and `variants` if it's the `local` provider):
+It can also specify a `provider`:
 
 ```js
 export default defineConfig({
@@ -263,7 +267,7 @@ export default defineConfig({
     {
       name: "Roboto",
       cssVariable: "--font-roboto",
-      provider: "local",
+      provider: fontProviders.google(),
     },
   ],
 });
