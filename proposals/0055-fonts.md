@@ -402,7 +402,7 @@ Check out [this article](https://developer.chrome.com/blog/font-fallbacks/) to u
 
 ### Defaults
 
-Fallbaks default to `["sans-serif"]`. Technically serif is the browser default but most websites these days use sans-serif so it makes sense to set it as a default so users can benefit from optimizations out of the box.
+Fallbacks default to `["sans-serif"]`. Technically serif is the browser default but most websites these days use sans-serif so it makes sense to set it as a default so users can benefit from optimizations out of the box.
 
 ### What and how are we generating them?
 
