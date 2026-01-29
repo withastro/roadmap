@@ -368,17 +368,6 @@ import { fontData } from "astro:assets"
 const data = fontData["--font-roboto"]
 ```
 
-### `getFontBuffer()`
-
-For more advanced needs, `getFontBuffer()` can be coupled with `fontData` to easily retrieve the font file buffer, even during the build:
-
-```ts
-import { fontData, getFontBuffer } from "astro:assets"
-
-const data = fontData["--font-roboto"]
-const buffer = await getFontBuffer(data[0].src[0].url)
-```
-
 ## Usage
 
 Since fallbacks may be generated for a given family name, this name can't be used alone reliably:
