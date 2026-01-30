@@ -45,7 +45,7 @@ export function storeLoader({
 }): LiveLoader<Product, StoreEntryFilter, StoreCollectionFilter> {
   return {
     name: "store-loader",
-    loadCollection: async ({ logger, filter }) => {
+    loadCollection: async ({ logger, filter, collection }) => {
       logger.info(`Loading collection from ${field}`);
       try {
         // load from API
@@ -66,7 +66,7 @@ export function storeLoader({
         };
       }
     },
-    loadEntry: async ({ logger, filter }) => {
+    loadEntry: async ({ logger, filter, collection }) => {
       logger.info(`Loading entry from ${field}`);
       try {
         // load from API
@@ -324,11 +324,11 @@ export function storeLoader({
   return {
     name: "store-loader",
     // `filter` is typed as `StoreCollectionFilter`
-    loadCollection: async ({ filter }) => {
+    loadCollection: async ({ filter, collection }) => {
       // ...
     },
     // `filter` is typed as `StoreEntryFilter`
-    loadEntry: async ({ filter }) => {
+    loadEntry: async ({ filter, collection }) => {
       // ...
     },
   };
@@ -401,9 +401,11 @@ export interface LoadEntryContext<TEntryFilter = never> {
         id: string;
       }
     : TEntryFilter;
+  collection: string;
 }
 export interface LoadCollectionContext<TCollectionFilter = unknown> {
   filter?: TCollectionFilter;
+  collection: string;
 }
 export interface LiveLoader<
   TData extends Record<string, any> = Record<string, unknown>,
