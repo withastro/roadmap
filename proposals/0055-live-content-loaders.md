@@ -17,7 +17,7 @@
 - Implementation PR: https://github.com/withastro/astro/pull/13685
 - Stage 1 Discussion: https://github.com/withastro/roadmap/discussions/1137
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1151
-- Stage 3 PR: <!-- related roadmap PR, leave it empty if you don't have a PR yet -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1164
 
 # Summary
 
