@@ -20,7 +20,7 @@
 
 # Summary
 
-A platform-agnostic route caching API for Astro SSR pages that enables declarative cache control using web standards. The API provides a unified interface for caching server-rendered routes with support for time-to-live (TTL), stale-while-revalidate (SWR), tag-based invalidation, and automatic dependency tracking when used with live collections.
+A platform-agnostic route caching API for Astro SSR pages that enables declarative cache control using web standards. The API provides a unified interface for caching server-rendered routes with support for time-to-live (TTL), stale-while-revalidate (SWR), tag-based invalidation, and automatic dependency tracking when used with live collections. Cache settings are managed through `Astro.cache`, an object available in routes, API endpoints, and middleware with methods for setting cache policy, reading accumulated tags, and invalidating cached content.
 
 # Example
 
@@ -33,7 +33,7 @@ import { getEntry } from 'astro:content';
 
 const product = await getEntry('products', Astro.params.id);
 
-Astro.cache({
+Astro.cache.set({
   lastModified: product.updatedAt,
   maxAge: 300,  // Cache for 5 minutes
   swr: 3600,    // Stale-while-revalidate for 1 hour
@@ -62,7 +62,7 @@ export const POST: APIRoute = ({ cache }) => {
 // src/pages/api/webhook.ts
 export const POST: APIRoute = ({ cache }) => {
   // Invalidate by tag
-  cache.invalidate({ tag: "products" });
+  cache.invalidate({ tags: "products" });
 
   return Response.json({ ok: true });
 };
@@ -78,12 +78,59 @@ import { getLiveEntry, render } from 'astro:content';
 const { entry, cacheHint } = await getLiveEntry('products', Astro.params.slug);
 
 // Apply cache hints from the live collection loader
-Astro.cache(cacheHint);
+Astro.cache.set(cacheHint);
 
 const { Content } = await render(entry);
 ---
 <h1>{entry.data.name}</h1>
 <Content />
+```
+
+You can also pass the entry directly, which extracts the `cacheHint` automatically:
+
+```astro
+---
+const { entry } = await getLiveEntry('products', Astro.params.slug);
+
+// Equivalent to Astro.cache.set(entry.cacheHint)
+Astro.cache.set(entry);
+---
+```
+
+## Composing cache hints from multiple sources
+
+When a page depends on multiple data sources, call `Astro.cache.set()` multiple times. Tags accumulate (union), while scalar values like `maxAge` use last-write-wins. With lastModified, the most recent date wins. This makes it easy to compose cache hints from multiple entries:
+
+```astro
+---
+// src/pages/products/[slug].astro
+const { entry: product } = await getLiveEntry('products', Astro.params.slug);
+const { entry: author } = await getLiveEntry('authors', product.data.authorId);
+
+// Tags from both entries merge; most recent lastModified wins
+Astro.cache.set(product);
+Astro.cache.set(author);
+
+// User can still override TTL without losing accumulated tags
+Astro.cache.set({ maxAge: 600 });
+---
+```
+
+## Additive cache tags
+
+Because `cache.set()` merges tags across calls, CMS integrations can add tags without affecting other cache settings:
+
+```astro
+---
+// Integration adds tags only — doesn't touch TTL
+Astro.cache.set({ tags: ['products', `product:${product.id}`] });
+
+// User controls TTL separately — tags are preserved
+Astro.cache.set({ maxAge: 300 });
+
+// Read current tags (useful for integrations)
+console.log(Astro.cache.tags); // ['products', 'product:123']
+---
 ```
 
 ## Automatic dependency tracking
@@ -101,6 +148,18 @@ export const POST: APIRoute = async ({ cache, request }) => {
 
   return Response.json({ ok: true });
 };
+```
+
+## Opting out of config-level caching
+
+If a route matches a config-level cache rule but should not be cached, pass `false`:
+
+```astro
+---
+// src/pages/blog/draft-post.astro
+// Config sets caching for /blog/**, but this page opts out
+Astro.cache.set(false);
+---
 ```
 
 ## Define cache in config
@@ -141,7 +200,7 @@ Caching is essential for performant server-rendered applications, but current so
 - **Declarative cache control**: Simple, readable API for setting cache policies
 - **Tag-based invalidation**: Invalidate groups of related pages efficiently
 - **Path-based invalidation**: Invalidate specific routes by URL pattern
-- **Live collections integration**: Seamless integration with live collections by passing entries directly to `Astro.cache()`
+- **Live collections integration**: Seamless integration with live collections by passing entries or cache hints directly to `Astro.cache.set()`
 - **Automatic dependency tracking**: Invalidate all pages that depend on changed content entries
 - **Adapter abstraction**: Adapters provide platform-specific implementations with consistent behavior
 - **Pluggable cache drivers**: Users can configure cache drivers for different CDN providers (Fastly, Cloudflare, Akamai, etc.)
@@ -157,26 +216,29 @@ Caching is essential for performant server-rendered applications, but current so
 - **Fetch cache**: This focuses on HTTP-level response caching, not API request caching
 - **Building or maintaining all CDN-specific drivers**: We'll provide a driver interface and some select implementations, but rely on community or CDN vendors to maintain platform-specific implementations
 - **General-purpose cache**: This is not a general-purpose key-value cache, but a specialized HTTP response cache
+- **Dev server caching**: Caching is not active during development. The `Astro.cache` API is available and calls are no-ops, so code using it works without errors, but no responses are cached. The dev server always serves fresh content
 
 # Detailed Design
 
 ## API
 
-### `Astro.cache(options | cacheHint)`
+`Astro.cache` is an object available in `.astro` pages and API routes (via the context object) that provides methods for managing route-level caching. It is also available in middleware via the context object.
 
-Called within a route to declare caching behavior. This function sets the appropriate headers for the current adapter.
+**Important:** This API only works in on-demand SSR routes. Static and prerendered routes are already cached and don't support route-level cache control. Caching is not active during development — the API is available but calls are no-ops, ensuring the dev server always serves fresh content.
 
-**Important:** This API only works in on-demand SSR routes. Static and prerendered routes are already cached and don't support route-level cache control.
+### `Astro.cache.set(options | cacheHint | entry | false)`
+
+Declares caching behavior for the current route. Sets the appropriate headers for the current adapter.
 
 **With cache options:**
 
 ```astro
 ---
-Astro.cache({
+Astro.cache.set({
   maxAge: 300,
   swr: 3600,
   tags: ['products', 'product:123'],
-  lastModified: new Date('2025-01-15')
+  lastModified: new Date('2026-02-11')
 });
 ---
 ```
@@ -191,22 +253,70 @@ Astro.cache({
 
 **With cache hints from live collections:**
 
-When using live collections, pass the `cacheHint` object returned by `getLiveEntry()` or `getLiveCollection()`:
+When using live collections, pass the `cacheHint` object returned by `getLiveEntry()` or `getLiveCollection()`, or pass the entry directly:
 
 ```astro
 ---
 const { entry, cacheHint } = await getLiveEntry('products', Astro.params.id);
 
-// Apply cache hints from the live collection loader
-Astro.cache(cacheHint);
+// Either of these works:
+Astro.cache.set(cacheHint);
+Astro.cache.set(entry);  // Extracts entry.cacheHint automatically
 ---
 ```
 
-The `cacheHint` object contains pre-configured cache metadata including tags, lastModified, and other cache-related properties specific to that content entry.
+The `cacheHint` object contains pre-configured cache metadata including tags, lastModified, and other cache-related properties specific to that content entry. When an entry is passed directly, `Astro.cache.set()` reads the `cacheHint` property from the entry.
 
-### `cache.invalidate(options | entry)`
+**Opting out:**
 
-Available in API routes and server endpoints via the `cache` object on the API context. Invalidates cached responses.
+Pass `false` to explicitly disable caching for a route that would otherwise be cached by a config-level rule:
+
+```astro
+---
+Astro.cache.set(false);
+---
+```
+
+**Multiple calls (merge behavior):**
+
+`Astro.cache.set()` can be called multiple times within a single request. Calls are merged as follows:
+
+- **`maxAge`, `swr`, `etag`**: last-write-wins
+- **`lastModified`**: most recent date wins
+- **`tags`**: accumulated (union, deduplicated)
+- **`false`**: overrides all previous settings and disables caching
+
+This makes it natural to compose cache hints from multiple data sources:
+
+```astro
+---
+const { entry: product } = await getLiveEntry('products', id);
+const { entry: author } = await getLiveEntry('authors', product.data.authorId);
+
+Astro.cache.set(product);   // tags: ['entry:products:123']
+Astro.cache.set(author);    // tags: ['entry:authors:456'] — merged with above
+Astro.cache.set({ maxAge: 600 }); // overrides TTL, tags preserved
+// Final tags: ['entry:products:123', 'entry:authors:456']
+---
+```
+
+### `Astro.cache.tags`
+
+A read-only getter that returns the current accumulated cache tags for the request as a `string[]`. Returns a copy of the internal array.
+
+```astro
+---
+Astro.cache.set(entry);
+Astro.cache.set({ tags: ['extra-tag'] });
+console.log(Astro.cache.tags); // ['entry:products:123', 'extra-tag']
+---
+```
+
+This is useful for integrations that need to inspect which tags are set, for example to decide whether to trigger invalidation for opaque tags.
+
+### `Astro.cache.invalidate(options | entry)`
+
+Invalidates cached responses. Available in `.astro` pages, API routes, and middleware.
 
 **Invalidate by path:**
 
@@ -218,15 +328,15 @@ cache.invalidate({ path: "/blog/*" }); // Pattern matching
 **Invalidate by tag:**
 
 ```ts
-cache.invalidate({ tag: "products" });
+cache.invalidate({ tags: "products" });
 cache.invalidate({ tags: ["products", "featured"] });
 ```
 
 **Invalidate by entry:**
 
 ```ts
-const entry = await getLiveEntry("products", id);
-cache.invalidate(entry); // Invalidates all routes that used this entry with Astro.cache()
+const { entry } = await getLiveEntry("products", id);
+cache.invalidate(entry); // Reads entry.cacheHint.tags and invalidates matching routes
 ```
 
 ## Cache Provider Interface
@@ -278,8 +388,32 @@ interface CacheOptions {
 
 interface InvalidateOptions {
   path?: string;
-  tag?: string;
-  tags?: string[];
+  tags?: string | string[];
+}
+```
+
+### `AstroCache` Object Interface
+
+The `Astro.cache` object (and `context.cache` in API routes/middleware) implements the following interface:
+
+```ts
+interface AstroCache {
+  /**
+   * Set cache policy for the current route.
+   * Multiple calls are merged: scalars use last-write-wins, tags accumulate.
+   * Pass `false` to disable caching (overrides config-level rules).
+   */
+  set(options: CacheOptions | CacheHint | LiveDataEntry | false): void;
+
+  /**
+   * Current accumulated cache tags for this request (read-only copy).
+   */
+  readonly tags: string[];
+
+  /**
+   * Invalidate cached content by path, tags, or entry.
+   */
+  invalidate(options: InvalidateOptions | LiveDataEntry): Promise<void>;
 }
 ```
 
@@ -287,14 +421,14 @@ interface InvalidateOptions {
 
 There are two fundamental types of cache providers:
 
-**Header-based Providers** (Vercel, Netlify, Fastly, Cloudflare CDN, Akamai):
+**Header-based Providers** (Vercel, Netlify, Fastly, Cloudflare, Akamai):
 
 - Implement `setHeaders()` to generate platform-specific cache headers
 - Implement `invalidate()` to call platform purge APIs
 - Do NOT implement `onRequest()` - external CDN handles actual caching
 - Cache happens outside the application runtime
 
-**Runtime Providers** (Node memory, Cloudflare Workers):
+**Runtime Providers** (Node memory):
 
 - Implement `onRequest()` middleware to intercept requests and handle caching
 - Implement `invalidate()` to delete from cache store
@@ -335,7 +469,7 @@ async onRequest(context, next) {
 
 **Unified Flow:**
 
-1. `Astro.cache()` or config rules generate cache options
+1. `Astro.cache.set()` or config rules generate cache options
 2. Options converted to headers (via `setHeaders()` or default implementation)
 3. Headers set on response
 4. **Runtime providers** read headers in `onRequest()` middleware to determine caching behavior
@@ -411,8 +545,8 @@ class NodeMemoryProvider implements CacheProvider {
       }
     }
 
-    if (options.tag || options.tags) {
-      const tags = options.tags ?? [options.tag!];
+    if (options.tags) {
+      const tags = Array.isArray(options.tags) ? options.tags : [options.tags];
       // Invalidate by tag
       for (const [key, value] of this.cache.entries()) {
         if (value.tags.some((tag) => tags.includes(tag))) {
@@ -472,6 +606,8 @@ function defaultSetHeaders(options: CacheOptions): Headers {
 
 This API focuses on CDN and server-side caching, not browser caching. The `CDN-Cache-Control` and `Cache-Tag` headers are stripped before reaching the browser. Only `Last-Modified` and `ETag` headers are sent to browsers to enable conditional requests (304 Not Modified responses).
 
+For header-based providers, `CDN-Cache-Control` is stripped by the CDN itself per RFC 9213. For runtime providers, the framework strips `CDN-Cache-Control` and `Cache-Tag` from the outgoing response after the cache middleware has processed them.
+
 Providers can override this to use platform-specific headers. For example:
 
 - Fastly overrides to use `Surrogate-Control` instead of `CDN-Cache-Control`, and `Surrogate-Key` instead of `Cache-Tag`
@@ -514,7 +650,7 @@ Adapters provide platform-specific caching implementations while maintaining a c
 
 ### Header Mapping
 
-Each cache provider maps `Astro.cache()` options to platform-specific headers or APIs:
+Each cache provider maps `Astro.cache.set()` options to platform-specific headers or APIs:
 
 **Vercel Provider (`vercel`):**
 
@@ -743,7 +879,7 @@ export default function fastlyProvider(options: FastlyOptions) {
 
 ## Dependency Tracking
 
-Dependency tracking is implemented using cache tags rather than in-memory state. When you pass a `cacheHint` to `Astro.cache()`, it contains pre-configured cache tags based on the content entry.
+Dependency tracking is implemented using cache tags rather than in-memory state. When you pass a `cacheHint` or entry to `Astro.cache.set()`, it contains pre-configured cache tags based on the content entry. Live collection entries carry a `cacheHint` property directly on the entry object, so both `Astro.cache.set(entry)` and `Astro.cache.set(cacheHint)` work.
 
 **Automatic tag generation:**
 
@@ -754,7 +890,9 @@ const { entry, cacheHint } = await getLiveEntry('products', 'laptop');
 // cacheHint contains cache tags:
 // - 'collection:products'
 // - 'entry:products:laptop'
-Astro.cache(cacheHint);
+Astro.cache.set(cacheHint);
+// or equivalently:
+Astro.cache.set(entry);
 ---
 ```
 
@@ -762,7 +900,7 @@ Astro.cache(cacheHint);
 
 ```astro
 ---
-Astro.cache({
+Astro.cache.set({
   tags: [
     'collection:products',
     'entry:products:laptop'
@@ -783,7 +921,7 @@ import { getLiveEntry } from "astro:content";
 export const POST: APIRoute = async ({ cache, request }) => {
   const { id } = await request.json();
 
-  const entry = await getLiveEntry("products", id);
+  const { entry } = await getLiveEntry("products", id);
 
   // This invalidates the tag 'entry:products:123'
   // All routes that used this entry will be purged
@@ -870,7 +1008,7 @@ export default defineConfig({
 
 ### Route-Level Cache Rules
 
-You can also declare cache rules for routes in your config. These act as defaults that can be overridden by `Astro.cache()` calls within routes.
+You can also declare cache rules for routes in your config. These act as defaults that can be overridden by `Astro.cache.set()` calls within routes.
 
 **Basic route patterns:**
 
@@ -897,10 +1035,13 @@ export default defineConfig({
 
 **Precedence rules:**
 
-1. `Astro.cache()` called in the route (highest priority)
-2. Most specific matching route pattern in config
-3. Less specific route patterns
-4. No caching (default)
+1. `Astro.cache.set(false)` in the route (disables caching entirely)
+2. `Astro.cache.set()` called in the route or middleware
+3. Most specific matching route pattern in config
+4. Less specific route patterns
+5. No caching (default)
+
+**No merging between config rules:** Each route pattern must be fully specified. A more specific pattern does not inherit settings from a less specific one.
 
 **Example with precedence:**
 
@@ -919,16 +1060,50 @@ cache: {
 // src/pages/blog/[slug].astro
 // This page uses maxAge: 600 from config by default
 // But can override it:
-Astro.cache({ maxAge: 900 }); // This wins
+Astro.cache.set({ maxAge: 900 }); // This wins
 ---
 ```
 
 **Benefits of config-based rules:**
 
 - Set defaults for entire route patterns
-- No need to add `Astro.cache()` to every page
+- No need to add `Astro.cache.set()` to every page
 - Centralized cache policy
 - Useful for API routes and pages that don't use live collections
+
+## Middleware and API Route Support
+
+`Astro.cache` is available in middleware via `context.cache`:
+
+```ts
+// src/middleware.ts
+export const onRequest = (context, next) => {
+  if (context.url.pathname.startsWith('/api/')) {
+    context.cache.set({ maxAge: 600 });
+  }
+  return next();
+};
+```
+
+API routes can both set cache policy and trigger invalidation:
+
+```ts
+// src/pages/api/products.ts
+export const GET: APIRoute = async ({ cache }) => {
+  cache.set({ maxAge: 300, tags: ['products'] });
+  const products = await fetchProducts();
+  return Response.json(products);
+};
+
+export const POST: APIRoute = async ({ cache, request }) => {
+  const product = await request.json();
+  await saveProduct(product);
+  cache.invalidate({ tags: ['products', `product:${product.id}`] });
+  return Response.json({ ok: true });
+};
+```
+
+Cache set in middleware is treated like config-level defaults: `Astro.cache.set()` called within the route takes higher priority.
 
 ## Node.js Implementation Details
 
@@ -1055,7 +1230,8 @@ export default defineConfig({
 
 ## Unit Tests
 
-- Test `Astro.cache()` API with mock providers
+- Test `Astro.cache.set()` / `Astro.cache.tags` with mock providers
+- Test merge semantics: scalar last-write-wins, tag accumulation, `false` override
 - Test cache option validation and defaults
 - Test automatic tag generation when passing entries
 - Test entry cache hint extraction
@@ -1153,7 +1329,7 @@ Astro.response.headers.set('CDN-Cache-Control', 'public, max-age=300, stale-whil
 
 ```astro
 ---
-Astro.cache({ maxAge: 300, swr: 3600 });
+Astro.cache.set({ maxAge: 300, swr: 3600 });
 ---
 ```
 
@@ -1174,9 +1350,11 @@ Astro.cache({ maxAge: 300, swr: 3600 });
 
 # Unresolved Questions
 
-- **Cache metadata API design**: Should we use an explicit `cacheHint` parameter, or use a hidden `Symbol` field on entry/collection objects? The symbol approach would allow `Astro.cache(entry)` instead of `Astro.cache(cacheHint)`, making the API cleaner while keeping cache metadata non-enumerable. Related: for collections, should cache metadata be on the collection result object, or on individual entries?
-- Should we support cache warming/preloading on deployment?
-- How should we handle cache invalidation across regions for globally distributed apps?
-- What metrics/observability should we provide for cache hit rates and invalidation?
-- Should tag matching support wildcards (e.g., `product:*`)?
-- Should we provide a CLI command for cache invalidation during development/testing?
+None. All previously open questions have been resolved:
+
+- **Cache warming/preloading**: Out of scope. Can be built as an integration if needed.
+- **Cross-region invalidation**: Delegated to the cache provider/CDN. Not something the framework should abstract.
+- **Metrics/observability**: Out of scope. Providers can expose their own metrics.
+- **Wildcard tag matching**: No. Tags are exact-match strings. Use explicit tag hierarchies instead.
+- **CLI command for invalidation**: No. Use API routes or platform-specific tools.
+
