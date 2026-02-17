@@ -171,13 +171,15 @@ export default defineConfig({
   cache: {
     routes: {
       "/": { maxAge: 0, swr: 60 },
-      "/blog/**": { maxAge: 300 },
-      "/products/**": { maxAge: 300, swr: 3600, tags: ["products"] },
-      "/api/**": { maxAge: 600 },
+      "/blog/[...path]": { maxAge: 300 },
+      "/products/[...path]": { maxAge: 300, swr: 3600, tags: ["products"] },
+      "/api/[...path]": { maxAge: 600 },
     },
   },
 });
 ```
+
+Route patterns use the same `[param]` / `[...rest]` syntax as file-based routing and `redirects` in config. They follow the same priority rules: more segments win, static segments beat dynamic, single params beat rest params.
 
 # Background & Motivation
 
@@ -1020,18 +1022,22 @@ export default defineConfig({
     routes: {
       "/": { maxAge: 0, swr: 60 },
       "/blog/**": { maxAge: 300 },
-      "/products/**": { maxAge: 300, swr: 3600, tags: ["products"] },
-      "/api/**": { maxAge: 600 },
+      "/products/[...path]": { maxAge: 300, swr: 3600, tags: ["products"] },
+      "/api/[...path]": { maxAge: 600 },
     },
   },
 });
 ```
 
-**Pattern matching:**
+**Pattern syntax:**
+
+Route patterns use the same syntax as file-based routing and `redirects` in config:
 
 - Exact paths: `/about`
-- Wildcards: `/blog/*` (single segment), `/blog/**` (multiple segments)
-- Dynamic routes: `/products/[id]` (matches the file pattern)
+- Dynamic segments: `/products/[id]` (single segment)
+- Rest parameters: `/blog/[...slug]` (one or more segments)
+
+This reuses Astro's existing route parsing and priority infrastructure.
 
 **Precedence rules:**
 
@@ -1041,6 +1047,8 @@ export default defineConfig({
 4. Less specific route patterns
 5. No caching (default)
 
+Config route priority follows the same rules as file-based routing: more segments win, static segments beat dynamic, single params beat rest params.
+
 **No merging between config rules:** Each route pattern must be fully specified. A more specific pattern does not inherit settings from a less specific one.
 
 **Example with precedence:**
@@ -1048,9 +1056,9 @@ export default defineConfig({
 ```ts
 cache: {
   routes: {
-    '/blog/**': { maxAge: 300 },           // Matches all blog routes
-    '/blog/featured': { maxAge: 60 },      // More specific, wins for this route
-    '/blog/[slug]': { maxAge: 600 }        // Matches dynamic routes
+    '/blog/[...path]': { maxAge: 300 },    // Matches all blog routes
+    '/blog/featured': { maxAge: 60 },       // More specific, wins for this route
+    '/blog/[slug]': { maxAge: 600 }         // Matches single-segment dynamic routes
   }
 }
 ```
