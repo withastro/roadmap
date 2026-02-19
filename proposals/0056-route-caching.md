@@ -162,24 +162,32 @@ Astro.cache.set(false);
 ---
 ```
 
-## Define cache in config
+## Define route rules in config
 
 ```ts
 // astro.config.ts
 export default defineConfig({
   adapter: node(),
   cache: {
-    routes: {
-      "/": { maxAge: 0, swr: 60 },
-      "/blog/[...path]": { maxAge: 300 },
-      "/products/[...path]": { maxAge: 300, swr: 3600, tags: ["products"] },
-      "/api/[...path]": { maxAge: 600 },
+    provider: "@astrojs/node/cache",
+  },
+  routeRules: {
+    // Shortcut form (Nitro-style)
+    "/": { swr: 60 },
+    "/blog/[...path]": { maxAge: 300 },
+    "/api/[...path]": { maxAge: 600 },
+
+    // Full form with nested cache
+    "/products/[...path]": {
+      cache: { maxAge: 300, swr: 3600, tags: ["products"] },
     },
   },
 });
 ```
 
 Route patterns use the same `[param]` / `[...rest]` syntax as file-based routing and `redirects` in config. They follow the same priority rules: more segments win, static segments beat dynamic, single params beat rest params.
+
+Route rules support Nitro-style shortcuts where cache options (`maxAge`, `swr`, `tags`) can be specified directly at the rule level, or nested under a `cache` key for the full form.
 
 # Background & Motivation
 
@@ -205,7 +213,7 @@ Caching is essential for performant server-rendered applications, but current so
 - **Live collections integration**: Seamless integration with live collections by passing entries or cache hints directly to `Astro.cache.set()`
 - **Automatic dependency tracking**: Invalidate all pages that depend on changed content entries
 - **Adapter abstraction**: Adapters provide platform-specific implementations with consistent behavior
-- **Pluggable cache drivers**: Users can configure cache drivers for different CDN providers (Fastly, Cloudflare, Akamai, etc.)
+- **Pluggable cache providers**: Users can configure cache providers for different CDN platforms (Fastly, Cloudflare, Akamai, etc.)
 - **Node.js support**: Functional in-memory caching for Node.js deployments
 
 # Non-Goals
@@ -216,7 +224,7 @@ Caching is essential for performant server-rendered applications, but current so
 - **Partial page caching**: This focuses on full-page route caching, not fragment or component-level caching
 - **Browser caching**: This focuses on CDN and server-side caching, not browser caching. Only `Last-Modified` and `ETag` headers are sent to browsers for conditional requests
 - **Fetch cache**: This focuses on HTTP-level response caching, not API request caching
-- **Building or maintaining all CDN-specific drivers**: We'll provide a driver interface and some select implementations, but rely on community or CDN vendors to maintain platform-specific implementations
+- **Building or maintaining all CDN-specific providers**: We'll provide a provider interface and some select implementations, but rely on community or CDN vendors to maintain platform-specific implementations
 - **General-purpose cache**: This is not a general-purpose key-value cache, but a specialized HTTP response cache
 - **Dev server caching**: Caching is not active during development. The `Astro.cache` API is available and calls are no-ops, so code using it works without errors, but no responses are cached. The dev server always serves fresh content
 
@@ -343,7 +351,7 @@ cache.invalidate(entry); // Reads entry.cacheHint.tags and invalidates matching 
 
 ## Cache Provider Interface
 
-Cache providers implement platform-specific caching logic while maintaining a consistent developer experience. Similar to how sessions use pluggable storage drivers, route caching uses pluggable cache providers.
+Cache providers implement platform-specific caching logic while maintaining a consistent developer experience. The implementation is similar to existing APIs such as sessions, fonts, and image services.
 
 ### Provider Interface
 
@@ -371,7 +379,7 @@ interface CacheProvider {
    */
   onRequest?(
     context: MiddlewareContext,
-    next: () => Promise<Response>
+    next: () => Promise<Response>,
   ): Promise<Response>;
 
   /**
@@ -436,7 +444,7 @@ There are two fundamental types of cache providers:
 - Implement `invalidate()` to delete from cache store
 - May optionally implement `setHeaders()` for platform-specific header formats
 - Read cache headers (CDN-Cache-Control, Cache-Tag) from responses to determine caching behavior
-- Cache happens within the application runtime (memory, KV, Cache API, etc.)
+- Cache happens within the application runtime (memory, KV, etc.)
 
 **Runtime provider middleware flow:**
 
@@ -501,7 +509,7 @@ class NodeMemoryProvider implements CacheProvider {
 
   async onRequest(
     context: CacheMiddlewareContext,
-    next: () => Promise<Response>
+    next: () => Promise<Response>,
   ): Promise<Response> {
     // In real implementation, normalise the URL params etc
     const cacheKey = context.url.pathname + context.url.search;
@@ -621,12 +629,12 @@ Astro will ship with built-in providers for common platforms:
 
 - `@astrojs/vercel/cache` - Vercel CDN (default for `@astrojs/vercel` adapter)
 - `@astrojs/netlify/cache` - Netlify CDN (default for `@astrojs/netlify` adapter)
-- `@astrojs/cloudflare/cache` - Cloudflare Workers Cache API (default for `@astrojs/cloudflare` adapter)
+- `@astrojs/cloudflare/cache` - Cloudflare Workers response caching (default for `@astrojs/cloudflare` adapter)
 - `@astrojs/node/cache` - In-memory LRU cache (default for `@astrojs/node` adapter)
 
-### Driver Packages
+### Provider Packages
 
-Driver packages can be distributed as npm packages. They are shown with the `@astrojs` scope for illustration, but could be published by providers themselves.
+Provider packages can be distributed as npm packages. They are shown with the `@astrojs` scope for illustration, but could be published by providers themselves.
 
 - `@astrojs/cache-cloudflare-cdn` - Cloudflare as proxy in front of other origins. Distributed separately from the Cloudflare adapter, because it would usually be used with the Node adapter.
 - `@astrojs/cache-fastly` - Fastly CDN support
@@ -634,7 +642,7 @@ Driver packages can be distributed as npm packages. They are shown with the `@as
 - Custom providers for other CDNs or caching solutions
 - Custom runtime providers using external stores (Redis, Memcached, etc.)
 
-Driver packages export a function that accepts driver-specific options and returns a cache provider configuration. This pattern provides type-safe configuration and follows Astro's established patterns (similar to the fonts API):
+Provider packages export a function that accepts provider-specific options and returns a cache provider configuration. This pattern provides type-safe configuration and follows Astro's established patterns (similar to the fonts API):
 
 ```ts
 // @astrojs/cache-fastly
@@ -671,15 +679,7 @@ lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
 
 **Cloudflare Workers Provider:**
-Uses the Workers Cache API directly when SSR runs in a Cloudflare Worker:
-
-```ts
-const cache = caches.default;
-const cacheKey = new Request(url, request);
-await cache.put(cacheKey, response.clone());
-```
-
-Tags are stored in KV for invalidation mapping. Invalidation looks up tag mappings in KV, then deletes from cache.
+Uses Cloudflare's upcoming support for caching Worker responses with native tag-based invalidation, TTL, and stale-while-revalidate — no external storage (like KV) is needed for tag mapping.
 
 **Cloudflare CDN Provider (`cloudflare-cdn`):**
 For use when Cloudflare acts as a CDN/proxy in front of another origin (like Node.js):
@@ -751,12 +751,8 @@ await purgeCache({ tags: [tag] });
 **Cloudflare Workers Provider:**
 
 ```ts
-// Look up tag mappings in KV
-const routes = await env.CACHE_TAGS.get(`tag:${tag}`, { type: "json" });
-// Delete each route from cache
-for (const route of routes) {
-  await caches.default.delete(route);
-}
+// Native tag-based invalidation
+await cache.purge({ tags: [tag] });
 ```
 
 **Cloudflare CDN Provider:**
@@ -773,7 +769,7 @@ await fetch(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ tags: [tag] }),
-  }
+  },
 );
 ```
 
@@ -792,11 +788,11 @@ for (const [key, value] of cache.entries()) {
 
 ### Adapter Integration
 
-Adapters provide default cache drivers via the integration API, similar to how they provide default session drivers. Users can override the default driver in their config.
+Adapters provide default cache providers via the integration API, similar to how they provide default session drivers. Users can override the default provider in their config.
 
-**Driver Loading:**
+**Provider Loading:**
 
-Cache driver functions return a configuration object containing an entrypoint and options. The entrypoint points to the provider implementation that is dynamically imported at runtime. The Netlify, Vercel, Cloudflare Workers, and Node memory drivers are published as subpath exports of their respective adapter packages because they are only ever used alongside those adapters.
+Cache provider functions return a configuration object containing an entrypoint and options. The entrypoint points to the provider implementation that is dynamically imported at runtime. The Netlify, Vercel, Cloudflare Workers, and Node memory providers are published as subpath exports of their respective adapter packages because they are only ever used alongside those adapters.
 
 **Adapter providing a default:**
 
@@ -809,11 +805,11 @@ export function vercel() {
     name: "@astrojs/vercel",
     hooks: {
       "astro:config:setup": ({ config, updateConfig }) => {
-        // Only provide default if user hasn't configured a driver
-        if (!config.cache?.driver) {
+        // Only provide default if user hasn't configured a provider
+        if (!config.cache?.provider) {
           updateConfig({
             cache: {
-              driver: cacheVercel(),
+              provider: cacheVercel(),
             },
           });
         }
@@ -829,7 +825,7 @@ export function vercel() {
 }
 ```
 
-**User overriding the default with a driver package:**
+**User overriding the default with a provider package:**
 
 ```ts
 // astro.config.ts
@@ -839,7 +835,7 @@ export default defineConfig({
   adapter: node(),
   cache: {
     // Override Node's default in-memory cache with Fastly
-    driver: cacheFastly({
+    provider: cacheFastly({
       serviceId: process.env.FASTLY_SERVICE_ID,
       token: process.env.FASTLY_TOKEN,
     }),
@@ -847,9 +843,9 @@ export default defineConfig({
 });
 ```
 
-**Driver packages:**
+**Provider packages:**
 
-Driver packages export a configuration function that accepts type-safe options and returns a provider configuration. The provider implementation is then dynamically imported at runtime:
+Provider packages export a configuration function that accepts type-safe options and returns a provider configuration. The provider implementation is then dynamically imported at runtime:
 
 ```ts
 // fastly/index.ts
@@ -876,7 +872,7 @@ export default function fastlyProvider(options: FastlyOptions) {
 
 **Precedence:**
 
-1. User-configured `cache.driver` in `astro.config.ts`
+1. User-configured `cache.provider` in `astro.config.ts`
 2. Adapter-provided default via `setAdapter()`
 
 ## Dependency Tracking
@@ -956,7 +952,7 @@ export default defineConfig({
 });
 ```
 
-**Overriding with a driver package:**
+**Overriding with a provider package:**
 
 ```ts
 // astro.config.ts
@@ -966,7 +962,7 @@ export default defineConfig({
   adapter: node(),
   cache: {
     // Node app behind Cloudflare CDN
-    driver: cacheCloudflare({
+    provider: cacheCloudflare({
       zoneId: process.env.CF_ZONE_ID,
       token: process.env.CF_TOKEN,
     }),
@@ -983,7 +979,7 @@ import { cacheFastly } from "@astrojs/cache-fastly";
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: cacheFastly({
+    provider: cacheFastly({
       serviceId: process.env.FASTLY_SERVICE_ID,
       token: process.env.FASTLY_TOKEN,
     }),
@@ -1000,7 +996,7 @@ import { cacheMemory } from "@astrojs/node/cache";
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: cacheMemory({
+    provider: cacheMemory({
       max: 1000, // Max cache entries
       ttl: 300000, // Default TTL in ms
     }),
@@ -1008,9 +1004,11 @@ export default defineConfig({
 });
 ```
 
-### Route-Level Cache Rules
+### Route Rules
 
-You can also declare cache rules for routes in your config. These act as defaults that can be overridden by `Astro.cache.set()` calls within routes.
+You can declare cache rules for routes in your config using `routeRules`. These act as defaults that can be overridden by `Astro.cache.set()` calls within routes. The syntax is inspired by Nitro's route rules. It is deliberately a top-level config option rather than nested under `cache` to allow for future expansion of route-level options beyond caching, such as prerendering, headers and redirects.
+
+Route rules support shortcuts where cache options can be specified directly at the rule level, or nested under a `cache` key for the full form:
 
 **Basic route patterns:**
 
@@ -1018,12 +1016,15 @@ You can also declare cache rules for routes in your config. These act as default
 // astro.config.ts
 export default defineConfig({
   adapter: vercel(),
-  cache: {
-    routes: {
-      "/": { maxAge: 0, swr: 60 },
-      "/blog/**": { maxAge: 300 },
-      "/products/[...path]": { maxAge: 300, swr: 3600, tags: ["products"] },
-      "/api/[...path]": { maxAge: 600 },
+  routeRules: {
+    // Shortcut form (Nitro-style)
+    "/": { swr: 60 },
+    "/blog/**": { maxAge: 300 },
+    "/api/[...path]": { maxAge: 600 },
+
+    // Full form with nested cache
+    "/products/[...path]": {
+      cache: { maxAge: 300, swr: 3600, tags: ["products"] },
     },
   },
 });
@@ -1054,12 +1055,10 @@ Config route priority follows the same rules as file-based routing: more segment
 **Example with precedence:**
 
 ```ts
-cache: {
-  routes: {
-    '/blog/[...path]': { maxAge: 300 },    // Matches all blog routes
-    '/blog/featured': { maxAge: 60 },       // More specific, wins for this route
-    '/blog/[slug]': { maxAge: 600 }         // Matches single-segment dynamic routes
-  }
+routeRules: {
+  '/blog/[...path]': { maxAge: 300 },    // Matches all blog routes
+  '/blog/featured': { maxAge: 60 },       // More specific, wins for this route
+  '/blog/[slug]': { maxAge: 600 }         // Matches single-segment dynamic routes
 }
 ```
 
@@ -1086,7 +1085,7 @@ Astro.cache.set({ maxAge: 900 }); // This wins
 ```ts
 // src/middleware.ts
 export const onRequest = (context, next) => {
-  if (context.url.pathname.startsWith('/api/')) {
+  if (context.url.pathname.startsWith("/api/")) {
     context.cache.set({ maxAge: 600 });
   }
   return next();
@@ -1098,7 +1097,7 @@ API routes can both set cache policy and trigger invalidation:
 ```ts
 // src/pages/api/products.ts
 export const GET: APIRoute = async ({ cache }) => {
-  cache.set({ maxAge: 300, tags: ['products'] });
+  cache.set({ maxAge: 300, tags: ["products"] });
   const products = await fetchProducts();
   return Response.json(products);
 };
@@ -1106,7 +1105,7 @@ export const GET: APIRoute = async ({ cache }) => {
 export const POST: APIRoute = async ({ cache, request }) => {
   const product = await request.json();
   await saveProduct(product);
-  cache.invalidate({ tags: ['products', `product:${product.id}`] });
+  cache.invalidate({ tags: ["products", `product:${product.id}`] });
   return Response.json({ ok: true });
 };
 ```
@@ -1115,7 +1114,7 @@ Cache set in middleware is treated like config-level defaults: `Astro.cache.set(
 
 ## Node.js Implementation Details
 
-The Node adapter maintains an in-memory LRU cache using the `lru-cache` library, which provides:
+The Node adapter maintains an in-memory LRU cache which provides:
 
 - Automatic eviction of least-recently-used entries
 - Built-in stale-while-revalidate support via `fetchMethod`
@@ -1131,7 +1130,7 @@ The Node adapter maintains an in-memory LRU cache using the `lru-cache` library,
 **For distributed Node deployments**, users should:
 
 - Use a CDN in front of Node servers (recommended)
-- Implement a custom cache driver using Redis, Memcached, or another distributed cache
+- Implement a custom cache provider using Redis, Memcached, or another distributed cache
 - Use a platform with built-in edge caching (Vercel, Netlify, Cloudflare)
 
 ## Real-World Deployment Scenarios
@@ -1153,7 +1152,7 @@ export default defineConfig({
 ### Scenario 2: Node.js Behind Cloudflare CDN
 
 **Setup:** Self-hosted Node.js server with Cloudflare as CDN/proxy
-**Driver:** `@astrojs/cache-cloudflare-cdn` (user configured, driver package)
+**Provider:** `@astrojs/cache-cloudflare-cdn` (user configured, provider package)
 **Configuration:** Requires Cloudflare zone ID and API token
 **Behavior:** Sets Cache-Tag headers, invalidation via Cloudflare purge API
 
@@ -1164,7 +1163,7 @@ import { cacheCloudflare } from "@astrojs/cache-cloudflare-cdn";
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: cacheCloudflare({
+    provider: cacheCloudflare({
       zoneId: process.env.CF_ZONE_ID,
       token: process.env.CF_TOKEN,
     }),
@@ -1175,23 +1174,23 @@ export default defineConfig({
 ### Scenario 3: Cloudflare Workers
 
 **Setup:** SSR running directly in Cloudflare Workers
-**Driver:** `@astrojs/cloudflare/cache` (automatic default)
-**Configuration:** None required, uses KV for tag mapping
-**Behavior:** Uses Workers Cache API directly, stores tag mappings in KV
+**Provider:** `@astrojs/cloudflare/cache` (automatic default)
+**Configuration:** None required
+**Behavior:** Uses Cloudflare's upcoming support for caching Worker responses, with tag-based invalidation, TTL, and stale-while-revalidate
 
 ```ts
 // astro.config.ts
 export default defineConfig({
-  adapter: cloudflare(), // Automatically uses @astrojs/cloudflare/cache driver
+  adapter: cloudflare(), // Automatically uses @astrojs/cloudflare/cache provider
 });
 ```
 
 ### Scenario 4: Node.js Behind Fastly
 
 **Setup:** Self-hosted Node.js with Fastly CDN
-**Driver:** `@astrojs/cache-fastly` (user configured, driver package)
+**Provider:** `@astrojs/cache-fastly` (user configured, provider package)
 **Configuration:** Requires Fastly service ID and API token
-**Behavior:** Sets Surrogate-Key headers, invalidation via Fastly batch purge API (~1ms)
+**Behavior:** Sets Surrogate-Key headers, invalidation via Fastly batch purge API
 
 ```ts
 // astro.config.ts
@@ -1200,7 +1199,7 @@ import { cacheFastly } from "@astrojs/cache-fastly";
 export default defineConfig({
   adapter: node(),
   cache: {
-    driver: cacheFastly({
+    provider: cacheFastly({
       serviceId: process.env.FASTLY_SERVICE_ID,
       token: process.env.FASTLY_TOKEN,
     }),
@@ -1211,7 +1210,7 @@ export default defineConfig({
 ### Scenario 5: Simple Node.js Deployment (Single Instance)
 
 **Setup:** Single Node.js server, no CDN
-**Driver:** `@astrojs/node/cache` (automatic default)
+**Provider:** `@astrojs/node/cache` (automatic default)
 **Configuration:** Optional tuning of cache size
 **Behavior:** In-memory LRU cache, lost on restart
 
@@ -1224,7 +1223,7 @@ export default defineConfig({
   adapter: node(),
   // Optional: tune cache settings
   cache: {
-    driver: cacheMemory({
+    provider: cacheMemory({
       max: 1000,
       ttl: 300000,
     }),
@@ -1293,7 +1292,7 @@ Implement caching entirely in middleware rather than as a first-class API. This 
 
 ## Rollout Plan
 
-1. **Experimental release**: Ship behind experimental flag, disabled by default. Cache configuration will be inside the `experimental` object:
+1. **Experimental release**: Ship behind experimental flag, disabled by default. Cache provider is configured via `experimental.cache`, route rules via `experimental.routeRules`:
 
 ```ts
 import { cacheVercel } from "@astrojs/vercel/cache";
@@ -1302,10 +1301,11 @@ export default defineConfig({
   adapter: vercel(),
   experimental: {
     cache: {
-      driver: cacheVercel(), // or use adapter default by omitting
-      routes: {
-        "/blog/**": { maxAge: 300 },
-      },
+      provider: cacheVercel(), // or use adapter default by omitting
+    },
+    routeRules: {
+      "/blog/**": { maxAge: 300 },
+      "/products/*": { cache: { maxAge: 600, tags: ["products"] } },
     },
   },
 });
@@ -1313,8 +1313,8 @@ export default defineConfig({
 
 2. **Adapter implementation**: Start with Netlify and Vercel adapters as they have the most mature caching APIs
 3. **Node adapter**: Implement in-memory caching for local development and simple deployments
-4. **Cloudflare adapter**: Add support once Worker cache API integration is stable
-5. **Stable release**: Move to stable once battle-tested on major platforms. Configuration moves from `experimental.cache` to `cache`.
+4. **Cloudflare adapter**: Add support using Cloudflare's upcoming Worker response caching with native tag support
+5. **Stable release**: Move to stable once when it has had a chance to be thoroughly tested on all major platforms. Configuration moves from `experimental.cache` to `cache` and `experimental.routeRules` to `routeRules`.
 
 ## Breaking Changes
 
@@ -1365,4 +1365,3 @@ None. All previously open questions have been resolved:
 - **Metrics/observability**: Out of scope. Providers can expose their own metrics.
 - **Wildcard tag matching**: No. Tags are exact-match strings. Use explicit tag hierarchies instead.
 - **CLI command for invalidation**: No. Use API routes or platform-specific tools.
-
