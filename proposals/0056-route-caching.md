@@ -236,6 +236,8 @@ Caching is essential for performant server-rendered applications, but current so
 
 **Important:** This API only works in on-demand SSR routes. Static and prerendered routes are already cached and don't support route-level cache control. Caching is not active during development — the API is available but calls are no-ops, ensuring the dev server always serves fresh content.
 
+**When cache is not configured:** If no cache provider is configured (i.e. no `cache` in config and the adapter does not provide a default), accessing `Astro.cache` throws a `CacheNotEnabled` error with an actionable message directing the user to configure a cache provider.
+
 ### `Astro.cache.set(options | cacheHint | entry | false)`
 
 Declares caching behavior for the current route. Sets the appropriate headers for the current adapter.
@@ -331,9 +333,10 @@ Invalidates cached responses. Available in `.astro` pages, API routes, and middl
 **Invalidate by path:**
 
 ```ts
-cache.invalidate({ path: "/products/laptop" });
-cache.invalidate({ path: "/blog/*" }); // Pattern matching
+cache.invalidate({ path: "/products/laptop" }); // Exact path
 ```
+
+Note: Path invalidation is exact-match only. Wildcard patterns are not supported.
 
 **Invalidate by tag:**
 
@@ -376,9 +379,17 @@ interface CacheProvider {
    * - Read cache headers from response to determine caching behavior
    * - Store response in cache
    * - Return response
+   *
+   * The context includes an optional `waitUntil` function, which runtime
+   * providers can use for SWR background revalidation without blocking
+   * the response.
    */
   onRequest?(
-    context: MiddlewareContext,
+    context: {
+      request: Request;
+      url: URL;
+      waitUntil?: (p: Promise<unknown>) => void;
+    },
     next: () => Promise<Response>,
   ): Promise<Response>;
 
@@ -421,6 +432,11 @@ interface AstroCache {
   readonly tags: string[];
 
   /**
+   * Current accumulated cache options for this request (read-only).
+   */
+  readonly options: Readonly<CacheOptions>;
+
+  /**
    * Invalidate cached content by path, tags, or entry.
    */
   invalidate(options: InvalidateOptions | LiveDataEntry): Promise<void>;
@@ -449,6 +465,7 @@ There are two fundamental types of cache providers:
 **Runtime provider middleware flow:**
 
 ```ts
+// context: { request: Request; url: URL; waitUntil?: (p: Promise<unknown>) => void }
 async onRequest(context, next) {
   // 1. Check cache using context.request. Assume this.cache is a simple key-value store.
   const cached = await this.cache.get(context.url.pathname);
@@ -487,28 +504,30 @@ async onRequest(context, next) {
 
 This design ensures consistent behavior: runtime providers honour the same cache headers that external CDNs use.
 
+**Observability:** Runtime providers set an `X-Astro-Cache` response header with the value `HIT`, `MISS`, or `STALE` to indicate whether the response was served from cache. This is useful for debugging and monitoring cache behavior.
+
 ### Example Runtime Provider Implementation
 
 Here's a complete example of a Node memory provider implementation:
 
 ```ts
-import { LRUCache } from "lru-cache";
-
+// Zero-dependency in-memory LRU cache implementation
 class NodeMemoryProvider implements CacheProvider {
   name = "node-memory";
-  private cache: LRUCache<string, CachedEntry>;
+  private cache: Map<string, CachedEntry>;
+  private max: number;
 
-  constructor(options?: { max?: number; ttl?: number }) {
-    this.cache = new LRUCache({
-      max: options?.max ?? 500,
-      ttl: options?.ttl ?? 1000 * 60 * 5, // 5 minutes default
-      allowStale: true,
-      updateAgeOnGet: true,
-    });
+  constructor(options?: { max?: number }) {
+    this.max = options?.max ?? 1000;
+    this.cache = new Map();
   }
 
   async onRequest(
-    context: CacheMiddlewareContext,
+    context: {
+      request: Request;
+      url: URL;
+      waitUntil?: (p: Promise<unknown>) => void;
+    },
     next: () => Promise<Response>,
   ): Promise<Response> {
     // In real implementation, normalise the URL params etc
@@ -523,13 +542,13 @@ class NodeMemoryProvider implements CacheProvider {
     // Get response from route
     const response = await next();
 
-    // Parse cache headers
+    // Parse cache headers — TTL is per-entry from response headers
     const cacheControl = response.headers.get("CDN-Cache-Control");
     if (cacheControl) {
       const { maxAge, swr } = this.parseCacheControl(cacheControl);
       const tags = response.headers.get("Cache-Tag")?.split(", ") ?? [];
 
-      // Store in cache
+      // Store in cache (evict LRU entries if at capacity)
       this.cache.set(cacheKey, {
         response: response.clone(),
         tags,
@@ -543,16 +562,9 @@ class NodeMemoryProvider implements CacheProvider {
   }
 
   async invalidate(options: InvalidateOptions): Promise<void> {
-    // Naive implementation iterates all keys
-
     if (options.path) {
-      // Invalidate by path (with wildcard support)
-      const pattern = new URLPattern(options.path);
-      for (const key of this.cache.keys()) {
-        if (pattern.test(key)) {
-          this.cache.delete(key);
-        }
-      }
+      // Exact-path invalidation only (no glob/wildcard patterns)
+      this.cache.delete(options.path);
     }
 
     if (options.tags) {
@@ -572,8 +584,8 @@ This example demonstrates:
 
 - Middleware-style `onRequest()` that checks cache before calling `next()`
 - Reading cache headers from the response to determine caching behavior
-- Storing responses with metadata (tags, TTL, timestamp)
-- Invalidation by both path patterns and cache tags
+- Per-entry TTL derived from response cache headers (not a global default)
+- Exact-path invalidation and tag-based invalidation
 - Proper response cloning to avoid consuming the stream
 
 ### Default Header Generation
@@ -586,7 +598,7 @@ function defaultSetHeaders(options: CacheOptions): Headers {
   const headers = new Headers();
 
   // Build Cache-Control value
-  const directives = ["public"];
+  const directives: string[] = [];
   if (options.maxAge !== undefined) {
     directives.push(`max-age=${options.maxAge}`);
   }
@@ -594,7 +606,9 @@ function defaultSetHeaders(options: CacheOptions): Headers {
     directives.push(`stale-while-revalidate=${options.swr}`);
   }
 
-  headers.set("CDN-Cache-Control", directives.join(", "));
+  if (directives.length) {
+    headers.set("CDN-Cache-Control", directives.join(", "));
+  }
 
   if (options.tags?.length) {
     headers.set("Cache-Tag", options.tags.join(", "));
@@ -649,7 +663,7 @@ Provider packages export a function that accepts provider-specific options and r
 export function cacheFastly(options: FastlyOptions) {
   return {
     entrypoint: new URL("./provider.js", import.meta.url),
-    options,
+    config: options,
   };
 }
 ```
@@ -665,7 +679,7 @@ Each cache provider maps `Astro.cache.set()` options to platform-specific header
 **Vercel Provider (`vercel`):**
 
 ```
-maxAge + swr → CDN-Cache-Control: public, max-age=300, stale-while-revalidate=3600
+maxAge + swr → CDN-Cache-Control: max-age=300, stale-while-revalidate=3600
 tags → Cache-Tag: products, product:123
 lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
@@ -673,19 +687,19 @@ lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 **Netlify Provider:**
 
 ```
-maxAge + swr → Netlify-CDN-Cache-Control: public, max-age=300, stale-while-revalidate=3600, durable
+maxAge + swr → Netlify-CDN-Cache-Control: max-age=300, stale-while-revalidate=3600, durable
 tags → Netlify-Cache-Tag: products, product:123
 lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
 
 **Cloudflare Workers Provider:**
-Uses Cloudflare's upcoming support for caching Worker responses with native tag-based invalidation, TTL, and stale-while-revalidate — no external storage (like KV) is needed for tag mapping.
+Uses Cloudflare's support for caching Worker responses with native tag-based invalidation, TTL, and stale-while-revalidate — no external storage (like KV) is needed for tag mapping.
 
 **Cloudflare CDN Provider (`cloudflare-cdn`):**
 For use when Cloudflare acts as a CDN/proxy in front of another origin (like Node.js):
 
 ```
-maxAge + swr → Cache-Control: public, s-maxage=300, stale-while-revalidate=3600
+maxAge + swr → Cache-Control: s-maxage=300, stale-while-revalidate=3600
 tags → Cache-Tag: products, product:123
 lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
@@ -705,7 +719,7 @@ Note: Fastly uses `Surrogate-Control` and `Surrogate-Key` headers (proprietary F
 **Akamai Provider:**
 
 ```
-maxAge + swr → CDN-Cache-Control: public, max-age=300, stale-while-revalidate=3600
+maxAge + swr → CDN-Cache-Control: max-age=300, stale-while-revalidate=3600
 tags → Edge-Cache-Tag: products,product:123
 lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 ```
@@ -714,7 +728,7 @@ Note: Akamai supports the standardized `CDN-Cache-Control` header (RFC 9213) for
 
 **Node Memory Provider:**
 
-In-memory LRU cache using `lru-cache` library with stale-while-revalidate support. As a runtime provider, it reads the `CDN-Cache-Control` and `Cache-Tag` headers set by the default header generation to determine caching behavior.
+Zero-dependency in-memory LRU cache with stale-while-revalidate support. As a runtime provider, it reads the `CDN-Cache-Control` and `Cache-Tag` headers set by the default header generation to determine caching behavior. TTL is determined per-entry from the response's cache headers rather than a global default.
 
 ### Invalidation Implementation
 
@@ -852,7 +866,7 @@ Provider packages export a configuration function that accepts type-safe options
 export function cacheFastly(options: FastlyOptions) {
   return {
     entrypoint: new URL("./provider.js", import.meta.url),
-    options,
+    config: options,
   };
 }
 
@@ -997,8 +1011,7 @@ export default defineConfig({
   adapter: node(),
   cache: {
     provider: cacheMemory({
-      max: 1000, // Max cache entries
-      ttl: 300000, // Default TTL in ms
+      max: 1000, // Max cache entries (default: 1000)
     }),
   },
 });
@@ -1114,12 +1127,13 @@ Cache set in middleware is treated like config-level defaults: `Astro.cache.set(
 
 ## Node.js Implementation Details
 
-The Node adapter maintains an in-memory LRU cache which provides:
+The Node adapter maintains a zero-dependency in-memory LRU cache (default max: 1000 entries) which provides:
 
 - Automatic eviction of least-recently-used entries
-- Built-in stale-while-revalidate support via `fetchMethod`
-- TTL management
+- Built-in stale-while-revalidate support
+- Per-entry TTL derived from response cache headers
 - Size limits to prevent memory issues
+- Exact-path invalidation only (no wildcard patterns)
 
 **Important limitations:**
 
@@ -1176,7 +1190,7 @@ export default defineConfig({
 **Setup:** SSR running directly in Cloudflare Workers
 **Provider:** `@astrojs/cloudflare/cache` (automatic default)
 **Configuration:** None required
-**Behavior:** Uses Cloudflare's upcoming support for caching Worker responses, with tag-based invalidation, TTL, and stale-while-revalidate
+**Behavior:** Uses Cloudflare's support for caching Worker responses, with tag-based invalidation, TTL, and stale-while-revalidate
 
 ```ts
 // astro.config.ts
@@ -1225,7 +1239,6 @@ export default defineConfig({
   cache: {
     provider: cacheMemory({
       max: 1000,
-      ttl: 300000,
     }),
   },
 });
@@ -1313,7 +1326,7 @@ export default defineConfig({
 
 2. **Adapter implementation**: Start with Netlify and Vercel adapters as they have the most mature caching APIs
 3. **Node adapter**: Implement in-memory caching for local development and simple deployments
-4. **Cloudflare adapter**: Add support using Cloudflare's upcoming Worker response caching with native tag support
+4. **Cloudflare adapter**: Add support using Cloudflare's Worker response caching with native tag support
 5. **Stable release**: Move to stable once when it has had a chance to be thoroughly tested on all major platforms. Configuration moves from `experimental.cache` to `cache` and `experimental.routeRules` to `routeRules`.
 
 ## Breaking Changes
@@ -1322,14 +1335,14 @@ This is a **non-breaking addition**. The feature is disabled by default and user
 
 ## Migration Path
 
-Users currently setting cache headers manually can migrate incrementally:
+Users setting cache headers manually can migrate incrementally:
 
 **Before:**
 
 ```astro
 ---
-Astro.response.headers.set('Cache-Control', 'public, max-age=300');
-Astro.response.headers.set('CDN-Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
+Astro.response.headers.set('Cache-Control', 'max-age=300');
+Astro.response.headers.set('CDN-Cache-Control', 'max-age=300, stale-while-revalidate=3600');
 ---
 ```
 
