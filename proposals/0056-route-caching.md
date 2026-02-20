@@ -166,10 +166,12 @@ Astro.cache.set(false);
 
 ```ts
 // astro.config.ts
+import { memoryCache } from "astro/config";
+
 export default defineConfig({
   adapter: node(),
   cache: {
-    provider: "@astrojs/node/cache",
+    provider: memoryCache(),
   },
   routeRules: {
     // Shortcut form (Nitro-style)
@@ -644,7 +646,7 @@ Astro will ship with built-in providers for common platforms:
 - `@astrojs/vercel/cache` - Vercel CDN (default for `@astrojs/vercel` adapter)
 - `@astrojs/netlify/cache` - Netlify CDN (default for `@astrojs/netlify` adapter)
 - `@astrojs/cloudflare/cache` - Cloudflare Workers response caching (default for `@astrojs/cloudflare` adapter)
-- `@astrojs/node/cache` - In-memory LRU cache (default for `@astrojs/node` adapter)
+- `astro/cache/memory` - Built-in in-memory LRU cache (available with any adapter)
 
 ### Provider Packages
 
@@ -1005,12 +1007,12 @@ export default defineConfig({
 
 ```ts
 // astro.config.ts
-import { cacheMemory } from "@astrojs/node/cache";
+import { memoryCache } from "astro/config";
 
 export default defineConfig({
   adapter: node(),
   cache: {
-    provider: cacheMemory({
+    provider: memoryCache({
       max: 1000, // Max cache entries (default: 1000)
     }),
   },
@@ -1224,20 +1226,20 @@ export default defineConfig({
 ### Scenario 5: Simple Node.js Deployment (Single Instance)
 
 **Setup:** Single Node.js server, no CDN
-**Provider:** `@astrojs/node/cache` (automatic default)
+**Provider:** `memoryCache()` from `astro/config` (automatic default)
 **Configuration:** Optional tuning of cache size
 **Behavior:** In-memory LRU cache, lost on restart
 
 ```ts
 // astro.config.ts
 import node from "@astrojs/node";
-import { cacheMemory } from "@astrojs/node/cache";
+import { memoryCache } from "astro/config";
 
 export default defineConfig({
   adapter: node(),
   // Optional: tune cache settings
   cache: {
-    provider: cacheMemory({
+    provider: memoryCache({
       max: 1000,
     }),
   },
