@@ -723,9 +723,16 @@ lastModified → Last-Modified: Thu, 15 Jan 2025 00:00:00 GMT
 
 Note: Akamai supports the standardized `CDN-Cache-Control` header (RFC 9213) for Targeted Cache Control. Individual tags limited to 128 characters, total header limited to 8192 bytes. Tags are case-sensitive.
 
-**Node Memory Provider:**
+**Memory Provider:**
 
 Zero-dependency in-memory LRU cache with stale-while-revalidate support. As a runtime provider, it reads the `CDN-Cache-Control` and `Cache-Tag` headers set by the default header generation to determine caching behavior. TTL is determined per-entry from the response's cache headers rather than a global default.
+
+The memory provider normalizes cache keys for better hit rates:
+
+- **Query parameter sorting**: Parameters are sorted alphabetically, so `/page?b=2&a=1` and `/page?a=1&b=2` resolve to the same cache entry (enabled by default, configurable via `query.sort`)
+- **Tracking parameter exclusion**: Common analytics parameters (`utm_*`, `fbclid`, `gclid`, etc.) are stripped from cache keys by default (configurable via `query.exclude`)
+- **Query parameter allowlisting**: Optionally include only specific parameters in the cache key, ignoring all others (via `query.include`, mutually exclusive with `exclude`)
+- **Vary header support**: When a response includes a `Vary` header, the provider creates separate cache entries keyed by the specified request header values. `Vary: Cookie` is ignored (too high cardinality) — future work will add config-level cookie-based vary for specific cookie keys.
 
 ### Invalidation Implementation
 
@@ -1126,6 +1133,29 @@ The Node adapter maintains a zero-dependency in-memory LRU cache (default max: 1
 - Per-entry TTL derived from response cache headers
 - Size limits to prevent memory issues
 - Exact-path invalidation only (no wildcard patterns)
+- Query parameter normalization (sorting, tracking param exclusion, allowlisting)
+- `Vary` header-aware cache keying (separate entries per request variant)
+
+**Cache key normalization:**
+
+Query parameters are sorted alphabetically by default so that parameter order does not affect the cache key. Common tracking and analytics parameters (`utm_*`, `fbclid`, `gclid`, `msclkid`, `_ga`, `_gl`, etc.) are excluded by default. Users can customize this behavior:
+
+```ts
+import { memoryCache } from "astro/config";
+
+memoryCache({
+  query: {
+    sort: true, // default: true
+    exclude: [], // default: common tracking params; set to [] to include all
+    // OR:
+    include: ["page", "sort"], // allowlist mode (mutually exclusive with exclude)
+  },
+});
+```
+
+**Vary header support:**
+
+When a response includes a `Vary` header (e.g. `Vary: Accept-Language`), the memory provider incorporates the specified request header values into the cache key, creating separate entries per variant. `Vary: Cookie` and `Vary: Set-Cookie` are ignored — `Cookie` has too-high cardinality for effective caching. Config-level cookie-based vary (for specific cookie keys like `theme` or `locale`) is planned as a future enhancement.
 
 **Important limitations:**
 
@@ -1217,7 +1247,7 @@ export default defineConfig({
 
 **Setup:** Single Node.js server, no CDN
 **Provider:** `memoryCache()` from `astro/config` (automatic default)
-**Configuration:** Optional tuning of cache size
+**Configuration:** Optional tuning of cache size and query parameter handling
 **Behavior:** In-memory LRU cache, lost on restart
 
 ```ts
@@ -1231,6 +1261,10 @@ export default defineConfig({
   cache: {
     provider: memoryCache({
       max: 1000,
+      query: {
+        // Sort params (default: true), exclude tracking params (default: common list)
+        // Use include for allowlist mode: include: ['page', 'sort']
+      },
     }),
   },
 });
