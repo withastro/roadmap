@@ -174,15 +174,10 @@ export default defineConfig({
     provider: memoryCache(),
   },
   routeRules: {
-    // Shortcut form (Nitro-style)
     "/": { swr: 60 },
     "/blog/[...path]": { maxAge: 300 },
     "/api/[...path]": { maxAge: 600 },
-
-    // Full form with nested cache
-    "/products/[...path]": {
-      cache: { maxAge: 300, swr: 3600, tags: ["products"] },
-    },
+    "/products/[...path]": { maxAge: 300, swr: 3600, tags: ["products"] },
   },
 });
 ```
@@ -1023,7 +1018,7 @@ export default defineConfig({
 
 You can declare cache rules for routes in your config using `routeRules`. These act as defaults that can be overridden by `Astro.cache.set()` calls within routes. The syntax is inspired by Nitro's route rules. It is deliberately a top-level config option rather than nested under `cache` to allow for future expansion of route-level options beyond caching, such as prerendering, headers and redirects.
 
-Route rules support shortcuts where cache options can be specified directly at the rule level, or nested under a `cache` key for the full form:
+Cache options are specified directly at the rule level:
 
 **Basic route patterns:**
 
@@ -1032,15 +1027,10 @@ Route rules support shortcuts where cache options can be specified directly at t
 export default defineConfig({
   adapter: vercel(),
   routeRules: {
-    // Shortcut form (Nitro-style)
     "/": { swr: 60 },
     "/blog/**": { maxAge: 300 },
     "/api/[...path]": { maxAge: 600 },
-
-    // Full form with nested cache
-    "/products/[...path]": {
-      cache: { maxAge: 300, swr: 3600, tags: ["products"] },
-    },
+    "/products/[...path]": { maxAge: 300, swr: 3600, tags: ["products"] },
   },
 });
 ```
@@ -1320,7 +1310,7 @@ export default defineConfig({
     },
     routeRules: {
       "/blog/**": { maxAge: 300 },
-      "/products/*": { cache: { maxAge: 600, tags: ["products"] } },
+      "/products/*": { maxAge: 600, tags: ["products"] },
     },
   },
 });
