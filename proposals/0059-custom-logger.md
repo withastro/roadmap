@@ -34,7 +34,10 @@ import { defineConfig, logHandlers } from "astro/config";
 
 export default defineConfig({
   experimental: {
-    logger: logHandlers.json({ pretty: false }),
+    logger: logHandlers.json({ 
+      pretty: false,
+      level: "warn"
+    }),
   },
 });
 ```
@@ -110,7 +113,10 @@ Configuration via the proper handler
 import { logHandler } from "astro/config";
 
 export default defineConfig({
-  logger: logHandler.json({ pretty: true }),
+  logger: logHandler.json({ 
+    pretty: true,
+    level: "warn"
+  }),
 });
 ```
 
@@ -250,7 +256,44 @@ fields are broken down on multiple lines.
 import { defineConfig, logHandlers } from "astro/config";
 
 export default defineConfig({
-  logger: logHandlers.json({ pretty: true }),
+  logger: logHandlers.json({ 
+    pretty: true,
+    level: "warn"
+  }),
+});
+```
+
+
+### `logHandlers.console(config?)`
+
+A logger that writes to `console`. Each level is mapped to the respective console binding:
+- "error" -> `console.error`
+- "warn" -> `console.warn`
+- "info" -> `console.info`
+
+```ts
+import { defineConfig, logHandlers } from "astro/config";
+
+export default defineConfig({
+  logger: logHandlers.console({ 
+    pretty: true,
+    level: "warn"
+  }),
+});
+```
+
+### `logHandlers.node(config?)`
+
+A logger that writes to `stdout` and `stderr`.
+
+```ts
+import { defineConfig, logHandlers } from "astro/config";
+
+export default defineConfig({
+  logger: logHandlers.node({ 
+    pretty: true,
+    level: "warn"
+  }),
 });
 ```
 
