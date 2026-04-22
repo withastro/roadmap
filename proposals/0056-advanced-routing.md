@@ -160,6 +160,39 @@ export default {
 
 Note that using the `astro/hono` API the creation of FetchState is not necessary, since Hono has its own Context object; handlers can get/create a FetchState by inspecting HonoContext for a certain key (likely `astro.fetchState`).
 
+### Context Providers
+
+`FetchState` includes a **provider registry** that allows handlers to lazily contribute values to the `APIContext` and `Astro` global. This is the mechanism that powers features like sessions and cache — instead of being created eagerly during request setup, they are registered as providers and only instantiated when user code accesses them.
+
+```ts
+interface ContextProvider<T> {
+  /** Factory called lazily on the first access. */
+  create: () => T;
+  /** Optional cleanup / persist callback. */
+  finalize?: (value: T) => Promise<void> | void;
+}
+```
+The API on `FetchState`:
+
+- `provide<T>(key, provider)` — Registers a provider. The `create` factory is deferred until the first time accessed.
+- `resolve<T>(key)` — Lazily calls `create()`, caches the result, and returns it. Returns `undefined` if no provider was registered.
+- `finalizeAll()` — Runs all registered `finalize` callbacks for providers that were actually resolved. Returns synchronously when nothing needs finalizing.
+
+For example, the `sessions()` handler registers a provider that lazily creates an `AstroSession` and persists it on finalize:
+
+```ts
+state.provide<AstroSession>('session', {
+  create() {
+    return new AstroSession({ cookies, config, ... });
+  },
+  finalize(session) {
+    return session.persist();
+  },
+});
+```
+
+From the user's perspective they only need to add the `session()` handler/middleware and then they get `ctx.session` / `Astro.session` as values. This could also be used by 3rd party integrations.
+
 ## Feature Handlers
 
 As much as possible, the aim is to group distinct "features" of Astro into individual handlers. In the `astro/hono` API these will be provided as separate middleware. The following features are expected to be provided:
