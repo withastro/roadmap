@@ -17,7 +17,7 @@ comment on the Stage 2 issue (links below).**
 - Reference Issues: <!-- related issues, otherwise leave empty -->
 - Implementation PR: <!-- leave empty -->
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1335
-- Stage 3 PR: <!-- leave empty -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1339
 
 # Summary
 
