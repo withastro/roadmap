@@ -195,18 +195,146 @@ From the user's perspective they only need to add the `session()` handler/middle
 
 ## Feature Handlers
 
-As much as possible, the aim is to group distinct "features" of Astro into individual handlers. In the `astro/hono` API these will be provided as separate middleware. The following features are expected to be provided:
+Each Astro feature is exposed as a plain function from `astro/fetch`. These functions fall into three categories based on their return type:
 
-- trailingSlash - Controls enforcement of Astro `trailingSlash` config.
-- i18n
-- sessions
-- redirects
-- cache providers
-- pages folder - This is rendering pages and calling endpoints.
-- user middleware - This runs the user's `src/middleware.ts` if present. `src/middleware.ts` is still supported when `src/app.ts` is used; it becomes one of the composable handlers in the pipeline rather than being automatically injected.
-- actions
+- **Early-exit handlers** return `Response | undefined`. If they return a `Response`, the request is handled and the caller should stop. If `undefined`, the caller continues to the next handler.
+- **Wrapping handlers** take a `next` callback and always return a `Response`. They run logic before and/or after the inner handler.
+- **Post-processors** take an existing `Response` and return a (possibly modified) `Response`.
 
-Additionally there will be an `astro()` handler that combines all of the features into a single API. Expectation is that most people who don't want fine-grained control will use this API.
+All handlers take a `FetchState` as their first argument. Here is each handler, what it does, and its signature:
+
+### `trailingSlash(state)`
+
+Enforces the `trailingSlash` config option (`'always'`, `'never'`, or `'ignore'`). If the request pathname doesn't match the configured policy, returns a `301` redirect to the corrected URL. Otherwise returns `undefined`. Call it first, before any other handler.
+
+```ts
+function trailingSlash(state: FetchState): Response | undefined
+```
+
+### `redirects(state)`
+
+Checks if the matched route is a redirect configured via `astro.config`. If so, returns the redirect `Response`. Otherwise returns `undefined`.
+
+```ts
+function redirects(state: FetchState): Promise<Response> | undefined
+```
+
+### `actions(state)`
+
+Handles Astro Action requests. For RPC actions (JSON API calls via `actions.myAction()`), executes the action and returns a `Response` containing the result. For form actions (progressive enhancement via `<form>`), executes the action and stores the result on the state so the page can read it via `Astro.getActionResult()`, then returns `undefined` to let page rendering continue. For non-action requests, returns `undefined`.
+
+```ts
+function actions(state: FetchState): Promise<Response | undefined> | undefined
+```
+
+### `sessions(state)`
+
+Registers the session provider on the state. The session object is created lazily — only when user code accesses `ctx.session` or `Astro.session`. No-op if sessions are not configured in `astro.config`.
+
+Call this early, before middleware runs. After the response is produced, call `state.finalizeAll()` in a `finally` block to persist any session mutations.
+
+```ts
+function sessions(state: FetchState): Promise<void> | void
+```
+
+Returns `undefined` when sessions are not configured.
+
+### `middleware(state, next)`
+
+Runs the user's `src/middleware.ts` (if present) around the `next` callback. The user's `onRequest` handler receives the usual `APIContext` and a `next` function. If no user middleware is configured, calls `next` directly.
+
+```ts
+function middleware(
+  state: FetchState,
+  next: (state: FetchState) => Promise<Response>,
+): Promise<Response>
+```
+
+The `next` callback is where you put the inner handlers (typically `pages`):
+
+```ts
+const response = await middleware(state, (s) => pages(s));
+```
+
+### `pages(state)`
+
+Renders the matched page or endpoint and returns the response. This is the core rendering handler — it loads the route's component module, executes it, and builds the response. Returns 404/500 error pages when appropriate.
+
+```ts
+function pages(state: FetchState): Promise<Response>
+```
+
+### `i18n(state, response)`
+
+Post-processes a response against the app's i18n configuration. Handles locale redirects for the root URL, 404 responses for invalid locales, and fallback routing. Returns the response unmodified if i18n is not configured or the strategy is `'manual'`.
+
+```ts
+function i18n(state: FetchState, response: Response): Promise<Response>
+```
+
+Call this after the response has been produced (typically by `middleware` + `pages`).
+
+### `cache(state, next)`
+
+Wraps a render callback with cache provider logic. Handles runtime caching (providers that implement `onRequest`), CDN-based providers (headers only), and the no-cache case transparently. Cache headers are applied and stripped internally.
+
+```ts
+function cache(
+  state: FetchState,
+  next: () => Promise<Response>,
+): Promise<Response>
+```
+
+### `astro(state)`
+
+The combined handler that runs all features in the default order. Equivalent to composing every handler above in the standard sequence: trailing slash → redirects → sessions → actions → cache → middleware → pages → i18n, with error handling and finalization.
+
+```ts
+function astro(state: FetchState): Promise<Response>
+```
+
+Most users who don't need fine-grained control should use this.
+
+### Composing handlers
+
+Here's how the individual handlers compose into a full pipeline:
+
+```ts
+import {
+  FetchState, trailingSlash, redirects,
+  sessions, actions, middleware, pages, i18n
+} from 'astro/fetch';
+
+export default {
+  async fetch(request: Request) {
+    const state = new FetchState(request);
+
+    // Early exits — return immediately if they handle the request.
+    const slash = trailingSlash(state);
+    if (slash) return slash;
+
+    const redirect = redirects(state);
+    if (redirect) return redirect;
+
+    // Register session provider (lazy, no-op if unconfigured).
+    sessions(state);
+
+    const action = await actions(state);
+    if (action) return action;
+
+    try {
+      // Middleware wraps page rendering; i18n post-processes.
+      const response = await middleware(state, () => pages(state));
+      return await i18n(state, response);
+    } finally {
+      // Persist sessions, etc.
+      await state.finalizeAll();
+    }
+  }
+};
+```
+
+The power of this API is that you can slot your own logic anywhere. Add auth before `pages`, add logging around `middleware`, skip `i18n` entirely, or replace `pages` with your own rendering — it's all just function calls.
 
 ## Platform Entrypoints
 
