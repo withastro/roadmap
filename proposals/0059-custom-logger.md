@@ -175,12 +175,12 @@ export default defineDestination<PinoConfig>((config) => {
 });
 ```
 
-The `LoggerDestination` interface will be defined as follows:
+The `AstroLoggerDestination` interface will be defined as follows:
 
 ```ts
-export interface LoggerDestination<T> {
+export interface AstroLoggerDestination {
   /** Write a log event. Called synchronously on every log call. */
-  write: (chunk: T) => void;
+  write: (chunk: AstroLoggerMessage) => void;
   /** Flush buffered writes without releasing resources. Optional. */
   flush?: () => void | Promise<void>;
   /** Flush and release resources (file descriptors, connections). Optional. Implies flush. */
