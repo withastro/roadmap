@@ -421,11 +421,15 @@ Because the user controls the pipeline, debugging can be harder. Errors that pre
 
 # Alternatives
 
-Early in the design process it was expected that we directly depend on `Hono` and only provide the `astro/hono` APIs. The reason for taking this initial approach was to avoid creating our own framework APIs that are similar to but slightly different from Hono.
+## Direct Hono dependency
 
-A lot of feedback was provided about not wanting to directly depend on Hono. Part of this was motivated by not wanting to prefer one framework over others, and some of the feedback was concern about breaking changes in Hono affecting Astro.
+Early in the design process the plan was for Astro to depend directly on Hono and use it as the internal request pipeline, only exposing the `astro/hono` APIs. The motivation was to avoid designing a custom middleware API that would inevitably look very similar to Hono's — using Hono directly would give users access to its large ecosystem of middleware from day one.
 
-So the compromise was to provide an easy way to use Hono while also providing a lower-level Fetch handler shaped API, along with the proposed `astro/fetch` API.
+During review, concerns were raised about coupling Astro to Hono's release cycle. A breaking change in Hono could force a breaking change in Astro, and some reviewers felt that preferring one framework over others was undesirable. The compromise was to provide the low-level `astro/fetch` API as the standalone foundation, with `astro/hono` as an optional wrapper for users who want Hono's middleware model. Users opt in by installing Hono themselves.
+
+## Separate `@astrojs/hono` package
+
+An alternative to `astro/hono` would be a separate `@astrojs/hono` package. However, Astro does not depend on Hono at runtime — the user brings their own Hono dependency. The `astro/hono` module only provides the thin adapter layer that bridges Astro's feature handlers into Hono middleware. Since there is no Hono code being bundled into Astro, a separate package is unnecessary; a subpath export is sufficient.
 
 # Adoption strategy
 
