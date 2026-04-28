@@ -91,6 +91,7 @@ This proposal aims to consolidate a single pipeline for Astro request handling w
 - Allow developers to have complete control over requests coming into their Astro application.
 - Provide an API that is completely compatible with Fetch handlers, such as Hono, so users can gain the benefit of those ecosystems.
 - Break individual Astro features into small APIs that can be composed however the user wishes.
+- Work equally in SSG and SSR. During a static build, Astro calls the fetch handler for each prerendered page the same way a server would at runtime. There is no difference in behavior between the two modes.
 
 # Non-Goals
 
@@ -142,6 +143,8 @@ This proposal doesn't aim to enforce a single interface across all handlers, as 
 The user-facing API in `astro/fetch` wraps these classes as plain functions (e.g. `redirects(state)`, `pages(state)`). The `astro/hono` API wraps them further as Hono middleware. See the [Feature Handlers](#feature-handlers) and [Hono API](#hono-api) sections below for details.
 
 Internally, handler classes require configuration from Astro's SSR manifest (route table, i18n settings, etc.). To keep the user-facing API simple, the `astro/fetch` module imports the manifest via a Vite virtual module (`virtual:astro:manifest`) at build time and passes it into the handler constructors. This means users just call `redirects(state)` rather than needing to import and wire up the manifest themselves. The handler classes themselves remain pure and accept the manifest as a constructor argument, which makes them directly unit-testable without the virtual module.
+
+The module specifier is `astro/fetch` (not a virtual module like `astro:fetch`) because the functions it exports can be used by third-party npm packages that build on top of Astro's request handling. A library author can import from `astro/fetch` in their own package, get full type-safety, and publish it for others to use in their `src/app.ts`. While the code ultimately only runs inside the fetch handler, it does not need to be authored there.
 
 ## FetchState
 
@@ -368,7 +371,9 @@ The power of this API is that you can slot your own logic anywhere. Add auth bef
 
 ## Hono API
 
-A hono-specific API of middleware will be provided as `astro/hono`. These will be thin wrappers around the lower-level feature handlers that essentially just store FetchState on HonoContext, but otherwise just directly call into the handlers.
+A Hono-specific API of middleware will be provided as `astro/hono`. Hono is used here purely for its middleware composition capability — no server is started and no ports are bound. When a Hono app is exported from `src/app.ts`, Astro calls its `fetch` method directly with the incoming `Request`, the same way it would call any other fetch handler. Hono acts as a middleware router in pure JavaScript; all actual HTTP serving is handled by the adapter/platform layer above.
+
+The `astro/hono` exports are thin wrappers around the lower-level `astro/fetch` feature handlers. They store `FetchState` on Hono's context object and delegate directly to the underlying handlers.
 
 User-facing API will look like:
 
