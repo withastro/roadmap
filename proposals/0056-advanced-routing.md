@@ -135,7 +135,16 @@ class RedirectsHandler {
 }
 ```
 
-- **Post-processors** run after the main response has been produced and may mutate it (e.g. i18n rerouting unhandled requests). These expose a method like `finalize()`.
+- **Post-processors** take an existing `Response` and return a modified one. They can be used at any point, but typically run after page rendering. For example, the i18n handler post-processes the response from `pages()` to handle locale redirects and fallbacks:
+
+```ts
+class I18nHandler {
+  finalize(state: FetchState, response: Response): Response {
+    // ...
+  }
+}
+```
+
 - **Helpers** provide checks or utilities that other handlers use, without directly producing or modifying responses.
 
 This proposal doesn't aim to enforce a single interface across all handlers, as the methods vary depending on what each feature needs to do.
