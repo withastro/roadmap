@@ -369,7 +369,7 @@ export default {
 };
 ```
 
-The power of this API is that you can slot your own logic anywhere. Add auth before `pages`, add logging around `middleware`, skip `i18n` entirely, or replace `pages` with your own rendering — it's all just function calls.
+The API is flexible, so it's possible to slot business logic anywhere. Add auth before `pages`, add logging around `middleware`, skip `i18n` entirely, or replace `pages` with your own rendering — it's all just function calls.
 
 ## Platform Entrypoints
 
