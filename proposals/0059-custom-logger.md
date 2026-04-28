@@ -146,22 +146,20 @@ export default defineConfig({
 });
 ```
 
-Astro will export a `defineDestination` type-safe function where users can create their custom destination:
+Library authors can use the `AstroLoggerDestination` interface if they need to create custom loggers:
 
 ```ts
 // astro-pino-logger/src/handler.ts
-import { defineDestination } from "astro/logger";
-import type { AstroLogMessage } from "astro";
+import type { AstroLoggerMessage, AstroLoggerDestination } from "astro";
 
 interface PinoConfig {
   destination?: string;
   level?: string;
 }
 
-export default defineDestination<PinoConfig>((config) => {
-  const pino = require("pino")(config);
+const pinoLogger = (config: PinoConfig = {}): AstroLoggerDestination => {
   return {
-    write(event: AstroLogMessage) {
+    write(event: AstroLoggerMessage) {
       pino[event.level]({ label: event.label }, event.message);
     },
     flush() {
@@ -172,7 +170,9 @@ export default defineDestination<PinoConfig>((config) => {
       pino.destination?.end();
     },
   };
-});
+}
+
+export default pinoLogger;
 ```
 
 The `AstroLoggerDestination` interface will be defined as follows:
