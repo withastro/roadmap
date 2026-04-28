@@ -148,7 +148,7 @@ The module specifier is `astro/fetch` (not a virtual module like `astro:fetch`) 
 
 ## FetchState
 
-Every request has additional state associated with it. Some of it is specific to the adapter such as the `clientAddress`, while other state is loaded during the request lifecycle, such as the `APIContext` object that is created to pass to user middleware.
+Every request has additional state associated with it. Some of it is specific to the adapter such as the `clientAddress`, while other state is loaded during the request lifecycle, such as the `APIContext` object that is created to pass to user middleware or endpoint.
 
 The `FetchState` object is the representation of this state and needs to be created by the user when using the `astro/fetch` API. The expected public surface includes:
 
