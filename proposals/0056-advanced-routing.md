@@ -167,6 +167,7 @@ The user creates the `FetchState` when using the `astro/fetch` API. The expected
 - `response` - The `Response` produced by handlers, if any.
 - `routeData` - The matched route information.
 - `pathname` - The resolved pathname for the request.
+- `locals` - The `App.Locals` object, available to middleware and endpoints via `ctx.locals` / `Astro.locals`.
 - `cookies` - The `AstroCookies` instance for reading/writing cookies.
 
 > **Note:** The exact shape of `FetchState` is still a work in progress and may change during the review and implementation process.
