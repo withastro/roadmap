@@ -237,9 +237,7 @@ export interface LogHandlerConfig {
 }
 ```
 
-Internally, Astro will use Vite to resolve the entrypoint. We will probably use the same instance of the configuration (
-or a different one), because, internally, the logger is instantiated before the
-dev server starts.
+Internally, Astro will load the specifier using a simple dynamic import.
 
 The type `config` is optional, and when provided, is passed as parameter to the function exported by the entrypoint.
 
