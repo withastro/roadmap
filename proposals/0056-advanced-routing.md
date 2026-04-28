@@ -307,7 +307,7 @@ Post-processes a response against the app's i18n configuration. Handles locale r
 function i18n(state: FetchState, response: Response): Promise<Response>
 ```
 
-Call this after the response has been produced (typically by `middleware` + `pages`).
+This API requires a `Response`, you must call it after a fetch handler that returns a `Response` object, for example `middleware` or/and `pages`.
 
 ### `cache(state, next)`
 
