@@ -318,14 +318,14 @@ export default defineConfig({
 
 We will provide some utilities so that users can create better logging. As designed, if users create their own logger, Astro's logs will flow into their destination.
 
-### `isAstroMessage`
+### `matchesLevel`
 
 ```ts
-import { isAstroMessage } from "astro/logger";
+import { matchesLevel } from "astro/logger";
 
 const dest = {
-  write(chunk) {
-    if (!isAstroMessage(chunk)) {
+  write(message) {
+    if (matchesLevel(message.level, 'info')) {
       // write something in the custom destination
     }
   },
