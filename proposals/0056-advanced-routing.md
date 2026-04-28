@@ -100,6 +100,26 @@ This proposal aims to consolidate a single pipeline for Astro request handling w
 
 # Detailed Design
 
+## `src/app.ts`
+
+The entrypoint for this feature is a `src/app.ts` file whose default export is an object with a `fetch` method. This shape was chosen because it is the standard entrypoint convention used by [Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/), [Bun](https://bun.sh/docs/api/http#export-default-syntax), and [Hono](https://hono.dev/docs/api/hono#fetch). By aligning with this existing pattern, `src/app.ts` is instantly familiar to anyone who has used those runtimes, and fetch handlers written for those platforms can be reused with minimal changes.
+
+For type-safety, Astro will export a `Fetchable` interface:
+
+```ts
+import type { Fetchable } from 'astro';
+
+export default {
+  async fetch(request) {
+    return new Response('ok');
+  }
+} satisfies Fetchable;
+```
+
+The `Fetchable` type ensures the `fetch` method has the correct signature (it must accept a `Request` and return a `Response` or `Promise<Response>`). This aligns with other platforms, for ex. Bun, which use `satisfies` to type the shape.
+
+## Handler Architecture
+
 Currently most of the logic to resolve what gets called during a request is contained within the App class. This class doubles as the external API used by adapters to render pages.
 
 The bulk of the changes for this proposal will be to extract the logic out of the App class and into feature-specific handler classes. Each feature is organized as a class, but the API of each handler varies depending on what it does. There are a few common patterns:
