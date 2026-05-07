@@ -21,7 +21,7 @@ const result = transform(source, {
 });
 ```
 
-The notable shape differences are described individually n [Detailed Design and Adoption strategy](#detailed-design), but the overall usage is nonetheless the same.
+The notable shape differences are described individually in [Detailed Design and Adoption strategy](#detailed-design), but the overall usage is nonetheless the same.
 
 # Background & Motivation
 
