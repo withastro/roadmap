@@ -1,0 +1,23 @@
+proposals/0057-dev-background.md
+  a4bfa49829d0d01b 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "f564cb7ee229ffe18ec7467d440921bf73d9899a",
+  "prompts": {
+    "a4bfa49829d0d01b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e7e23005ffeg7KKWzCLls5MZW",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "Matthew Phillips",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
