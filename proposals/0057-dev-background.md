@@ -4,7 +4,7 @@
 - Reference Issues: https://github.com/withastro/roadmap/discussions/1308
 - Implementation PR: https://github.com/withastro/astro/pull/16610
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1358
-- Stage 3 PR: <!-- leave empty -->
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1362
 
 # Summary
 
