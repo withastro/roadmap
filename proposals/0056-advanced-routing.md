@@ -166,7 +166,7 @@ The user creates the `FetchState` when using the `astro/fetch` API. The expected
 - `request` - The current `Request` object.
 - `response` - The `Response` produced by handlers, if any.
 - `routeData` - The matched route information.
-- `pathname` - The resolved pathname for the request.
+- `pathname` - The resolved pathname for the request. During a static build this may differ from the URL pathname — for example, it may include a `.html` extension to match the output file.
 - `locals` - The `App.Locals` object, available to middleware and endpoints via `ctx.locals` / `Astro.locals`.
 - `cookies` - The `AstroCookies` instance for reading/writing cookies.
 
@@ -209,9 +209,9 @@ interface ContextProvider<T> {
 ```
 The API on `FetchState`:
 
-- `provide<T>(key, provider)` — Registers a provider. The `create` factory is deferred until the first time accessed.
-- `resolve<T>(key)` — Lazily calls `create()`, caches the result, and returns it. Returns `undefined` if no provider was registered.
-- `finalizeAll()` — Runs all registered `finalize` callbacks for providers that were actually resolved. Returns synchronously when nothing needs finalizing.
+- `provide<T>(key, provider): void` — Registers a provider. Synchronous; the `create` factory is deferred until the first `resolve` call.
+- `resolve<T>(key): T | undefined` — Lazily calls `create()`, caches the result, and returns it. Synchronous. Returns `undefined` if no provider was registered.
+- `finalizeAll(): Promise<void> | void` — Runs all registered `finalize` callbacks for providers that were actually resolved. Returns `void` synchronously when nothing needs finalizing; returns a `Promise<void>` when any `finalize` callback is asynchronous. Callers should `await` the result.
 
 For example, the `sessions()` handler registers a provider that lazily creates an `AstroSession` and persists it on finalize:
 
@@ -227,6 +227,20 @@ state.provide<AstroSession>('session', {
 ```
 
 From the user's perspective they only need to add the `session()` handler/middleware and then they get `ctx.session` / `Astro.session` as values. This could also be used by 3rd party integrations.
+
+### Typing Context Providers
+
+Custom context providers are typed using the same pattern as `locals`: module augmentation. A library or user registers a provider with a string key, and the corresponding type is declared by extending an interface in `env.d.ts`:
+
+```ts
+declare namespace App {
+  interface Providers {
+    oauth: import('./lib/oauth').OAuthSession;
+  }
+}
+```
+
+With this declaration, `ctx.oauth` and `Astro.oauth` are properly typed. Built-in providers like `session` are pre-declared by Astro's own type definitions, so users don't need to augment those themselves.
 
 ## Feature Handlers
 
@@ -285,10 +299,11 @@ function middleware(
 ): Promise<Response>
 ```
 
-The `next` callback is where you put the inner handlers (typically `pages`):
+The `next` callback is where you put the inner handlers (typically `pages`). The `Response` returned by `next` is also set on `state.response`, so both the return value and the state property reference the same object:
 
 ```ts
 const response = await middleware(state, (s) => pages(s));
+// response === state.response
 ```
 
 ### `pages(state)`
@@ -318,6 +333,12 @@ function cache(
   state: FetchState,
   next: () => Promise<Response>,
 ): Promise<Response>
+```
+
+Unlike `middleware`, the `next` callback here does not receive `state` because `cache` only wraps the response — it does not need to forward state to an inner handler. The caller already has `state` in scope and can close over it:
+
+```ts
+const response = await cache(state, () => middleware(state, (s) => pages(s)));
 ```
 
 ### `astro(state)`
@@ -369,6 +390,8 @@ export default {
 };
 ```
 
+Note that `finalizeAll()` must be called by the user when composing handlers manually. Context providers like `sessions()` register lazy `finalize` callbacks (e.g. to persist session data), and the user controls when those run. This is intentional — the low-level API gives the user full control over the request lifecycle, including cleanup. The combined `astro()` handler calls `finalizeAll()` internally, so users who don't need fine-grained control don't have to think about it.
+
 The API is flexible, so it's possible to slot business logic anywhere. Add auth before `pages`, add logging around `middleware`, skip `i18n` entirely, or replace `pages` with your own rendering — it's all just function calls.
 
 ## Platform Entrypoints
@@ -381,7 +404,11 @@ The API is flexible, so it's possible to slot business logic anywhere. Add auth 
 
 `src/app.ts` does not replace platform entrypoints. Users who need platform-specific APIs (e.g. Durable Objects, queues) still use their platform's entrypoint for those concerns.
 
+Some platforms also provide edge middleware (e.g. Vercel Edge Middleware, Netlify Edge Functions) that runs before the request reaches the adapter. This layer is outside Astro's control and is not affected by this proposal — it continues to work as it does today.
+
 ## Hono API
+
+[Hono](https://hono.dev/) was chosen because it is built entirely on Web Standard APIs (`Request`/`Response`/`fetch`), which aligns with the fetch-handler model at the core of this proposal. It has the largest middleware ecosystem among fetch-native frameworks, giving users access to auth, CORS, rate limiting, and many other capabilities without Astro needing to build them. Hono is also lightweight — it is a middleware router in pure JavaScript with no server runtime of its own, so it adds no overhead beyond what the user's middleware does.
 
 A Hono-specific API of middleware will be provided as `astro/hono`. Hono is used here purely for its middleware composition capability — no server is started and no ports are bound. When a Hono app is exported from `src/app.ts`, Astro calls its `fetch` method directly with the incoming `Request`, the same way it would call any other fetch handler. Hono acts as a middleware router in pure JavaScript; all actual HTTP serving is handled by the adapter/platform layer above.
 
