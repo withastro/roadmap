@@ -15,7 +15,7 @@ comment on the Stage 2 issue (links below).**
 
 - Start Date: 2026-04-07
 - Reference Issues: <!-- related issues, otherwise leave empty -->
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/16477
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1335
 - Stage 3 PR: https://github.com/withastro/roadmap/pull/1339
 
