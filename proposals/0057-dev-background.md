@@ -51,11 +51,8 @@ $ astro dev --background
 
 ### Automatic agent detection
 
-When an AI coding agent is detected (via [`am-i-vibing`](https://github.com/ascorbic/am-i-vibing)), background mode is enabled automatically, so no `--background` flag is needed. Agents can simply run `astro dev` and get the background behavior.
+When an AI coding agent is detected (via [`am-i-vibing`](https://github.com/ascorbic/am-i-vibing)), background mode and the JSON logger are enabled automatically. Agents can simply run `astro dev` and get background behavior with machine-readable output:
 
-### Agent workflow with JSON logging
-
-When an agent is running with a JSON logger configured, the output is machine-readable:
 
 ```sh
 $ astro dev
@@ -140,7 +137,7 @@ Today, this is painful. The dev server is designed for humans watching a termina
 
 # Non-Goals
 
-- **JSON logging.** This is covered in the [custom logging proposal](https://github.com/withastro/roadmap/discussions/908#discussioncomment-15852766) and is not strictly required for background process management. The two features are complementary and should be designed to work together. The output format of the CLI commands follows whatever logger the user has configured, not hardcoded to JSON.
+- **Custom logging framework.** The full custom logging proposal is covered in a [separate RFC](https://github.com/withastro/roadmap/discussions/908#discussioncomment-15852766). This proposal uses the JSON logger when an agent is detected but does not cover the broader custom logger plugin API.
 - **Astro MCP server.** This proposal does not cover an MCP server, though it could provide the foundation for one.
 
 # Detailed Design
@@ -168,7 +165,7 @@ Starts the dev server as a detached background process. The CLI:
 
 ### Automatic agent detection
 
-When `astro dev` is invoked and the [`am-i-vibing`](https://github.com/ascorbic/am-i-vibing) library detects an AI coding agent, background mode is enabled automatically without the user (or agent) needing to pass `--background`. This is skipped when the `ASTRO_DEV_BACKGROUND` environment variable is set, which indicates the current process is the spawned child and should run the foreground dev server.
+When `astro dev` is invoked and the [`am-i-vibing`](https://github.com/ascorbic/am-i-vibing) library detects an AI coding agent, background mode and the JSON logger are enabled automatically without the user (or agent) needing to pass `--background` or `--json`. This is skipped when the `ASTRO_DEV_BACKGROUND` environment variable is set, which indicates the current process is the spawned child and should run the foreground dev server.
 
 ### `astro dev status`
 
@@ -262,7 +259,11 @@ The background server handles:
 
 ## Logging
 
-The background server redirects both stdout and stderr to `.astro/dev.log`. This file contains the standard Astro dev server output, the same content that would appear in the terminal if run in foreground mode.
+The background server redirects both stdout and stderr to `.astro/dev.log`. The format of this file depends on the configured logger:
+
+- **Default (Node logger):** Human-readable text with timestamps and ANSI color codes, the same content that would appear in the terminal if run in foreground mode (e.g. `HH:MM:SS [astro] message`).
+- **JSON logger:** Newline-delimited JSON objects with `message`, `label`, and `level` fields (e.g. `{"message":"watching for file changes...","label":null,"level":"info"}`). ANSI color codes are stripped. This is enabled automatically when an AI agent is detected, or manually with `--json`.
+- **Custom logger:** Whatever format the user's custom logger implementation writes to stdout/stderr.
 
 The log file is truncated when a new background server starts.
 
@@ -292,7 +293,7 @@ If the project uses `src/app.ts` ([RFC 0056](https://github.com/withastro/roadma
 
 - **Maintenance surface.** Background process management is platform-sensitive code (PID tracking, signal handling, detached processes). This is inherently more complex and fragile than pure HTTP server code, particularly across different operating systems and Node.js versions.
 - **Agents may catch up.** As AI agents improve their ability to manage long-running processes natively (e.g. Claude Code already backgrounds processes), some of this functionality may become redundant. However, the health endpoint and lock file remain valuable regardless, and the background management can be deprecated if/when agents no longer need it.
-- **Agent detection heuristics.** Automatic background mode relies on `am-i-vibing` to detect agents. False positives would be surprising (a human's `astro dev` silently backgrounds). False negatives are harmless (the agent just needs to pass `--background` explicitly).
+- **Agent detection heuristics.** Automatic background mode and JSON logging rely on `am-i-vibing` to detect agents. False positives would be surprising (a human's `astro dev` silently backgrounds and switches to JSON output). False negatives are harmless (the agent just needs to pass `--background` and `--json` explicitly).
 
 # Alternatives
 
