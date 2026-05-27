@@ -269,6 +269,21 @@ The log file is truncated when a new background server starts.
 
 The `logs` command reads this file and writes its contents to stdout.
 
+## Telemetry
+
+When an AI coding agent is detected, four optional fields are added to the existing `ASTRO_CLI_SESSION_STARTED` telemetry event:
+
+| Field | Type | Description |
+|---|---|---|
+| `isAgentic` | `boolean` | Whether the CLI session was run by an AI coding agent. |
+| `agentId` | `string` | Identifier of the detected agent (e.g. `"cursor-agent"`, `"claude-code"`). |
+| `agentName` | `string` | Display name of the detected agent (e.g. `"Cursor Agent"`, `"Claude Code"`). |
+| `agentType` | `string` | Type of agentic environment: `"agent"`, `"interactive"`, or `"hybrid"`. |
+
+These fields are collected for all CLI commands (not just `astro dev`) so the Astro team can understand which agents are commonly used and prioritize improvements. No new telemetry events are introduced. The fields are populated using `detectAgenticEnvironment()` from `am-i-vibing` and follow the same anonymous telemetry pipeline, respecting `astro telemetry disable`.
+
+The [astro.build/telemetry](https://astro.build/telemetry/) page must be updated to document these new fields before release.
+
 ## Integration with `src/app.ts` (Advanced Routing)
 
 If the project uses `src/app.ts` ([RFC 0056](https://github.com/withastro/roadmap/pull/1344)), the background server and health endpoint work identically. The `/_astro/status` middleware is registered at the Vite layer, before the user's fetch handler, so it is always available regardless of the user's routing configuration.
