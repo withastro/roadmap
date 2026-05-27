@@ -328,8 +328,7 @@ An earlier design had all CLI commands print raw JSON to stdout (e.g. `{"pid": 1
 # Adoption strategy
 
 - **Fully opt-in.** Without `--background`, `astro dev` behaves exactly as it does today, unless an AI agent is detected, in which case background mode is enabled automatically.
-- **Not a breaking change.** The new subcommands and flags are additions to the CLI. The `/_astro/status` endpoint is a new route in the dev server that does not conflict with user routes (it uses the `/_astro/` prefix already reserved by Astro). The lock file adds duplicate server detection to foreground mode, but this is a guard against a common mistake, not a behavior change.
-- **Experimental phase.** Initially gated behind `--experimental-*` prefixed flags to gather feedback before stabilizing.
+- **Not a breaking change.** The new subcommands and flags are additions to the CLI. The `/_astro/status` endpoint is a new route in the dev server only — it does not exist in production builds. It does not conflict with user routes (it uses the `/_astro/` prefix already reserved by Astro). The lock file adds duplicate server detection to foreground mode, but this is a guard against a common mistake, not a behavior change.
 - **Agent instruction templates.** Once shipped, we can provide recommended agent instructions (e.g. for `.claude/commands/`, `.opencode/`, etc.) that use `astro dev` and rely on automatic agent detection for the background behavior.
 - **Documentation.** A new guide covering agent workflows with the background dev server, including common patterns for starting, checking status, and stopping the server.
 
