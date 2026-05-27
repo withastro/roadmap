@@ -10,7 +10,7 @@ Provides greater control over the request lifecycle in Astro as well as the abil
 
 # Example
 
-The minimal API for this proposal is a `src/app.ts` file with the following shape:
+The minimal API for this proposal is a `src/fetch.ts` file with the following shape:
 
 ```ts
 export default {
@@ -101,9 +101,9 @@ This proposal aims to consolidate a single pipeline for Astro request handling w
 
 # Detailed Design
 
-## `src/app.ts`
+## `src/fetch.ts`
 
-The entrypoint for this feature is a `src/app.ts` file whose default export is an object with a `fetch` method. This shape was chosen because it is the standard entrypoint convention used by [Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/), [Bun](https://bun.sh/docs/api/http#export-default-syntax), and [Hono](https://hono.dev/docs/api/hono#fetch). By aligning with this existing pattern, `src/app.ts` is instantly familiar to anyone who has used those runtimes, and fetch handlers written for those platforms can be reused with minimal changes.
+The entrypoint for this feature is a `src/fetch.ts` file whose default export is an object with a `fetch` method. This shape was chosen because it is the standard entrypoint convention used by [Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/), [Bun](https://bun.sh/docs/api/http#export-default-syntax), and [Hono](https://hono.dev/docs/api/hono#fetch). By aligning with this existing pattern, `src/fetch.ts` is instantly familiar to anyone who has used those runtimes, and fetch handlers written for those platforms can be reused with minimal changes.
 
 For type-safety, Astro will export a `Fetchable` interface:
 
@@ -153,7 +153,7 @@ The user-facing API in `astro/fetch` wraps these classes as plain functions (e.g
 
 Internally, handler classes require configuration from Astro's SSR manifest (route table, i18n settings, etc.). To keep the user-facing API simple, the `astro/fetch` module imports the manifest via a Vite virtual module (`virtual:astro:manifest`) at build time and passes it into the handler constructors. This means users just call `redirects(state)` rather than needing to import and wire up the manifest themselves. The handler classes themselves remain pure and accept the manifest as a constructor argument, which makes them directly unit-testable without the virtual module.
 
-The module specifier is `astro/fetch` (not a virtual module like `astro:fetch`) because the functions it exports can be used by third-party npm packages that build on top of Astro's request handling. A library author can import from `astro/fetch` in their own package, get full type-safety, and publish it for others to use in their `src/app.ts`. While the code ultimately only runs inside the fetch handler, it does not need to be authored there.
+The module specifier is `astro/fetch` (not a virtual module like `astro:fetch`) because the functions it exports can be used by third-party npm packages that build on top of Astro's request handling. A library author can import from `astro/fetch` in their own package, get full type-safety, and publish it for others to use in their `src/fetch.ts`. While the code ultimately only runs inside the fetch handler, it does not need to be authored there.
 
 ## FetchState
 
@@ -396,13 +396,13 @@ The API is flexible, so it's possible to slot business logic anywhere. Add auth 
 
 ## Platform Entrypoints
 
-`src/app.ts` runs within Astro's request handling, after the adapter and any platform-specific entrypoint (e.g. Cloudflare's `worker.ts`). The layering is:
+`src/fetch.ts` runs within Astro's request handling, after the adapter and any platform-specific entrypoint (e.g. Cloudflare's `worker.ts`). The layering is:
 
 1. **Adapter / platform entrypoint** (e.g. `worker.ts`) - Platform-specific logic, receives the raw platform request.
-2. **`src/app.ts`** - User's fetch handler, receives a standard `Request`.
+2. **`src/fetch.ts`** - User's fetch handler, receives a standard `Request`.
 3. **Feature handlers** - Astro features like redirects, pages, etc.
 
-`src/app.ts` does not replace platform entrypoints. Users who need platform-specific APIs (e.g. Durable Objects, queues) still use their platform's entrypoint for those concerns.
+`src/fetch.ts` does not replace platform entrypoints. Users who need platform-specific APIs (e.g. Durable Objects, queues) still use their platform's entrypoint for those concerns.
 
 Some platforms also provide edge middleware (e.g. Vercel Edge Middleware, Netlify Edge Functions) that runs before the request reaches the adapter. This layer is outside Astro's control and is not affected by this proposal — it continues to work as it does today.
 
@@ -410,7 +410,7 @@ Some platforms also provide edge middleware (e.g. Vercel Edge Middleware, Netlif
 
 [Hono](https://hono.dev/) was chosen because it is built entirely on Web Standard APIs (`Request`/`Response`/`fetch`), which aligns with the fetch-handler model at the core of this proposal. It has the largest middleware ecosystem among fetch-native frameworks, giving users access to auth, CORS, rate limiting, and many other capabilities without Astro needing to build them. Hono is also lightweight — it is a middleware router in pure JavaScript with no server runtime of its own, so it adds no overhead beyond what the user's middleware does.
 
-A Hono-specific API of middleware will be provided as `astro/hono`. Hono is used here purely for its middleware composition capability — no server is started and no ports are bound. When a Hono app is exported from `src/app.ts`, Astro calls its `fetch` method directly with the incoming `Request`, the same way it would call any other fetch handler. Hono acts as a middleware router in pure JavaScript; all actual HTTP serving is handled by the adapter/platform layer above.
+A Hono-specific API of middleware will be provided as `astro/hono`. Hono is used here purely for its middleware composition capability — no server is started and no ports are bound. When a Hono app is exported from `src/fetch.ts`, Astro calls its `fetch` method directly with the incoming `Request`, the same way it would call any other fetch handler. Hono acts as a middleware router in pure JavaScript; all actual HTTP serving is handled by the adapter/platform layer above.
 
 The `astro/hono` exports are thin wrappers around the lower-level `astro/fetch` feature handlers. They store `FetchState` on Hono's context object and delegate directly to the underlying handlers.
 
@@ -460,15 +460,13 @@ An alternative to `astro/hono` would be a separate `@astrojs/hono` package. Howe
 
 # Adoption strategy
 
-The `src/app.ts` module will be opt-in. Without this file Astro will behave as it normally does.
+The `src/fetch.ts` module will be opt-in. Without this file Astro will behave as it normally does.
 
-Initially this feature will be gated by an `experimental.advancedRouting` flag. In the next major version of Astro there will be no flag, meaning that `src/app.ts` becomes a special-file that users can't use for other purposes.
-
-To accommodate projects which already have a `app.ts` file, this will be configurable:
+To accommodate projects which already have a `src/fetch.ts` file, this will be configurable:
 
 ```
 export default defineConfig({
-  fetchFile: 'fetch.ts'
+  fetchFile: 'handler.ts'
 });
 ```
 
@@ -478,7 +476,7 @@ The shape will be:
 type FetchFile = string | null;
 ```
 
-The usage of `null` will disable the feature; this is useful if the user has their own `app.ts` file but don't want to define their own fetch handler file.
+The usage of `null` will disable the feature; this is useful if the user has their own `fetch.ts` file but don't want to define their own fetch handler file.
 
 # Unresolved Questions
 
