@@ -267,14 +267,6 @@ The background server redirects both stdout and stderr to `.astro/dev.log`. The 
 
 The log file is truncated when a new background server starts.
 
-### Log rotation
-
-To prevent unbounded log growth, the log file is capped at a maximum size (default: 10 MB). When the file exceeds the limit, the oldest content is truncated to bring it back under the cap. The limit can be overridden with `--max-log-size`:
-
-```sh
-$ astro dev --background --max-log-size 50mb
-```
-
 The `logs` command reads this file and writes its contents to stdout.
 
 ## Integration with `src/app.ts` (Advanced Routing)
