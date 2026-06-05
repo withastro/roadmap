@@ -195,7 +195,7 @@ export default {
 }
 ```
 
-Note that using the `astro/hono` API the creation of `FetchState` is not necessary, since Hono has its own Context object; the `astro/hono` handler wrappers automatically create and store a `FetchState` on the Hono context under the `"fetchState"` key. You can access it directly via `context.get("fetchState")`.
+Note that using the `astro/hono` API the creation of FetchState is not necessary, since Hono has its own Context object; handlers can get/create a FetchState by inspecting HonoContext for a certain key (likely `astro.fetchState`).
 
 ### Context Providers
 
