@@ -161,16 +161,18 @@ Every request has additional state associated with it. Some of it is specific to
 
 `FetchState` is a mutable object that is created once per request and passed through all handlers. Handlers read and write properties on it as they run — for example, `redirects()` reads `routeData` to check for a match, and `pages()` sets `response` after rendering. It is not copied between handler calls; every handler receives the same instance.
 
-The user creates the `FetchState` when using the `astro/fetch` API. The expected public surface includes:
+The user creates the `FetchState` when using the `astro/fetch` API. The public surface includes:
 
 - `request` - The current `Request` object.
-- `response` - The `Response` produced by handlers, if any.
-- `routeData` - The matched route information.
-- `pathname` - The resolved pathname for the request. During a static build this may differ from the URL pathname — for example, it may include a `.html` extension to match the output file.
-- `locals` - The `App.Locals` object, available to middleware and endpoints via `ctx.locals` / `Astro.locals`.
+- `url` - Normalized `URL` derived from the request.
+- `pathname` - Base-stripped, decoded pathname of the request.
+- `routeData` - The matched route for this request, if any.
 - `cookies` - The `AstroCookies` instance for reading/writing cookies.
-
-> **Note:** The exact shape of `FetchState` is still a work in progress and may change during the review and implementation process.
+- `locals` - The `App.Locals` object, available to middleware and endpoints via `ctx.locals` / `Astro.locals`.
+- `params` - Route params derived from `routeData` and `pathname`.
+- `response` - The `Response` produced by handlers, if any. Set after rendering.
+- `status` - Default HTTP status for the rendered response.
+- `rewrite(payload)` - Triggers a rewrite to a different route.
 
 Usage:
 
