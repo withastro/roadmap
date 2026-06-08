@@ -195,7 +195,7 @@ export default {
 }
 ```
 
-Note that using the `astro/hono` API the creation of FetchState is not necessary, since Hono has its own Context object; handlers can get/create a FetchState by inspecting HonoContext for a certain key (likely `astro.fetchState`).
+Note that using the `astro/hono` API the creation of FetchState is not necessary, since Hono has its own Context object; handlers get/create a FetchState lazily via the `getFetchState(context)` function exported from `astro/hono`. This function is part of the public API, so custom Hono middleware and third-party packages can use it to access the same shared `FetchState` that the built-in Astro middleware wrappers use.
 
 ### Context Providers
 
@@ -414,7 +414,24 @@ Some platforms also provide edge middleware (e.g. Vercel Edge Middleware, Netlif
 
 A Hono-specific API of middleware will be provided as `astro/hono`. Hono is used here purely for its middleware composition capability — no server is started and no ports are bound. When a Hono app is exported from `src/fetch.ts`, Astro calls its `fetch` method directly with the incoming `Request`, the same way it would call any other fetch handler. Hono acts as a middleware router in pure JavaScript; all actual HTTP serving is handled by the adapter/platform layer above.
 
-The `astro/hono` exports are thin wrappers around the lower-level `astro/fetch` feature handlers. They store `FetchState` on Hono's context object and delegate directly to the underlying handlers.
+The `astro/hono` exports are thin wrappers around the lower-level `astro/fetch` feature handlers. They store `FetchState` on Hono's context object and delegate directly to the underlying handlers. The `getFetchState(context)` function is also exported, allowing custom Hono middleware and third-party packages to access the per-request `FetchState`:
+
+```ts
+import { Hono } from 'hono';
+import { getFetchState, pages } from 'astro/hono';
+
+const app = new Hono();
+
+app.use(async (context, next) => {
+  const state = getFetchState(context);
+  state.locals.user = await authenticate(context.req.raw);
+  await next();
+});
+
+app.use(pages());
+
+export default app;
+```
 
 User-facing API will look like:
 
