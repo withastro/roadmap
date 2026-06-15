@@ -108,8 +108,8 @@ I suggest it becomes the default Markdown / MDX pipeline in Astro. Users that do
 
 - Native syntax highlighting; we'll keep using Shiki.
 - Mixing multiple Markdown processors in the same project.
-- Prism support under the new pipeline, at least at first.
 - Built-in support for MDX or any other formats from third-party processors. They have to opt into MDX themselves.
+- Markdown processing at runtime, although this makes it more feasible in the future if we ever want to support it.
 
 # Detailed Design
 
@@ -130,37 +130,63 @@ interface MarkdownProcessorEntry {
 
 `SharedMarkdownConfig` covers the cross-cutting Markdown options (`syntaxHighlight`, `shikiConfig`, `gfm`, `smartypants`, `image`) that apply regardless of the engine. A processor that doesn't implement `createMdxRenderer` falls back to `@astrojs/mdx`'s built-in handling for the two known names (`'satteri'` and `'unified'`). Third-party processors can implement `createMdxRenderer` themselves or omit it and only handle `.md`.
 
-Shape-wise this mirrors image services: the user picks one of the built-in options or drops in a third-party one, and the rest of Astro stays the same, interacting with the Markdown processor through an abstraction.
+This mirrors image services, font providers and session drivers: the user picks one of the built-in options or drops in a third-party one, and the rest of Astro stays the same, interacting with the Markdown processor through an abstraction.
 
 One could imagine that in the future, this could be set to `undefined` by default and Astro would ship without Markdown support built-in, keeping the core lean for people that don't use Markdown at all.
 
-## `satteri()`
+## Built-in Processors
 
-Exported from `astro/config` (re-exported from `@astrojs/markdown-satteri`). Calling it returns a `MarkdownProcessorEntry` you pass to `markdown.processor`. The options you can pass it:
+### `satteri()`
+
+Exported from `astro/config` (re-exported from `@astrojs/markdown-satteri`). The options you can pass it:
 
 - `mdastPlugins`: MDAST plugins
 - `hastPlugins`: HAST plugins
 - `features`: optional Sätteri parser feature toggles (directives, definition lists, etc.)
 
-The MDX integration recognizes the Sätteri processor by name and merges these plugins and features into the MDX pipeline, so a single `markdown.processor` config drives both file types without duplicating plugins, much like how it works right now with remark/rehypePlugins between Markdown and MDX.
+```js
+// astro.config.mjs
+import { defineConfig, satteri } from 'astro/config';
+import myPlugin from './my-satteri-plugin.js';
 
-## `unified()` and `@astrojs/markdown-remark`
+export default defineConfig({
+  markdown: {
+    processor: satteri({
+      hastPlugins: [myPlugin],
+      features: { directive: true, definitionList: true },
+    }),
+  },
+});
+```
 
-`@astrojs/markdown-remark` is no longer a transitive dependency of `astro`. Users that want the remark pipeline (directly via `markdown.processor: unified({...})` or indirectly via the deprecated top-level options) have to install it themselves:
+### `unified()` and `@astrojs/markdown-remark`
+
+`unified()` returns a processor backed by the existing remark / rehype pipeline. Replacing the previously implicit default.
+
+`@astrojs/markdown-remark` is no longer a transitive dependency of `astro`. Users that want the remark pipeline, directly via `markdown.processor: unified({...})` or indirectly via the deprecated top-level options, have to install it themselves and import `unified()` from there.
 
 ```sh
 pnpm add @astrojs/markdown-remark
 ```
 
-`unified()` takes the same `remarkPlugins`, `rehypePlugins`, and `remarkRehype` shape that the deprecated top-level options used. Auto-wrapping (see below) routes legacy configs through it without any user changes beyond installing the package for easier migration.
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import { unified } from '@astrojs/markdown-remark';
+import remarkToc from 'remark-toc';
 
-## The `@astrojs/markdown-satteri` package
+export default defineConfig({
+  markdown: {
+    processor: unified({ remarkPlugins: [remarkToc] }),
+  },
+});
+```
 
-A new `@astrojs/markdown-satteri` package wraps Sätteri and exposes it as a `MarkdownProcessorEntry`. It ships as a dependency of `astro`, so users on the default don't install it explicitly. It exports `satteri()`, which returns the value you pass to `markdown.processor`. The package also contains all the built-in internal plugins Astro requires for various things (`astro:assets`, islands etc.)
+`unified()` takes the same `remarkPlugins`, `rehypePlugins`, and `remarkRehype` shape that the deprecated top-level options used. Auto-wrapping (see below) routes legacy configs through it without any user changes beyond installing the package, for easier migration.
 
-## Deprecation: top-level `remarkPlugins` / `rehypePlugins` / `remarkRehype`
+## Deprecation: top-level `remarkPlugins` / `rehypePlugins` / `remarkRehype` / `gfm` / `smartypants`
 
-The top-level `markdown.remarkPlugins`, `markdown.rehypePlugins`, and `markdown.remarkRehype` options are deprecated but continue to work for now. During config validation, Astro checks if any of them are set and `markdown.processor` is not. If so, it dynamically imports `@astrojs/markdown-remark`, wraps the legacy options in `unified({...})` and prints a deprecation warning.
+The top-level `markdown.remarkPlugins`, `markdown.rehypePlugins`, `markdown.remarkRehype`, `markdown.gfm`, `markdown.smartypants` options are deprecated but continue to work for now. During config validation, Astro checks if any of them are set and `markdown.processor` is not. If so, it dynamically imports `@astrojs/markdown-remark`, wraps the legacy options in `unified({...})` and prints a deprecation warning.
 
 If `@astrojs/markdown-remark` is not installed, the user gets an error telling them to install it and optionally migrate to the new processor API.
 
@@ -183,6 +209,7 @@ The pluggable layer is covered by the existing test suite for both `astro` and `
 - Sätteri itself has its own test suite upstream covering the parser and core plugins; we depend on it like any other parser.
 - A new third-party-processor fixture exercises the `MarkdownProcessorEntry` contract end to end (a minimal processor that implements `createRenderer` and `createMdxRenderer` and renders both file types).
 - Config validation tests cover the auto-wrapping behavior: legacy options auto-wrap with a deprecation warning, and a missing `@astrojs/markdown-remark` install produces the expected error.
+- Beyond the test suite, the staged rollout (see [Adoption strategy](#adoption-strategy)) acts as a long real-world bake: Sätteri is opt-in for an entire 6.x cycle before the default flips in 7. The intent is for Starlight, the Astro docs, and other large content sites to opt in during that window, so parity gaps and performance regressions are caught against real workloads — not just fixtures — before any project gets the new default automatically.
 
 # Drawbacks
 
@@ -200,16 +227,32 @@ The pluggable layer is covered by the existing test suite for both `astro` and `
 
 # Adoption strategy
 
-This lands in the Astro 7 major. The breaking changes are scoped:
+Rollout is staged across three majors. The new API ships before the default ever changes, giving the parser a full release cycle to bake against real projects.
 
-- Projects with no `markdown.remarkPlugins`, `rehypePlugins`, or `remarkRehype` set get the new default automatically. There is no migration step, output should be the same.
-- Projects that do set those options keep working, with a deprecation warning, as long as `@astrojs/markdown-remark` is installed. The auto-wrapper turns them into `markdown.processor: unified({...})` at config-validation time.
-- The recommended migration is a small change: `markdown: { processor: unified({ remarkPlugins, rehypePlugins, remarkRehype }) }` plus an explicit install of `@astrojs/markdown-remark`. Given instructions can be easily done by humans and AI alike.
-- For `.mdx` users, the integration picks up `markdown.processor` automatically. No separate change is needed unless you want `.mdx` to use a different processor than `.md`.
-- For ecosystem projects: integrations that ship remark / rehype plugins should document that users on Astro 7 need `@astrojs/markdown-remark` and the `unified()` opt-in. Integrations that want to ship Sätteri-native plugins can target `mdastPlugins` / `hastPlugins`.
-- Starlight is the highest-priority downstream. Landing it with Starlight on the new default proves the migration on Astro's largest content user.
+**Astro 6.x (current major) — `markdown.processor` ships, default unchanged**
+
+- The `markdown.processor` config option, `MarkdownProcessorEntry` interface, and `satteri()` / `unified()` entry-builders all ship.
+- The default processor stays `unified()`, so existing projects see no change in output, dependencies, or behavior.
+- The top-level `markdown.remarkPlugins` / `rehypePlugins` / `remarkRehype` options continue to work exactly as today, with no deprecation warnings.
+- Users that want to try Sätteri opt in with `markdown.processor: satteri()`. Starlight, the Astro docs, and other large content sites are encouraged to opt in during this cycle so parity gaps and performance regressions surface against real workloads before the default flips.
+
+**Astro 7.x — default flips to Sätteri**
+
+- Default `markdown.processor` becomes `satteri()`. Projects with no `markdown.*Plugins` set get the new default automatically; output should match.
+- Projects that still set the top-level legacy options keep working with a deprecation warning, as long as `@astrojs/markdown-remark` is installed. The auto-wrapper turns them into `markdown.processor: unified({...})` at config-validation time.
+- The recommended migration is small: `markdown: { processor: unified({ remarkPlugins, rehypePlugins, remarkRehype }) }` plus an explicit install of `@astrojs/markdown-remark`. Easy to do by hand or with an AI assistant; a codemod can be added if uptake suggests it's needed.
+- For `.mdx` users, the integration picks up `markdown.processor` automatically. No separate change is needed unless `.mdx` should use a different processor than `.md`.
+
+**Astro 8 — legacy options removed**
+
+- The top-level `markdown.remarkPlugins` / `rehypePlugins` / `remarkRehype` options are removed. Users on those options must move to `markdown.processor: unified({...})` (or another processor).
+
+**Ecosystem**
+
+- Integrations that ship remark / rehype plugins should document that users on Astro 7+ need `@astrojs/markdown-remark` and the `unified()` opt-in.
+- Integrations that want to ship Sätteri-native plugins can target `mdastPlugins` / `hastPlugins`.
+- Starlight supports it already
 
 # Unresolved Questions
 
-- How long do we keep auto-wrapping the deprecated top-level fields? One major? Two? Removing them earlier reduces config-validation surface area but forces another round of user migration.
-- How does runtime rendering interact with all of this.
+- None at this time.
