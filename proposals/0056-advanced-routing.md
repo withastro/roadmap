@@ -1,0 +1,516 @@
+- Start Date: 2026-04-21
+- Reference Issues: https://github.com/withastro/roadmap/discussions/1320
+- Implementation PR: https://github.com/withastro/astro/pull/16366
+- Stage 2 Issue: https://github.com/withastro/roadmap/issues/1342
+- Stage 3 PR: https://github.com/withastro/roadmap/pull/1344
+
+# Summary
+
+Provides greater control over the request lifecycle in Astro as well as the ability to use server frameworks that use the Request/Response APIs such as [Hono](https://hono.dev/), allowing the user to inject logic between Astro features such as i18n, redirects, rewrites, sessions, and even the pages directory.
+
+# Example
+
+The minimal API for this proposal is a `src/fetch.ts` file with the following shape:
+
+```ts
+export default {
+  fetch(request: Request) {
+    return new Response('ok', {
+      status: 200
+    });
+  }
+}
+```
+
+In order to be useful, we also provide ways to call into Astro's request handling features, one through a low-level module `astro/fetch` with plain functions that handle requests, and through a higher-level `astro/hono` which provides middleware for use with Hono apps.
+
+__astro/fetch__
+
+This is the low-level API that includes request handlers for various Astro features. The user has the ability to call them in any order.
+
+```ts
+import { FetchState, redirects, pages } from 'astro/fetch';
+
+export default {
+  fetch(request: Request) {
+    const state = new FetchState(request);
+
+    // Check redirects first
+    const redirect = redirects(state);
+    if (redirect) return redirect;
+
+    // Render pages
+    return pages(state);
+  }
+}
+```
+
+For users who don't need fine-grained control, a combined `astro()` handler runs all features in the default order:
+
+```ts
+import { FetchState, astro } from 'astro/fetch';
+
+export default {
+  fetch(request: Request) {
+    const state = new FetchState(request);
+    return astro(state);
+  }
+}
+```
+
+__astro/hono__
+
+This is the higher-level API targeting Hono specifically. Features are provided as Astro middleware and can be mixed and matched.
+
+```ts
+import { astro } from 'astro/hono';
+import { Hono } from 'hono';
+
+const app = new Hono();
+
+app.use(astro());
+
+export default app;
+```
+
+# Background & Motivation
+
+Astro started as a static site generator with simple file-based routing. As use-cases for Astro grew we needed to add new ways to configure routing; redirects through Astro config, middleware through a special `src/middleware.ts` file, Actions through a special file, i18n through config (or middleware).
+
+Despite this, users run into limitations with the current approach:
+
+- **No explicit request ordering.** If you need auth to run before Astro rendering and logging to run after, you're relying on implicit middleware ordering that Astro controls. There's no way to say "run this, then Astro, then that."
+- **Features are tightly coupled to Astro internals.** Middleware, Actions, rewrites, and i18n are all baked into Astro's request handling. They can't be used independently, reordered, or replaced -- they run when and how Astro decides.
+- **Hard to integrate non-Astro request logic.** If you want to mount an API from another library, add rate limiting, or run platform-specific logic before Astro sees the request, you're working against the framework rather than with it.
+- **Not all requests reach user code.** Requests that do not match a RouteData object never get passed through Astro's pipeline or reach user middleware, leading users to add logic in front of Astro through their platform's own APIs.
+
+This proposal aims to consolidate a single pipeline for Astro request handling where all requests go into, and the user has complete control.
+
+# Goals
+
+- Allow developers to have complete control over requests coming into their Astro application.
+- Provide an API that is completely compatible with Fetch handlers, such as Hono, so users can gain the benefit of those ecosystems.
+- Break individual Astro features into small APIs that can be composed however the user wishes.
+- Work equally in SSG and SSR. During a static build, Astro calls the fetch handler for each prerendered page the same way a server would at runtime. There is no difference in behavior between the two modes.
+
+# Non-Goals
+
+- Creating a single "entry point" that covers all platform-specific APIs. This API still runs after adapters.
+- Removing any features; this is just a different way to control what order features run. Features such as injectRoute will still exist, even if it would be possible to implement similar functionality through Hono middleware.
+- Provide ways for integrations to inject code into the pipeline. The user has complete control over the request pipeline in this proposal; in fact they have to include the right middleware to even render pages.
+
+# Detailed Design
+
+## `src/fetch.ts`
+
+The entrypoint for this feature is a `src/fetch.ts` file whose default export is an object with a `fetch` method. This shape was chosen because it is the standard entrypoint convention used by [Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/), [Bun](https://bun.sh/docs/api/http#export-default-syntax), and [Hono](https://hono.dev/docs/api/hono#fetch). By aligning with this existing pattern, `src/fetch.ts` is instantly familiar to anyone who has used those runtimes, and fetch handlers written for those platforms can be reused with minimal changes.
+
+For type-safety, Astro will export a `Fetchable` interface:
+
+```ts
+import type { Fetchable } from 'astro';
+
+export default {
+  async fetch(request) {
+    return new Response('ok');
+  }
+} satisfies Fetchable;
+```
+
+The `Fetchable` type ensures the `fetch` method has the correct signature (it must accept a `Request` and return a `Response` or `Promise<Response>`). This aligns with other platforms, for ex. Bun, which use `satisfies` to type the shape.
+
+## Handler Architecture
+
+Currently most of the logic to resolve what gets called during a request is contained within the App class. This class doubles as the external API used by adapters to render pages.
+
+The bulk of the changes for this proposal will be to extract the logic out of the App class and into feature-specific handler classes. Each feature is organized as a class, but the API of each handler varies depending on what it does. There are a few common patterns:
+
+- **Request interceptors** check the request and may return a response early (e.g. redirects). These have a `handle(state: FetchState)` method that returns a `Response` or `undefined`:
+
+```ts
+class RedirectsHandler {
+  handle(state: FetchState): Response | undefined {
+    // ...
+  }
+}
+```
+
+- **Post-processors** take an existing `Response` and return a modified one. They can be used at any point, but typically run after page rendering. For example, the i18n handler post-processes the response from `pages()` to handle locale redirects and fallbacks:
+
+```ts
+class I18nHandler {
+  finalize(state: FetchState, response: Response): Response {
+    // ...
+  }
+}
+```
+
+- **Helpers** provide checks or utilities that other handlers use, without directly producing or modifying responses.
+
+This proposal doesn't aim to enforce a single interface across all handlers, as the methods vary depending on what each feature needs to do.
+
+The user-facing API in `astro/fetch` wraps these classes as plain functions (e.g. `redirects(state)`, `pages(state)`). The `astro/hono` API wraps them further as Hono middleware. See the [Feature Handlers](#feature-handlers) and [Hono API](#hono-api) sections below for details.
+
+Internally, handler classes require configuration from Astro's SSR manifest (route table, i18n settings, etc.). To keep the user-facing API simple, the `astro/fetch` module imports the manifest via a Vite virtual module (`virtual:astro:manifest`) at build time and passes it into the handler constructors. This means users just call `redirects(state)` rather than needing to import and wire up the manifest themselves. The handler classes themselves remain pure and accept the manifest as a constructor argument, which makes them directly unit-testable without the virtual module.
+
+The module specifier is `astro/fetch` (not a virtual module like `astro:fetch`) because the functions it exports can be used by third-party npm packages that build on top of Astro's request handling. A library author can import from `astro/fetch` in their own package, get full type-safety, and publish it for others to use in their `src/fetch.ts`. While the code ultimately only runs inside the fetch handler, it does not need to be authored there.
+
+## FetchState
+
+Every request has additional state associated with it. Some of it is specific to the adapter such as the `clientAddress`, while other state is loaded during the request lifecycle, such as the `APIContext` object that is created to pass to user middleware or endpoint.
+
+`FetchState` is a mutable object that is created once per request and passed through all handlers. Handlers read and write properties on it as they run — for example, `redirects()` reads `routeData` to check for a match, and `pages()` sets `response` after rendering. It is not copied between handler calls; every handler receives the same instance.
+
+The user creates the `FetchState` when using the `astro/fetch` API. The public surface includes:
+
+- `request` - The current `Request` object.
+- `url` - Normalized `URL` derived from the request.
+- `pathname` - Base-stripped, decoded pathname of the request.
+- `routeData` - The matched route for this request, if any.
+- `cookies` - The `AstroCookies` instance for reading/writing cookies.
+- `locals` - The `App.Locals` object, available to middleware and endpoints via `ctx.locals` / `Astro.locals`.
+- `params` - Route params derived from `routeData` and `pathname`.
+- `response` - The `Response` produced by handlers, if any. Set after rendering.
+- `status` - Default HTTP status for the rendered response.
+- `rewrite(payload)` - Triggers a rewrite to a different route.
+
+Usage:
+
+```ts
+import { FetchState, pages, redirects } from 'astro/fetch';
+
+export default {
+  fetch(request: Request) {
+    const state = new FetchState(request);
+
+    // Run the redirects
+    const response = redirects(state);
+    if(response) {
+      return response;
+    }
+
+    // Continue...
+    return pages(state);
+  }
+}
+```
+
+Note that using the `astro/hono` API the creation of FetchState is not necessary, since Hono has its own Context object; handlers get/create a FetchState lazily via the `getFetchState(context)` function exported from `astro/hono`. This function is part of the public API, so custom Hono middleware and third-party packages can use it to access the same shared `FetchState` that the built-in Astro middleware wrappers use.
+
+### Context Providers
+
+`FetchState` includes a **provider registry** that allows handlers to lazily contribute values to the `APIContext` and `Astro` global. This is the mechanism that powers features like sessions and cache — instead of being created eagerly during request setup, they are registered as providers and only instantiated when user code accesses them.
+
+```ts
+interface ContextProvider<T> {
+  /** Factory called lazily on the first access. */
+  create: () => T;
+  /** Optional cleanup / persist callback. */
+  finalize?: (value: T) => Promise<void> | void;
+}
+```
+The API on `FetchState`:
+
+- `provide<T>(key, provider): void` — Registers a provider. Synchronous; the `create` factory is deferred until the first `resolve` call.
+- `resolve<T>(key): T | undefined` — Lazily calls `create()`, caches the result, and returns it. Synchronous. Returns `undefined` if no provider was registered.
+- `finalizeAll(): Promise<void> | void` — Runs all registered `finalize` callbacks for providers that were actually resolved. Returns `void` synchronously when nothing needs finalizing; returns a `Promise<void>` when any `finalize` callback is asynchronous. Callers should `await` the result.
+
+For example, the `sessions()` handler registers a provider that lazily creates an `AstroSession` and persists it on finalize:
+
+```ts
+state.provide<AstroSession>('session', {
+  create() {
+    return new AstroSession({ cookies, config, ... });
+  },
+  finalize(session) {
+    return session.persist();
+  },
+});
+```
+
+From the user's perspective they only need to add the `session()` handler/middleware and then they get `ctx.session` / `Astro.session` as values. This could also be used by 3rd party integrations.
+
+### Typing Context Providers
+
+Custom context providers are typed using the same pattern as `locals`: module augmentation. A library or user registers a provider with a string key, and the corresponding type is declared by extending an interface in `env.d.ts`:
+
+```ts
+declare namespace App {
+  interface Providers {
+    oauth: import('./lib/oauth').OAuthSession;
+  }
+}
+```
+
+With this declaration, `ctx.oauth` and `Astro.oauth` are properly typed. Built-in providers like `session` are pre-declared by Astro's own type definitions, so users don't need to augment those themselves.
+
+## Feature Handlers
+
+Each Astro feature is exposed as a plain function from `astro/fetch`. These functions fall into three categories based on their return type:
+
+- **Early-exit handlers** return `Response | undefined`. If they return a `Response`, the request is handled and the caller should stop. If `undefined`, the caller continues to the next handler.
+- **Wrapping handlers** take a `next` callback and always return a `Response`. They run logic before and/or after the inner handler.
+- **Post-processors** take an existing `Response` and return a (possibly modified) `Response`.
+
+All handlers take a `FetchState` as their first argument. Here is each handler, what it does, and its signature:
+
+### `trailingSlash(state)`
+
+Enforces the `trailingSlash` config option (`'always'`, `'never'`, or `'ignore'`). If the request pathname doesn't match the configured policy, returns a `301` redirect to the corrected URL. Otherwise returns `undefined`. Call it first, before any other handler.
+
+```ts
+function trailingSlash(state: FetchState): Response | undefined
+```
+
+### `redirects(state)`
+
+Checks if the matched route is a redirect configured via `astro.config`. If so, returns the redirect `Response`. Otherwise returns `undefined`.
+
+```ts
+function redirects(state: FetchState): Promise<Response> | undefined
+```
+
+### `actions(state)`
+
+Handles Astro Action requests. For RPC actions (JSON API calls via `actions.myAction()`), executes the action and returns a `Response` containing the result. For form actions (progressive enhancement via `<form>`), executes the action and stores the result on the state so the page can read it via `Astro.getActionResult()`, then returns `undefined` to let page rendering continue. For non-action requests, returns `undefined`.
+
+```ts
+function actions(state: FetchState): Promise<Response | undefined> | undefined
+```
+
+### `sessions(state)`
+
+Registers the session provider on the state. The session object is created lazily — only when user code accesses `ctx.session` or `Astro.session`. No-op if sessions are not configured in `astro.config`.
+
+Call this early, before middleware runs. After the response is produced, call `state.finalizeAll()` in a `finally` block to persist any session mutations.
+
+```ts
+function sessions(state: FetchState): Promise<void> | void
+```
+
+Returns `undefined` when sessions are not configured.
+
+### `middleware(state, next)`
+
+Runs the user's `src/middleware.ts` (if present) around the `next` callback. The user's `onRequest` handler receives the usual `APIContext` and a `next` function. If no user middleware is configured, calls `next` directly.
+
+```ts
+function middleware(
+  state: FetchState,
+  next: (state: FetchState) => Promise<Response>,
+): Promise<Response>
+```
+
+The `next` callback is where you put the inner handlers (typically `pages`). The `Response` returned by `next` is also set on `state.response`, so both the return value and the state property reference the same object:
+
+```ts
+const response = await middleware(state, (s) => pages(s));
+// response === state.response
+```
+
+### `pages(state)`
+
+Renders the matched page or endpoint and returns the response. This is the core rendering handler — it loads the route's component module, executes it, and builds the response. Returns 404/500 error pages when appropriate.
+
+```ts
+function pages(state: FetchState): Promise<Response>
+```
+
+### `i18n(state, response)`
+
+Post-processes a response against the app's i18n configuration. Handles locale redirects for the root URL, 404 responses for invalid locales, and fallback routing. Returns the response unmodified if i18n is not configured or the strategy is `'manual'`.
+
+```ts
+function i18n(state: FetchState, response: Response): Promise<Response>
+```
+
+This API requires a `Response`, you must call it after a fetch handler that returns a `Response` object, for example `middleware` or/and `pages`.
+
+### `cache(state, next)`
+
+Wraps a render callback with cache provider logic. Handles runtime caching (providers that implement `onRequest`), CDN-based providers (headers only), and the no-cache case transparently. Cache headers are applied and stripped internally.
+
+```ts
+function cache(
+  state: FetchState,
+  next: () => Promise<Response>,
+): Promise<Response>
+```
+
+Unlike `middleware`, the `next` callback here does not receive `state` because `cache` only wraps the response — it does not need to forward state to an inner handler. The caller already has `state` in scope and can close over it:
+
+```ts
+const response = await cache(state, () => middleware(state, (s) => pages(s)));
+```
+
+### `astro(state)`
+
+The combined handler that runs all features in the default order. Equivalent to composing every handler above in the standard sequence: trailing slash → redirects → sessions → actions → cache → middleware → pages → i18n, with error handling and finalization.
+
+```ts
+function astro(state: FetchState): Promise<Response>
+```
+
+Most users who don't need fine-grained control should use this.
+
+### Composing handlers
+
+Here's how the individual handlers compose into a full pipeline:
+
+```ts
+import {
+  FetchState, trailingSlash, redirects,
+  sessions, actions, middleware, pages, i18n
+} from 'astro/fetch';
+
+export default {
+  async fetch(request: Request) {
+    const state = new FetchState(request);
+
+    // Early exits — return immediately if they handle the request.
+    const slash = trailingSlash(state);
+    if (slash) return slash;
+
+    const redirect = redirects(state);
+    if (redirect) return redirect;
+
+    // Register session provider (lazy, no-op if unconfigured).
+    sessions(state);
+
+    const action = await actions(state);
+    if (action) return action;
+
+    try {
+      // Middleware wraps page rendering; i18n post-processes.
+      const response = await middleware(state, () => pages(state));
+      return await i18n(state, response);
+    } finally {
+      // Persist sessions, etc.
+      await state.finalizeAll();
+    }
+  }
+};
+```
+
+Note that `finalizeAll()` must be called by the user when composing handlers manually. Context providers like `sessions()` register lazy `finalize` callbacks (e.g. to persist session data), and the user controls when those run. This is intentional — the low-level API gives the user full control over the request lifecycle, including cleanup. The combined `astro()` handler calls `finalizeAll()` internally, so users who don't need fine-grained control don't have to think about it.
+
+The API is flexible, so it's possible to slot business logic anywhere. Add auth before `pages`, add logging around `middleware`, skip `i18n` entirely, or replace `pages` with your own rendering — it's all just function calls.
+
+## Platform Entrypoints
+
+`src/fetch.ts` runs within Astro's request handling, after the adapter and any platform-specific entrypoint (e.g. Cloudflare's `worker.ts`). The layering is:
+
+1. **Adapter / platform entrypoint** (e.g. `worker.ts`) - Platform-specific logic, receives the raw platform request.
+2. **`src/fetch.ts`** - User's fetch handler, receives a standard `Request`.
+3. **Feature handlers** - Astro features like redirects, pages, etc.
+
+`src/fetch.ts` does not replace platform entrypoints. Users who need platform-specific APIs (e.g. Durable Objects, queues) still use their platform's entrypoint for those concerns.
+
+Some platforms also provide edge middleware (e.g. Vercel Edge Middleware, Netlify Edge Functions) that runs before the request reaches the adapter. This layer is outside Astro's control and is not affected by this proposal — it continues to work as it does today.
+
+## Hono API
+
+[Hono](https://hono.dev/) was chosen because it is built entirely on Web Standard APIs (`Request`/`Response`/`fetch`), which aligns with the fetch-handler model at the core of this proposal. It has the largest middleware ecosystem among fetch-native frameworks, giving users access to auth, CORS, rate limiting, and many other capabilities without Astro needing to build them. Hono is also lightweight — it is a middleware router in pure JavaScript with no server runtime of its own, so it adds no overhead beyond what the user's middleware does.
+
+A Hono-specific API of middleware will be provided as `astro/hono`. Hono is used here purely for its middleware composition capability — no server is started and no ports are bound. When a Hono app is exported from `src/fetch.ts`, Astro calls its `fetch` method directly with the incoming `Request`, the same way it would call any other fetch handler. Hono acts as a middleware router in pure JavaScript; all actual HTTP serving is handled by the adapter/platform layer above.
+
+The `astro/hono` exports are thin wrappers around the lower-level `astro/fetch` feature handlers. They store `FetchState` on Hono's context object and delegate directly to the underlying handlers. The `getFetchState(context)` function is also exported, allowing custom Hono middleware and third-party packages to access the per-request `FetchState`:
+
+```ts
+import { Hono } from 'hono';
+import { getFetchState, pages } from 'astro/hono';
+
+const app = new Hono();
+
+app.use(async (context, next) => {
+  const state = getFetchState(context);
+  state.locals.user = await authenticate(context.req.raw);
+  await next();
+});
+
+app.use(pages());
+
+export default app;
+```
+
+User-facing API will look like:
+
+```ts
+import { redirects, actions, pages } from 'astro/hono';
+import { Hono } from 'hono';
+
+const app = new Hono();
+app.use(redirects());
+app.use(actions());
+app.use(pages());
+
+export default app;
+```
+
+Astro will not depend on Hono, except as a devDependency for the sake of testing. The user will be expected to bring their own version of Hono.
+
+# Testing Strategy
+
+This proposal intends to refactor much of Astro's request handling to improve testing. Each handler will take as little information as possible; a subset of the Manifest if possible, as global configuration, but otherwise take the `FetchState` object which can easily be created.
+
+As described in the Detailed Design section, the `astro/fetch` wrapper layer handles manifest wiring via a virtual module, while the underlying handler classes accept the manifest as a plain argument. This separation means handlers can be directly unit tested with mock manifest data.
+
+The higher-level `astro/fetch` and `astro/hono` will likely need to be tested via integration tests.
+
+# Drawbacks
+
+This is a significant refactor of the rendering pipeline. Although the goal is not to break any tests, it's possible that untested implicit behavior might be affected. For example, currently redirects are processed as part of rendering as they are part of the RouteList. By pulling it out, it's possible to break route matching as redirects runs before pages. The intent is preserve route matching rules despite redirects running at an earlier time.
+
+Additionally this is a fairly low-level API allowing the users full control over the request pipeline. For example, even pages do not get rendered with this API if the pages handler is not called. This can cause unexpected behavior for users who only want to tweak the request or handle application-specific scenarios upfront. The `astro()` handler is designed as a solution to this, it's the "do all of the Astro things" API.
+
+Because the user controls the pipeline, debugging can be harder. Errors that previously produced clear Astro error messages may instead manifest as silent failures -- for example, forgetting to include the `pages()` handler means no pages render, but there's no error, just an empty response. We should consider what kind of warnings or developer tooling can help catch common mistakes like missing handlers.
+
+# Alternatives
+
+## Direct Hono dependency
+
+Early in the design process the plan was for Astro to depend directly on Hono and use it as the internal request pipeline, only exposing the `astro/hono` APIs. The motivation was to avoid designing a custom middleware API that would inevitably look very similar to Hono's — using Hono directly would give users access to its large ecosystem of middleware from day one.
+
+During review, concerns were raised about coupling Astro to Hono's release cycle. A breaking change in Hono could force a breaking change in Astro, and some reviewers felt that preferring one framework over others was undesirable. The compromise was to provide the low-level `astro/fetch` API as the standalone foundation, with `astro/hono` as an optional wrapper for users who want Hono's middleware model. Users opt in by installing Hono themselves.
+
+## Separate `@astrojs/hono` package
+
+An alternative to `astro/hono` would be a separate `@astrojs/hono` package. However, Astro does not depend on Hono at runtime — the user brings their own Hono dependency. The `astro/hono` module only provides the thin adapter layer that bridges Astro's feature handlers into Hono middleware. Since there is no Hono code being bundled into Astro, a separate package is unnecessary; a subpath export is sufficient.
+
+# Adoption strategy
+
+The `src/fetch.ts` module will be opt-in. Without this file Astro will behave as it normally does.
+
+To accommodate projects which already have a `src/fetch.ts` file, this will be configurable:
+
+```
+export default defineConfig({
+  fetchFile: 'handler.ts'
+});
+```
+
+The shape will be:
+
+```ts
+type FetchFile = string | null;
+```
+
+The usage of `null` will disable the feature; this is useful if the user has their own `fetch.ts` file but don't want to define their own fetch handler file.
+
+# Unresolved Questions
+
+The exact shape of every feature handler is in-progress and not known. I think the shape of these can be discussed in the review process.
+
+How should users call into Astro from platform-specific entrypoints? For example, a Cloudflare `worker.ts` that needs to export Durable Objects alongside Astro's handler might look something like:
+
+```ts
+import { handler } from 'astro/fetch';
+
+export class MyDurableObject { ... }
+
+export default {
+  fetch: handler
+}
+```
+
+This proposal does not currently address this use case, but it may be something we want to support as part of or alongside this work.
