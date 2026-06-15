@@ -186,19 +186,19 @@ export default defineConfig({
 
 ## Deprecation: top-level `remarkPlugins` / `rehypePlugins` / `remarkRehype` / `gfm` / `smartypants`
 
-The top-level `markdown.remarkPlugins`, `markdown.rehypePlugins`, `markdown.remarkRehype`, `markdown.gfm`, `markdown.smartypants` options are deprecated but continue to work for now. During config validation, Astro checks if any of them are set and `markdown.processor` is not. If so, it dynamically imports `@astrojs/markdown-remark`, wraps the legacy options in `unified({...})` and prints a deprecation warning.
+The top-level `markdown.remarkPlugins`, `markdown.rehypePlugins`, `markdown.remarkRehype`, `markdown.gfm`, `markdown.smartypants` options are deprecated in v6 but continue to work for now until Astro 8.x. During config validation, Astro checks if any of them are set and `markdown.processor` is not. If so, it dynamically imports `@astrojs/markdown-remark`, wraps the legacy options in `unified({...})` and prints a deprecation warning.
 
 If `@astrojs/markdown-remark` is not installed, the user gets an error telling them to install it and optionally migrate to the new processor API.
 
 ## MDX integration
 
-`@astrojs/mdx` reads `config.markdown.processor` (or its own `processor` option override) in the `astro:config:done` hook. Based on the processor's `name`:
+`@astrojs/mdx` reads `config.markdown.processor.name` (or from its own `processor` option override) and uses the appropriate MDX renderer based on the value:
 
 - `'satteri'`: built-in Sätteri MDX path. The processor's `mdastPlugins`, `hastPlugins`, and `features` are merged into the MDX options.
 - `'unified'`: built-in unified MDX path. The processor's `remarkPlugins`, `rehypePlugins`, and `remarkRehype` are merged into the MDX options.
 - anything else: the integration calls `processor.createMdxRenderer(shared, mdx)` and uses the returned renderer.
 
-The `extendMarkdownConfig` integration option still controls whether `.mdx` inherits from `markdown.*` or starts from defaults.
+The `extendMarkdownConfig` integration option still controls whether `.mdx` inherits from `markdown.*` or starts from defaults, including the processor.
 
 # Testing Strategy
 
@@ -216,13 +216,13 @@ The pluggable layer is covered by the existing test suite for both `astro` and `
 - Two Markdown implementations rarely produce byte-identical HTML in every edge case. We aim for parity on common output, but minor differences (whitespace, markup, etc.) may surface, but would be considered bugs.
 - Users that depend on a remark or rehype plugin have to install `@astrojs/markdown-remark` themselves and switch to `markdown.processor: unified({...})`. The legacy fields auto-wrap, but it's still a config change to make. A codemod could be made available if we deem it necessary.
 - We now ship two markdown packages (`@astrojs/markdown-satteri` by default, `@astrojs/markdown-remark` opt-in), always annoying.
-- Sätteri is a new project. Its plugin ecosystem is small compared to remark / rehype.
+- Sätteri is a new project. Its plugin ecosystem is small compared to remark / rehype, although many features that required plugins in remark / rehype are built-in in Sätteri.
 - Documentation cost: every Markdown / MDX guide that mentions `remarkPlugins` or `rehypePlugins` needs an update.
 
 # Alternatives
 
 - Keep unified as the default and ship Sätteri as opt-in. The performance and dependency wins only land for users who actively switch, which from past experience is a small fraction. The docs sites that feel build time the most would keep paying the cost.
-- Depend on something else than Sätteri. The truth is that there's not a lot of options that have the flexibility we require. `markdown-it` would be the other obvious possible option.
+- Depend on something else than Sätteri. The truth is that there's not a lot of options that have the flexibility we require. `markdown-it` (or a fork of it) would be the other obvious possible option.
 - Do nothing. Build times for content-heavy sites stay where they are, and the dependency footprint of a stock Astro install stays at the current size.
 
 # Adoption strategy
