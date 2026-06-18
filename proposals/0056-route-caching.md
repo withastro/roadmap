@@ -14,7 +14,7 @@
 
 - Start Date: 2025-10-15
 - Reference Issues: https://github.com/withastro/roadmap/discussions/1131, https://github.com/withastro/roadmap/discussions/181
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/15579
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1140
 - Stage 3 PR: https://github.com/withastro/roadmap/pull/1245
 
