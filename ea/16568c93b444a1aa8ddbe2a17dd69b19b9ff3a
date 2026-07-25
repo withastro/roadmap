@@ -1,0 +1,19 @@
+proposals/0062-incremental-static-builds.md
+  s_873db6a6211f36::t_8565386bbaec3d 1-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ea16568c93b444a1aa8ddbe2a17dd69b19b9ff3a",
+  "prompts": {},
+  "sessions": {
+    "s_873db6a6211f36": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_065704ac8ffeNPRxMaqvjJV0PF",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Matthew Phillips <matthewphillips@cloudflare.com>"
+    }
+  }
+}
