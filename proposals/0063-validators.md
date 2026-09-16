@@ -160,6 +160,29 @@ A schema that is not a Standard Schema validator is now rejected with a dedicate
 
 The same applies to loaders: `Loader['schema']` and `Loader['createSchema']` are typed as `StandardSchemaV1` instead of `z.$ZodType`.
 
+### From schema factories to plain functions
+
+`image()` and `reference()` were Zod-specific for one concrete reason: they returned Zod schemas. `image()` handed back a Zod string with a transform attached, and `reference()` handed back a Zod type that parsed an id into a reference object. Using either one meant dropping a schema Astro built into the middle of a schema the user built, which only works when both come from the same library.
+
+Standard Schema does not fix that by itself. It describes how to validate *with* a schema, not how to construct one, and there is no portable schema constructor to write against. So instead of building a schema in a library it does not know about, Astro stops building schemas at all. Both helpers become plain functions from a value to a value, and the user plugs them into the transform mechanism their own validator already has:
+
+```ts
+// Zod
+cover: z.string().transform((src) => image(context, { src })),
+
+// Valibot
+cover: v.pipeAsync(v.string(), v.transformAsync((src) => image(context, { src }))),
+
+// ArkType
+author: type('string').pipe((id) => reference('authors', id)),
+```
+
+Astro supplies the behaviour and the validator supplies the plumbing. Neither helper knows or cares which validator called it, and the one line of library-specific glue is written by the user, in the idiom they are already using for the rest of the schema.
+
+This is also what makes the results validatable. The old helpers were terminal: whatever `image()` returned was the end of that field. The new ones hand a value back in the middle of the user's own chain, so anything after them (`.refine()`, `v.check()`, another `.pipe()`) sees it.
+
+One constraint is worth stating plainly, because "any Standard Schema validator" overstates it. This approach needs the validator to have a transform escape hatch, and `image()` needs an *async* one, since it reads the file. Zod and Valibot have both. ArkType has sync morphs but [does not support async ones](https://arktype.io/docs/faq), so `image()` cannot be inlined in an ArkType schema today. `reference()`, which is synchronous, works there fine. An ArkType user with images in a collection has to resolve them outside the schema, or use a different validator for that collection.
+
 ### `image()`
 
 The `image` helper used to come from the schema context and return a Zod schema, which meant two problems: it only worked with Zod, and its result could not be validated any further.
@@ -369,6 +392,7 @@ The implementation PR covers, and this RFC expects:
 - **More deprecated surface.** `astro/zod`, `astro:schema`, `image()` as a context helper, `reference(collection)`, form `input`, and five content types are all deprecated at once. That is a lot of warnings for users who are perfectly happy with Zod, and a lot to carry until Astro 8.
 - **`image()` and `reference()` get more verbose.** `z.string().transform((src) => image(context, { src }))` is a lot of characters next to `image()`, and the wrapper is boilerplate the old API hid. What it buys is composition: being able to validate the result at all, which was not possible before.
 - **Form parsing moves to userland.** Users who liked `input` on form actions have to write four lines they did not write before, against a package Astro does not own. This is a real regression in convenience, traded for a coercion story users can actually control.
+- **The helpers depend on the validator having a transform escape hatch.** `image()` needs an async one, which ArkType does not have, so "any Standard Schema validator" carries a footnote for collections with images. Standard Schema cannot paper over this, since it has nothing to say about transforms.
 - **Weaker error messages in places.** Astro's collection errors could lean on Zod's issue codes; a bare Standard Schema issue guarantees only `message` and `path`. Errors stay useful, but less structured for non-Zod validators.
 - **Teaching cost.** "Any validator" means docs and examples have to pick one anyway, and users now have one more decision to make before writing their first collection. The mitigation is to not present it as a decision: the docs and the official examples keep using Zod throughout, and other validators are documented as an opt-in for users who want one.
 
