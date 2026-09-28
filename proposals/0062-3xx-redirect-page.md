@@ -28,6 +28,8 @@ Create `src/pages/3xx.astro` to customize the page Astro writes for static redir
 
 ```astro
 ---
+import type { RedirectPageProps as Props } from 'astro';
+
 const { from, to, status, delay } = Astro.props;
 ---
 
@@ -92,6 +94,8 @@ Astro renders the page separately for each prerendered redirect and passes these
 - `delay`: The delay in seconds used by Astro's built-in template. The default is `2` for status `302` and `0` for other redirect statuses.
 
 The props are regular component props, not additional properties on the `Astro` global. A page can use them to render translated copy, destination links, or status-specific content. It can choose a different refresh delay by rendering its own meta refresh value. The `delay` prop reports the built-in default and does not constrain the custom page.
+
+The root `astro` package exports the `RedirectPageProps` type. Import it as `Props` in `3xx.astro` to give `Astro.props` the redirect page's declared type.
 
 ## Rendering and fallback
 
