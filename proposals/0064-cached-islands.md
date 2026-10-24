@@ -3,7 +3,7 @@
 - Start Date: 2026-07-28
 - Reference Issues: https://github.com/withastro/roadmap/issues/945 (Server Islands), https://github.com/withastro/roadmap/issues/1151 (Live content loaders), https://github.com/withastro/roadmap/issues/1140 (Route caching), https://github.com/withastro/roadmap/issues/1356 (Rust compiler)
 - Implementation PR: <!-- leave empty -->
-- Stage 2 Issue: <!-- fill in -->
+- Stage 2 Issue: https://github.com/withastro/roadmap/issues/1454
 - Stage 3 PR: <!-- leave empty -->
 
 # Summary
