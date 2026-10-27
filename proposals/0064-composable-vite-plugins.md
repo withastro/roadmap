@@ -359,7 +359,162 @@ pages.addChunkPostHook('$$CONTENT_STYLES$$', ({ chunks, mutate }) => {
 
 ## Feature plugins
 
-<!-- TODO: content, markdown, assets, i18n, actions, sessions, fonts, toolbar, and their dependencies. -->
+Each feature of Astro is a small plugin that owns its config and its runtime code. It builds only on the APIs `pages()` and `astro()` expose. This is the same API anyone can use to write their own feature.
+
+```js
+export default {
+  plugins: [
+    astro(),
+    pages(),
+    i18n({ defaultLocale: 'en', locales: ['en', 'fr'] }),
+    sessions({ driver: 'redis' }),
+    actions(),
+  ],
+};
+```
+
+The options of each plugin are its section of today's Astro config, and the CLI passes that section through unchanged.
+
+### The plugins
+
+- **`env()`** adds `astro:env` and private `import.meta.env` variables. It works with or without `pages()`.
+- **`i18n()`** adds locale routing, fallbacks, domains and `astro:i18n`. It requires `pages()`.
+- **`sessions()`** adds `Astro.session` and session drivers. It requires `pages()`.
+- **`cache()`** adds `Astro.cache`, route rules and cache providers. It requires `pages()`.
+- **`actions()`** adds `astro:actions`, the action endpoint and form actions. It requires `pages()`.
+- **`markdown()`** makes `.md` files importable and routable as pages. It requires `pages()`.
+- **`assets()`** adds `astro:assets`, image services, the image endpoint and build-time image optimization. It requires `pages()`.
+- **`fonts()`** adds font providers, optimized fallbacks and `<Font />`. It requires `pages()`, and adds `<Font />` to `astro:assets` when `assets()` is present.
+- **`prefetch()`** adds link prefetching and speculation rules. It requires `pages()`.
+- **`devToolbar()`** adds the dev toolbar and its app API. It requires `pages()`.
+- **`content()`** adds content collections. It requires only `astro()`: collections can be queried from any server code. It uses `pages()` and `assets()` when present, for rendering entries and optimizing their images.
+
+All of them also require `astro()`, except `prefetch()`.
+
+A plugin that needs another one looks it up by name when Vite resolves the config, and fails with an error naming the missing plugin:
+
+```
+`pages()` from @astrojs/vite-plugin-pages is missing from the Vite `plugins` array.
+```
+
+Because the lookup happens in `configResolved`, plugin order never matters.
+
+### Registration API
+
+Feature plugins add behavior through registration methods on `api.astroPages`, alongside the [Hooks](#hooks). Registrations take **module entrypoints, not functions**. A plugin runs in Vite's config process, but requests are handled in the server environment, which may be a different runtime such as workerd. `pages()` includes the registered modules in the server build.
+
+#### `injectRoute`
+
+Adds a route that isn't a file in `src/pages`. Actions uses it for its RPC endpoint. This is the integration API's `injectRoute`. Pass `{ internal: true }` for routes that are implementation details, which then don't appear in `onRoutesResolved` and don't turn a static site into a server build.
+
+```js
+pages.injectRoute({
+  pattern: '/_actions/[...path]',
+  entrypoint: new URL('./runtime/route.js', import.meta.url),
+  prerender: false,
+});
+```
+
+#### `addMiddleware`
+
+Adds middleware that runs before (`'pre'`) or after (`'post'`) the project's `src/middleware`. This is the integration API's `addMiddleware`.
+
+```js
+pages.addMiddleware(new URL('./runtime/middleware.js', import.meta.url), 'pre');
+```
+
+#### `addFetchHandler`
+
+Adds a step to the request pipeline, which runs before middleware and routing. A handler receives the request state and `next`, and can return a response without calling `next`. Sessions, cache and i18n are fetch handlers. `wraps` orders a handler relative to others without depending on plugin order. For example, cache runs before i18n so that a cached response includes i18n's redirects.
+
+```js
+pages.addFetchHandler('cache', {
+  entrypoint: new URL('./runtime/fetch-handler.js', import.meta.url),
+  order: 'pre',
+  wraps: ['i18n'],
+});
+```
+
+```js
+// runtime/fetch-handler.js
+export default async function cacheHandler(state, next) {
+  return (await lookup(state.request)) ?? next(state);
+}
+```
+
+#### `extendRenderContext`
+
+Adds a member to `Astro` and to the endpoint `context`. The module's default export is called once per request and provides the value. The value is created the first time it is read, so a session is never created for a page that doesn't use `Astro.session`. Its type is declared by extending `AstroGlobalExtensions` (see [The `Astro` global](#the-astro-global)).
+
+```js
+pages.extendRenderContext('session', new URL('./runtime/render-context.js', import.meta.url));
+```
+
+#### `extendManifest` and `setManifestData`
+
+Add data to the server manifest, which the runtime modules read. `setManifestData` adds a serializable value. `extendManifest` adds a module that is imported lazily, for code that depends on configuration, like a session driver or a cache provider.
+
+```js
+pages.setManifestData('sessionConfig', { cookie: 'astro-session', ttl: 3600 });
+pages.extendManifest('sessionDriver', 'virtual:my-session-driver');
+```
+
+#### `transformRoutes`
+
+Edits the route table each time it is created. i18n uses it to add a localized copy of each route.
+
+```js
+pages.transformRoutes((routes) => [...routes, ...routes.map(localize)]);
+```
+
+#### `extendRouting`
+
+Adds a module that takes part in matching a request to a route at runtime, for routing that depends on the request rather than the file system. i18n uses it for domains and fallbacks.
+
+```js
+pages.extendRouting(new URL('./runtime/routing-extension.js', import.meta.url));
+```
+
+#### `addPageExtension`
+
+Makes files with another extension routable as pages. The module they compile to must default-export an Astro component. Markdown uses it for `.md`, and an MDX plugin would use it for `.mdx`.
+
+```js
+pages.addPageExtension('.md');
+```
+
+#### `addPageScript`
+
+Adds a script to the `<head>` of every page: a module, or inline content. Inline scripts are included in the CSP policy. This is the integration API's `injectScript('page', ...)` and `injectScript('head-inline', ...)`. Prefetch uses it for its runtime and for speculation rules.
+
+```js
+pages.addPageScript(new URL('./runtime/prefetch.js', import.meta.url));
+pages.addPageScript(JSON.stringify(rules), { stage: 'head-inline', type: 'speculationrules' });
+```
+
+#### `addClientRouterInit`
+
+Adds a browser module that runs when `<ClientRouter />` initializes. Prefetch uses it to prefetch links on navigation.
+
+```js
+pages.addClientRouterInit(new URL('./runtime/client-router-init.js', import.meta.url));
+```
+
+#### `addCspSources`
+
+With CSP enabled, adds style hashes and font sources to the policy. Fonts uses it for the styles and font files it generates.
+
+```js
+pages.addCspSources({ styleHashes: [hash], fontResources: ['https://fonts.example.com'] });
+```
+
+### Feature plugin APIs
+
+A feature can expose its own API in the same way. `assets()` exposes `api.astroAssets`, which `fonts()` uses to add `<Font />` to `astro:assets`:
+
+```js
+getAssetsApi(config).addExports(fileURLToPath(new URL('./assets-exports.js', import.meta.url)));
+```
 
 ## Shared configuration
 
