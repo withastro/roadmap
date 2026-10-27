@@ -518,14 +518,16 @@ getAssetsApi(config).addExports(fileURLToPath(new URL('./assets-exports.js', imp
 
 ## Shared configuration
 
-Every setting has exactly one owner, and every other plugin reads it from that owner. Nothing is configured twice.
+Many settings are needed by more than one plugin. `site` is set for the language, because components read `Astro.site`, but `pages()` also needs it for absolute URLs, and so do `i18n()` and sitemap-like plugins. `trailingSlash` affects both how links render and how routes match. Every plugin needs `root`. In the CLI these all come from one Astro config object. Once the features are separate plugins, each needs a way to read settings it doesn't own, without the user repeating them.
+
+The answer is that each setting belongs to one plugin, and the others read it from that plugin:
 
 - **Vite** owns `root`, `base`, `publicDir`, the dev server and the output directory. The Astro plugins read them from Vite's resolved config, and no plugin has an option for them.
 - **`astro()`** owns the settings that affect how components render: `srcDir`, `site`, `trailingSlash`, `compressHTML`, the renderers and the client directives.
 - **`pages()`** owns routing and build settings: `output`, `build.*`, `redirects`, `security.*` and how the server output is deployed.
 - **Each feature plugin** owns its own section of the config.
 
-So `site` is set once, on `astro()`, and `pages()`, `i18n()` and `content()` all read it from there.
+So `site` is set once, on `astro()`, and every other plugin reads it from there.
 
 ### How plugins find each other
 
