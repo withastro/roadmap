@@ -558,7 +558,62 @@ Each plugin validates its own options with a zod schema and exports that schema.
 
 ## The astro CLI and integrations
 
-<!-- TODO: how astro.config.mjs and integrations map onto the plugins. -->
+For an existing Astro project, nothing changes. `astro.config.mjs`, integrations, adapters and the `astro` commands work as they do today. What changes is how they're implemented: `astro dev` and `astro build` run Vite with the same plugins a Vite user would write.
+
+### Composition
+
+The CLI loads and validates `astro.config.mjs`, then turns each section into the options of the plugin that owns it:
+
+```js
+// roughly what `astro dev` builds from an Astro config
+[
+  astro({ site, srcDir, trailingSlash, compressHTML, renderers }),
+  pages({ output, build, redirects, security, serverOutput }),
+  env(config.env),
+  i18n(config.i18n),
+  sessions(config.session),
+  // ...one per feature
+];
+```
+
+The option types are the plugins' own, and the Astro config schema is built from the plugins' schemas. A setting therefore behaves the same in `astro.config.mjs` and in `vite.config.js`.
+
+The plugins also take an optional second argument, used only by the CLI. It carries what an Astro project has and a Vite project doesn't, such as the CLI's logger, the state shared with integrations, and what `astro sync` generates. Vite users never pass it.
+
+### Integrations
+
+Integrations are not part of the plugins. They remain the extension API of the framework. The CLI runs them as today and maps what they register onto the plugin APIs:
+
+| Integration API                          | Plugin API                                         |
+| ---------------------------------------- | -------------------------------------------------- |
+| `addRenderer`                            | `astro()`'s renderers                              |
+| `addClientDirective`                     | `astro()`'s client directives                      |
+| `injectRoute`                            | `injectRoute`                                      |
+| `addMiddleware`                          | `addMiddleware`                                    |
+| `injectScript('page' / 'head-inline')`   | `addPageScript`                                    |
+| `addPageExtension`                       | `addPageExtension`                                 |
+| `astro:route:setup`                      | `onRouteSetup`                                     |
+| `astro:routes:resolved`                  | `onRoutesResolved`                                 |
+| `astro:build:ssr` / `generated` / `done` | `onServerManifest` / `onBuildGenerated` / `onBuildDone` |
+| `updateConfig({ vite })`                 | unchanged: integrations can still add Vite plugins |
+
+The mapping is in one place in `astro`, and integrations don't have to change. Over time, an integration whose only job is to add a Vite plugin can document the plugin for Vite users directly, as the framework integrations will (see [Renderers](#renderers)).
+
+### Adapters
+
+Adapters stay in the CLI too. The CLI maps what an adapter declares (its server entrypoint, its features, `setPrerenderer`, middleware mode, headers) onto `pages({ serverOutput })` and the [Hooks](#hooks). Existing adapters work unchanged. New ones can be written against `serverOutput` and the hooks directly.
+
+### Hook order in dev
+
+The route table is now created by `pages()`, so the CLI resolves Vite's config before `astro:config:done` to learn the routes. In builds this keeps today's order: `astro:routes:resolved` before `astro:config:done`. In dev the order used to be reversed, and it now matches the build. As a side effect, routes injected by features, such as the actions endpoint and the image endpoint, are visible in `astro:routes:resolved` for the first time.
+
+### What stays in `astro`
+
+- the commands: `dev`, `build`, `preview`, `sync`, `check`, `add`, `info`
+- config loading and validation
+- integrations and adapters
+- telemetry
+- the public `astro/*` entrypoints, which become re-exports of the plugin packages and stay until a major release
 
 # Testing Strategy
 
