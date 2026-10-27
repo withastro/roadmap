@@ -123,7 +123,6 @@ astro → vite-plugin-pages (+ feature plugins) → vite-plugin-astro → runtim
 |             | `@astrojs/vite-plugin-sessions`    | `sessions()`   | `Astro.session` and session drivers.                                                                                                                          |
 | Framework   | `astro`                            | —              | The CLI, config loading, integrations and adapters, `astro sync` / `check` / `add`, and the existing `astro/*` entrypoints, which re-export the packages above. |
 
-
 ## The language plugin
 
 <!-- TODO: compiling .astro, HMR, styles, and the metadata islands need. -->
