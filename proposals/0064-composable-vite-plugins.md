@@ -617,7 +617,18 @@ The route table is now created by `pages()`, so the CLI resolves Vite's config b
 
 # Testing Strategy
 
-<!-- TODO -->
+This is mostly a refactor of existing code, so the main protection is the test suite that already exists. Code is moved into the packages, not copied, and `astro` is rebuilt on top of them. That means every existing test exercises the plugin code: `astro`'s unit and integration tests, the adapter suites (Node, Cloudflare, Vercel, Netlify), the framework integrations, and the end-to-end tests. The work is split into a series of PRs, starting with the language plugin and the runtime, then pages, then one per feature, then the fold of `astro` onto them. The full suite has to pass at every step.
+
+The existing suite can't show that the plugins work without `astro`, so each package adds its own tests for that:
+
+- **Plugin tests** run each plugin in a plain Vite project, with no `astro` dependency. They cover its options, its API, and dev and build. Feature plugins are tested against `pages()` alone, so a feature never silently depends on something only the CLI provides.
+- **Standalone fixtures** cover the cases the prototype couldn't handle, in both `vite dev` and `vite build`: rendering a component with scoped styles, hydrating a React island, and rendering a page.
+- **Runtime tests** compile a component with the compiler and render it with `@astrojs/runtime` in plain Node, without Vite. A lint check (`knip --production`) fails the build if the runtime package imports Vite, the compiler or a bundler.
+- **Package resolution:** a test project outside the monorepo, installed with strict pnpm, checks that a project depending only on the plugin packages resolves everything it needs.
+- **Examples:** `examples/vite-plugin-full` (every plugin in a `vite.config.js`) and `examples/vite-plugin-astro-hono` (components rendered from Hono routes) are built in CI like the other examples.
+- **Types:** a type test checks that `AstroUserConfig` stays assignable to the plugin option types, so the Astro config and the plugins can't drift apart.
+
+Package size is measured as part of the work: the `astro` tarball, the install size of all the packages together, and the server bundle of a deployed SSR example.
 
 # Drawbacks
 
