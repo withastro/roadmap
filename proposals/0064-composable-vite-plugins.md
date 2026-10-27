@@ -29,7 +29,7 @@ export default {
 ```ts
 // src/app.ts
 import { Hono } from 'hono';
-import { renderToResponse } from '@astrojs/vite-plugin-astro/render';
+import { renderToResponse } from '@astrojs/runtime';
 import Page from './components/Page.astro';
 
 const app = new Hono();
@@ -146,7 +146,7 @@ In the framework, the CSS and scripts a page needs are collected per page, at bu
 - **Dev:** it walks the server module graph from the rendered component. Styles are inlined. Islands and scripts point at URLs the Vite dev server serves.
 - **Build:** it uses Vite's app builder to build the server environments first. Their module graphs decide the client build entries: one stylesheet per component, plus every hydrated component and script. The resulting URLs are written into the server output.
 
-This is the metadata the prototype was missing. The render API (see [The runtime](#the-runtime)) returns it with the HTML, so `renderToResponse(Page)` produces a complete page with working islands.
+This is the metadata the prototype was missing. The render API (see [The runtime](#the-runtime)) uses it, so `renderToResponse(Page)` produces a complete page with working islands.
 
 ### The `Astro` global
 
@@ -156,12 +156,8 @@ Standalone, `Astro` has the members that only depend on the component: `props`, 
 
 `@astrojs/runtime` is the code compiled components run: the render runtime, the client directive scripts, the JSX runtime and the base types, including `AstroGlobal`. It has no dependency on Vite, the compiler or a bundler. Compiled `.astro` output imports it, and `astro()` resolves it from its own dependency, so projects don't install it themselves.
 
-There are two ways to render.
-
-**With `astro()`**, render through `@astrojs/vite-plugin-astro/render`:
-
 ```ts
-import { renderToString, renderToResponse } from '@astrojs/vite-plugin-astro/render';
+import { renderToString, renderToResponse } from '@astrojs/runtime';
 
 const html = await renderToString(Page, { props, slots, request });
 const response = await renderToResponse(Page, { props });
@@ -169,11 +165,7 @@ const response = await renderToResponse(Page, { props });
 
 By default the result is a full document: `<!DOCTYPE html>` is added and the component tree's stylesheets are injected into `<head>`. Pass `partial: true` to get a fragment instead.
 
-This entry is the runtime bound to virtual modules that `astro()` provides. They supply the island and style metadata the runtime needs:
-
-- the registered renderers;
-- the client directives;
-- the stylesheets and client URLs of each component tree (see [Styles and islands without pages](#styles-and-islands-without-pages)).
+To render islands and styles, the runtime needs metadata that only `astro()` knows: the registered renderers, the client directives, and the stylesheets and client URLs of each component tree (see [Styles and islands without pages](#styles-and-islands-without-pages)). Compiled components bring it with them. `astro()` adds an import of a small setup module to every component it compiles, and that module registers the metadata with the runtime. The runtime itself never imports anything from Vite.
 
 **Without Vite**, use `createRenderer()` and supply that metadata yourself:
 
