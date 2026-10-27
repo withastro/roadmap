@@ -1,5 +1,3 @@
-**If you have feedback and the feature is released as experimental, please leave it on the Stage 3 PR. Otherwise, comment on the Stage 2 issue (links below).**
-
 - Start Date: 2026-10-17
 - Reference Issues: https://github.com/withastro/roadmap/discussions/1378
 - Implementation PR: <!-- leave empty -->
