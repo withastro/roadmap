@@ -621,7 +621,7 @@ This is mostly a refactor of existing code, so the main protection is the test s
 
 The existing suite can't show that the plugins work without `astro`, so each package adds its own tests for that:
 
-- **Plugin tests** run each plugin in a plain Vite project, with no `astro` dependency. They cover its options, its API, and dev and build. Feature plugins are tested against `pages()` alone, so a feature never silently depends on something only the CLI provides.
+- **Plugin tests** run each plugin in a plain Vite project, with no `astro` dependency. They cover its options, its API, and dev and build. Feature plugins are tested against `pages()` alone, so a feature never silently depends on something only the CLI provides. Tests also build with the plugins in different orders, to check that order doesn't matter.
 - **Standalone fixtures** cover the cases the prototype couldn't handle, in both `vite dev` and `vite build`: rendering a component with scoped styles, hydrating a React island, and rendering a page.
 - **Runtime tests** compile a component with the compiler and render it with `@astrojs/runtime` in plain Node, without Vite. A lint check (`knip --production`) fails the build if the runtime package imports Vite, the compiler or a bundler.
 - **Package resolution:** a test project outside the monorepo, installed with strict pnpm, checks that a project depending only on the plugin packages resolves everything it needs.
