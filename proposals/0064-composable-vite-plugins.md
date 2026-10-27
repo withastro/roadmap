@@ -29,7 +29,7 @@ export default {
 ```ts
 // src/app.ts
 import { Hono } from 'hono';
-import { renderToResponse } from '@astrojs/runtime';
+import { renderToResponse } from '@astrojs/vite-plugin-astro/render';
 import Page from './components/Page.astro';
 
 const app = new Hono();
@@ -154,7 +154,42 @@ Standalone, `Astro` has the members that only depend on the component: `props`, 
 
 ## The runtime
 
-<!-- TODO: @astrojs/runtime and renderToResponse; how island and style metadata reach it. -->
+`@astrojs/runtime` is the code compiled components run: the render runtime, the client directive scripts, the JSX runtime and the base types, including `AstroGlobal`. It has no dependency on Vite, the compiler or a bundler. Compiled `.astro` output imports it, and `astro()` resolves it from its own dependency, so projects don't install it themselves.
+
+There are two ways to render.
+
+**With `astro()`**, render through `@astrojs/vite-plugin-astro/render`:
+
+```ts
+import { renderToString, renderToResponse } from '@astrojs/vite-plugin-astro/render';
+
+const html = await renderToString(Page, { props, slots, request });
+const response = await renderToResponse(Page, { props });
+```
+
+By default the result is a full document: `<!DOCTYPE html>` is added and the component tree's stylesheets are injected into `<head>`. Pass `partial: true` to get a fragment instead.
+
+This entry is the runtime bound to virtual modules that `astro()` provides. They supply the island and style metadata the runtime needs:
+
+- the registered renderers;
+- the client directives;
+- the stylesheets and client URLs of each component tree (see [Styles and islands without pages](#styles-and-islands-without-pages)).
+
+**Without Vite**, use `createRenderer()` and supply that metadata yourself:
+
+```js
+import { createRenderer } from '@astrojs/runtime';
+
+const { renderToString } = createRenderer({
+  renderers,
+  componentAssets: (id) => manifest[id],
+  resolve: (specifier) => urls[specifier],
+});
+```
+
+This renders components compiled ahead of time, for example with `@astrojs/compiler-rs`, in any JavaScript runtime. It is the base for tooling other than Vite.
+
+`pages()` renders with the same runtime, but builds its own per-request context. That context adds the request-level members of `Astro` (see [The `Astro` global](#the-astro-global)).
 
 ## Renderers
 
