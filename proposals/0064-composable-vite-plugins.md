@@ -518,7 +518,41 @@ getAssetsApi(config).addExports(fileURLToPath(new URL('./assets-exports.js', imp
 
 ## Shared configuration
 
-<!-- TODO: how plugins share config (e.g. `site`) and discover each other. -->
+Every setting has exactly one owner, and every other plugin reads it from that owner. Nothing is configured twice.
+
+- **Vite** owns `root`, `base`, `publicDir`, the dev server and the output directory. The Astro plugins read them from Vite's resolved config, and no plugin has an option for them.
+- **`astro()`** owns the settings that affect how components render: `srcDir`, `site`, `trailingSlash`, `compressHTML`, the renderers and the client directives.
+- **`pages()`** owns routing and build settings: `output`, `build.*`, `redirects`, `security.*` and how the server output is deployed.
+- **Each feature plugin** owns its own section of the config.
+
+So `site` is set once, on `astro()`, and `pages()`, `i18n()` and `content()` all read it from there.
+
+### How plugins find each other
+
+Each plugin exposes an API object on its Vite plugin (`plugin.api`). Others look it up by name in Vite's resolved config, with a helper exported by the owning package:
+
+```js
+import { getAstroApi } from '@astrojs/vite-plugin-astro';
+import { getPagesApi } from '@astrojs/vite-plugin-pages';
+
+function myPlugin() {
+  return {
+    name: 'my-plugin',
+    configResolved(config) {
+      const { site, trailingSlash } = getAstroApi(config).config;
+      const { output } = getPagesApi(config).config;
+    },
+  };
+}
+```
+
+`getAstroApi()` reads `api.astro` and `getPagesApi()` reads `api.astroPages`. They throw with the missing plugin's name if it isn't in `plugins`. Every lookup and registration happens in `configResolved`, after Vite has created all of the plugins, so plugin order doesn't matter.
+
+The resolved config objects are read-only. They contain absolute URLs for directories, Vite's resolved `base`, and defaults applied. They are the only config that crosses a package boundary. The CLI's internal settings object stays inside `astro`.
+
+### Validation
+
+Each plugin validates its own options with a zod schema and exports that schema. The CLI builds the Astro config schema from these schemas, so a setting has the same validation, defaults and error messages whether it's written in `astro.config.mjs` or passed to a plugin.
 
 ## The astro CLI and integrations
 
