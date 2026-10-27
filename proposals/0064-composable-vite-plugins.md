@@ -208,7 +208,40 @@ The framework integrations become a composition of the same two parts. `@astrojs
 
 ## The pages plugin
 
-<!-- TODO: file routing, output modes, adapters. -->
+`pages()` turns `src/pages` into a site. It owns everything that today happens between a request and a rendered component: the route table, `getStaticPaths`, endpoints, redirects, rewrites, `src/middleware`, 404 and 500 pages, server islands, the `<ClientRouter />`, and the request-level members of `Astro`. `vite dev` serves the routes, and `vite build` builds them.
+
+```js
+export default {
+  plugins: [
+    astro(),
+    pages({ output: 'server', redirects: { '/old': '/new' } }),
+  ],
+};
+```
+
+The options are the routing and build parts of today's Astro config (`output`, `build.*`, `redirects`, `security.*`). Settings Vite already has, such as `base`, `publicDir` and the dev server, come from Vite. Settings that belong to the language, such as `site` and `trailingSlash`, are read from `astro()`.
+
+### Output
+
+Output works the way it does today:
+
+- `output: 'static'` prerenders every route, and routes can opt out with `export const prerender = false`.
+- `output: 'server'` renders on demand, and routes can opt in to prerendering.
+- A build with no on-demand routes writes plain files to Vite's `build.outDir`.
+
+Otherwise the build also emits a server entry, `dist/server/entry.mjs`, which by default exports `{ fetch(request) }`.
+
+### Deploying without adapters
+
+Adapters are an integration concept and stay in the CLI. In a plain Vite project, the server entry is a standard `fetch` handler, so anything that runs one can deploy it: a platform's Vite plugin (such as `@cloudflare/vite-plugin`), a Node server, or a framework that mounts it.
+
+What an adapter configures today becomes options of `pages()` (`serverOutput.*`): a custom server entry, headers for internal fetches, skew-protection query parameters, and whether the platform runs middleware at the edge. Build hooks (`onServerManifest`, `onBuildGenerated`, `setPrerenderer`) give a platform plugin the same information an adapter receives from `astro:build:*`.
+
+In the CLI, the existing adapter API is mapped onto those same options and hooks, so adapters keep working unchanged.
+
+### Extension API
+
+`pages()` exposes an API to other Vite plugins, `api.astroPages`, through which feature plugins add their behavior: injecting routes, adding middleware and request handlers, extending the manifest and the `Astro` global, adding page scripts, and hooking into the build. See [Feature plugins](#feature-plugins).
 
 ## Feature plugins
 
