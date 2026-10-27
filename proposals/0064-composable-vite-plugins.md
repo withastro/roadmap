@@ -123,13 +123,6 @@ astro → vite-plugin-pages (+ feature plugins) → vite-plugin-astro → runtim
 |             | `@astrojs/vite-plugin-sessions`    | `sessions()`   | `Astro.session` and session drivers.                                                                                                                          |
 | Framework   | `astro`                            | —              | The CLI, config loading, integrations and adapters, `astro sync` / `check` / `add`, and the existing `astro/*` entrypoints, which re-export the packages above. |
 
-A package depends only on packages in the layers below it. Integrations and adapters (`@astrojs/node`, `@astrojs/mdx`, …) keep depending on `astro`, not on the plugin packages.
-
-Code is moved into these packages, not copied: `astro` imports them, so the existing test suite covers every package, and the public `astro/*` paths become one-line re-exports that stay until a major release.
-
-New packages start at `0.1.0`. `@astrojs/runtime` and `@astrojs/vite-plugin-astro` are versioned together, because the compiler that `vite-plugin-astro` runs emits imports of the runtime.
-
-Exports named `internal/*` are for the packages in the Astro monorepo only and carry no stability guarantee.
 
 ## The language plugin
 
