@@ -632,7 +632,19 @@ Package size is measured as part of the work: the `astro` tarball, the install s
 
 # Drawbacks
 
-<!-- TODO -->
+**There are two ways to use Astro.** One is the framework: `astro.config.mjs`, integrations and the `astro` CLI. The other is Vite plugins in a `vite.config.js`. They run the same code, but they look different, and that has costs:
+
+- **Docs** have to explain both, or say clearly which one they cover. Guides that start with `npm create astro` stay the default, but every feature page needs a short "in a Vite project" note.
+- **Support and bug reports** need to establish which setup is in use. Some behavior only exists in the framework, like integrations, adapters, `astro add` and `astro check`.
+- **Choosing.** New users may not know which to pick. The answer should be simple and repeated everywhere: start with Astro, and use the plugins when you already have a Vite app or want only part of Astro.
+- **Ecosystem.** Integrations don't work in a plain Vite project. Integration authors who want to support both need to ship a Vite plugin too, as the framework renderers will.
+
+Other drawbacks:
+
+- **The internal APIs become public.** `api.astro`, `api.astroPages` and the hooks are how features are built today, and today they can change in any release. Once third-party plugins use them, changing them needs the same care as the integration API.
+- **More packages.** Thirteen new packages to version, publish and keep compatible with each other. The packages are released from the monorepo together, but a user can still end up with mismatched versions.
+- **A larger install for the whole framework.** The `astro` package gets much smaller, but installing all of the packages together is slightly larger than today's `astro`, because of package boundaries and re-exports.
+- **A large refactor.** Most of `astro` moves. This affects open PRs, `git blame`, and contributors who know where code used to be. The existing `astro/*` paths stay as re-exports, so adapters and integrations aren't affected.
 
 # Alternatives
 
