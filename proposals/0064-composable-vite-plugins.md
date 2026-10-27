@@ -125,7 +125,32 @@ astro → vite-plugin-pages (+ feature plugins) → vite-plugin-astro → runtim
 
 ## The language plugin
 
-<!-- TODO: compiling .astro, HMR, styles, and the metadata islands need. -->
+`astro()` makes `.astro` files importable in any Vite project. It compiles components, processes their `<style>` and `<script>` blocks, handles `client:*` directives, and provides HMR the same way the framework does today.
+
+```js
+astro({
+  site: 'https://example.com',
+  srcDir: './src',
+  compressHTML: true,
+  renderers: [],
+  clientDirectives: [],
+});
+```
+
+The options are the language-level subset of today's Astro config, and every one is optional. Vite already provides `root` and `base`, so `astro()` reads them from Vite instead of adding its own.
+
+### Styles and islands without pages
+
+In the framework, the CSS and scripts a page needs are collected per page, at build time, by the router. A standalone component has no page, so `astro()` collects them per **component tree** instead:
+
+- **Dev:** it walks the server module graph from the rendered component. Styles are inlined. Islands and scripts point at URLs the Vite dev server serves.
+- **Build:** it uses Vite's app builder to build the server environments first. Their module graphs decide the client build entries: one stylesheet per component, plus every hydrated component and script. The resulting URLs are written into the server output.
+
+This is the metadata the prototype was missing. The render API (see [The runtime](#the-runtime)) returns it with the HTML, so `renderToResponse(Page)` produces a complete page with working islands.
+
+### The `Astro` global
+
+Standalone, `Astro` has the members that only depend on the component: `props`, `slots`, `self`, `request`, `url`, `site` and `generator`. Request-level members (`cookies`, `params`, `redirect`, `locals`, `session`, …) come from `pages()` and its feature plugins.
 
 ## The runtime
 
