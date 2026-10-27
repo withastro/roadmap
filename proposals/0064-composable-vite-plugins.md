@@ -367,7 +367,7 @@ export default {
     astro(),
     pages(),
     i18n({ defaultLocale: 'en', locales: ['en', 'fr'] }),
-    sessions({ driver: 'redis' }),
+    sessions({ driver: sessionDrivers.redis({ url: process.env.REDIS_URL }) }),
     actions(),
   ],
 };
@@ -389,7 +389,7 @@ The options of each plugin are its section of today's Astro config, and the CLI 
 - **`devToolbar()`** adds the dev toolbar and its app API. It requires `pages()`.
 - **`content()`** adds content collections. It requires only `astro()`: collections can be queried from any server code. It uses `pages()` and `assets()` when present, for rendering entries and optimizing their images.
 
-All of them also require `astro()`, except `prefetch()`.
+All of them except `env()` and `prefetch()` also require `astro()`.
 
 A plugin that needs another one looks it up by name when Vite resolves the config, and fails with an error naming the missing plugin:
 
@@ -405,7 +405,7 @@ Feature plugins add behavior through registration methods on `api.astroPages`, a
 
 #### `injectRoute`
 
-Adds a route that isn't a file in `src/pages`. Actions uses it for its RPC endpoint. This is the integration API's `injectRoute`. Pass `{ internal: true }` for routes that are implementation details, which then don't appear in `onRoutesResolved` and don't turn a static site into a server build.
+Adds a route that isn't a file in `src/pages`. Actions uses it for its RPC endpoint. This is the integration API's `injectRoute`. Pass `{ internal: true }` for framework endpoints that only serve on-demand requests, like the image endpoint. An internal route always renders on demand, but never turns a static site into a server build, and `onRouteSetup` doesn't run for it.
 
 ```js
 pages.injectRoute({
