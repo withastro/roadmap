@@ -99,7 +99,37 @@ This proposal grew out of [Standalone `.astro` file usage](https://github.com/wi
 
 ## Packages
 
-<!-- TODO: list each package, what it contains, and its name. -->
+All packages are published under the `@astrojs/` scope. Each plugin package's default export is a function that returns Vite plugins.
+
+```
+astro → vite-plugin-pages (+ feature plugins) → vite-plugin-astro → runtime
+```
+
+| Layer       | Package                            | Plugin         | What it contains                                                                                                                                              |
+| ----------- | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime     | `@astrojs/runtime`                 | —              | What compiled components run: the render runtime, client directive scripts, the JSX runtime, head propagation, `AstroError` and the base render types. No dependency on Vite, the compiler or a bundler. |
+| Language    | `@astrojs/vite-plugin-astro`       | `astro()`      | The `.astro` compiler plugins, scoped styles, islands, client directives, `<script>` processing, renderers, and the render API (`/render`).                     |
+| Routing     | `@astrojs/vite-plugin-pages`       | `pages()`      | File-based routing, the request pipeline, middleware, the dev server, the production build (prerendering, server entry, manifest), server islands, the client router, and the API feature plugins build on. |
+| Features    | `@astrojs/vite-plugin-actions`     | `actions()`    | `astro:actions`, the action endpoint and form actions.                                                                                                        |
+|             | `@astrojs/vite-plugin-assets`      | `assets()`     | `astro:assets`, image services, the image endpoint and build-time image generation.                                                                           |
+|             | `@astrojs/vite-plugin-cache`       | `cache()`      | `Astro.cache`, route rules and cache providers.                                                                                                               |
+|             | `@astrojs/vite-plugin-content`     | `content()`    | Content collections: the content layer, loaders, the data store and `astro:content`.                                                                          |
+|             | `@astrojs/vite-plugin-dev-toolbar` | `devToolbar()` | The dev toolbar and its app API.                                                                                                                              |
+|             | `@astrojs/vite-plugin-env`         | `env()`        | `astro:env` and private `import.meta.env` variables.                                                                                                          |
+|             | `@astrojs/vite-plugin-fonts`       | `fonts()`      | Font providers, optimized fallbacks and `<Font />`.                                                                                                           |
+|             | `@astrojs/vite-plugin-i18n`        | `i18n()`       | Locale routing, fallbacks and `astro:i18n`.                                                                                                                   |
+|             | `@astrojs/vite-plugin-markdown`    | `markdown()`   | Markdown pages and `.md` modules.                                                                                                                             |
+|             | `@astrojs/vite-plugin-prefetch`    | `prefetch()`   | Link prefetching and speculation rules.                                                                                                                       |
+|             | `@astrojs/vite-plugin-sessions`    | `sessions()`   | `Astro.session` and session drivers.                                                                                                                          |
+| Framework   | `astro`                            | —              | The CLI, config loading, integrations and adapters, `astro sync` / `check` / `add`, and the existing `astro/*` entrypoints, which re-export the packages above. |
+
+A package depends only on packages in the layers below it. Integrations and adapters (`@astrojs/node`, `@astrojs/mdx`, …) keep depending on `astro`, not on the plugin packages.
+
+Code is moved into these packages, not copied: `astro` imports them, so the existing test suite covers every package, and the public `astro/*` paths become one-line re-exports that stay until a major release.
+
+New packages start at `0.1.0`. `@astrojs/runtime` and `@astrojs/vite-plugin-astro` are versioned together, because the compiler that `vite-plugin-astro` runs emits imports of the runtime.
+
+Exports named `internal/*` are for the packages in the Astro monorepo only and carry no stability guarantee.
 
 ## The language plugin
 
