@@ -235,9 +235,25 @@ Otherwise the build also emits a server entry, `dist/server/entry.mjs`, which by
 
 Adapters are an integration concept and stay in the CLI. In a plain Vite project, the server entry is a standard `fetch` handler, so anything that runs one can deploy it: a platform's Vite plugin (such as `@cloudflare/vite-plugin`), a Node server, or a framework that mounts it.
 
-What an adapter configures today becomes options of `pages()` (`serverOutput.*`): a custom server entry, headers for internal fetches, skew-protection query parameters, and whether the platform runs middleware at the edge. Build hooks (`onServerManifest`, `onBuildGenerated`, `setPrerenderer`) give a platform plugin the same information an adapter receives from `astro:build:*`.
+What an adapter configures today becomes options of `pages()` (`serverOutput.*`): a custom server entry, headers for internal fetches, skew-protection query parameters, and whether the platform runs middleware at the edge. [Hooks](#hooks) give a platform plugin the same information an adapter receives from `astro:build:*`.
 
 In the CLI, the existing adapter API is mapped onto those same options and hooks, so adapters keep working unchanged.
+
+### Hooks
+
+Other plugins observe the route table and the build through callbacks on `api.astroPages`. Most correspond to an integration hook, and in the CLI the integration hook is implemented with them.
+
+| Hook                              | Called                                                                                                   | Integration equivalent   |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `onRouteSetup(route)`             | For each route when the route table is created, and in dev when a route's `prerender` export changes. Can set `route.prerender`. | `astro:route:setup`      |
+| `onRoutesResolved(routes)`        | When the dev server or build starts, and in dev after each route table change.                           | `astro:routes:resolved`  |
+| `onServerManifest({ manifest })`  | Before the serialized manifest is written into the server bundle. Not called for static builds.          | `astro:build:ssr`        |
+| `onBuildGenerated({ routeToHeaders })` | After the static paths are generated, with each prerendered path's response headers (when the platform asks for them). | `astro:build:generated` |
+| `onBuildDone({ dir, routes })`    | After the build writes its output.                                                                       | `astro:build:done`       |
+| `setPrerenderer(prerenderer)`     | Not a callback: replaces how static paths are rendered at build time, for example inside the platform's runtime. | adapter `setPrerenderer()` |
+| `onPrerenderDone({ prerenderer })` | After every static path is written, before the prerenderer shuts down.                                  | —                        |
+| `onPrerenderPathRestored({ pathname, metadata })` | For each static path an incremental build skips, so a plugin can replay what rendering it would have recorded (for example, the images it used). | — |
+| `addChunkPostHook(marker, run)`   | After the server builds, for chunks containing `marker`, so a plugin can fill in a placeholder that depends on the whole build (content collections' styles). | — |
 
 ### Extension API
 
