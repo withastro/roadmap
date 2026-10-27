@@ -185,7 +185,26 @@ This renders components compiled ahead of time, for example with `@astrojs/compi
 
 ## Renderers
 
-<!-- TODO: how framework renderers (React, Vue, ...) plug into the language plugin. -->
+A renderer only renders. It tells Astro how to render a framework's components to HTML on the server and how to hydrate them in the browser. Compiling the framework's files is the job of that framework's own Vite plugin, the same one any Vite app uses.
+
+```js
+import astro from '@astrojs/vite-plugin-astro';
+import react from '@astrojs/react/renderer';
+import viteReact from '@vitejs/plugin-react';
+
+export default {
+  plugins: [
+    astro({ renderers: [react()] }),
+    viteReact(),
+  ],
+};
+```
+
+A renderer is plain data: its server and client entrypoints, its options, and a few declarative needs that `astro()` applies, such as dependencies to dedupe or pre-bundle and a dev-only head script (React's Fast Refresh preamble). It contains no Vite plugins.
+
+The order of `renderers` is the order in which Astro tries them. This matters when several frameworks use JSX, as it does today.
+
+The framework integrations become a composition of the same two parts. `@astrojs/react`'s integration adds `@vitejs/plugin-react` and registers the renderer from `@astrojs/react/renderer`, so the CLI and a plain Vite project use the same code. The other renderers follow the same pattern with their frameworks' plugins: `@vitejs/plugin-vue`, `@sveltejs/vite-plugin-svelte`, `@preact/preset-vite` and `vite-plugin-solid`.
 
 ## The pages plugin
 
