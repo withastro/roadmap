@@ -241,19 +241,117 @@ In the CLI, the existing adapter API is mapped onto those same options and hooks
 
 ### Hooks
 
-Other plugins observe the route table and the build through callbacks on `api.astroPages`. Most correspond to an integration hook, and in the CLI the integration hook is implemented with them.
+Other plugins observe the route table and the build through callbacks on `api.astroPages`. Plugins read the API in `configResolved`, so plugin order doesn't matter:
 
-| Hook                              | Called                                                                                                   | Integration equivalent   |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `onRouteSetup(route)`             | For each route when the route table is created, and in dev when a route's `prerender` export changes. Can set `route.prerender`. | `astro:route:setup`      |
-| `onRoutesResolved(routes)`        | When the dev server or build starts, and in dev after each route table change.                           | `astro:routes:resolved`  |
-| `onServerManifest({ manifest })`  | Before the serialized manifest is written into the server bundle. Not called for static builds.          | `astro:build:ssr`        |
-| `onBuildGenerated({ routeToHeaders })` | After the static paths are generated, with each prerendered path's response headers (when the platform asks for them). | `astro:build:generated` |
-| `onBuildDone({ dir, routes })`    | After the build writes its output.                                                                       | `astro:build:done`       |
-| `setPrerenderer(prerenderer)`     | Not a callback: replaces how static paths are rendered at build time, for example inside the platform's runtime. | adapter `setPrerenderer()` |
-| `onPrerenderDone({ prerenderer })` | After every static path is written, before the prerenderer shuts down.                                  | —                        |
-| `onPrerenderPathRestored({ pathname, metadata })` | For each static path an incremental build skips, so a plugin can replay what rendering it would have recorded (for example, the images it used). | — |
-| `addChunkPostHook(marker, run)`   | After the server builds, for chunks containing `marker`, so a plugin can fill in a placeholder that depends on the whole build (content collections' styles). | — |
+```js
+import { getPagesApi } from '@astrojs/vite-plugin-pages';
+
+function myPlugin() {
+  return {
+    name: 'my-plugin',
+    configResolved(config) {
+      const pages = getPagesApi(config);
+      pages.onRoutesResolved((routes) => { /* ... */ });
+    },
+  };
+}
+```
+
+Most hooks correspond to an integration hook, and in the CLI the integration hook is implemented with them.
+
+#### `onRouteSetup`
+
+Called for each route when the route table is created, and in dev whenever a route's `prerender` export changes. The callback can change how the route is built. Setting `prerender = false` on any route turns a static build into a server build. This is `astro:route:setup`.
+
+```js
+pages.onRouteSetup((route) => {
+  if (route.component.startsWith('src/pages/api/')) route.prerender = false;
+});
+```
+
+#### `onRoutesResolved`
+
+Called with the full route table when the dev server or the build starts, and again in dev after each change to the route table. Use it to generate something from the routes, like types or a sitemap. This is `astro:routes:resolved`.
+
+```js
+pages.onRoutesResolved((routes) => {
+  writeRouteTypes(routes.map((r) => r.pattern));
+});
+```
+
+#### `onServerManifest`
+
+Called during a server build, with the serialized manifest, before it is written into the server bundle. A platform plugin uses it to learn the routes and assets it will serve. Static builds don't call it. This is `astro:build:ssr`.
+
+```js
+pages.onServerManifest(({ manifest }) => {
+  platformConfig.routes = manifest.routes.map((r) => r.routeData.route);
+});
+```
+
+#### `onBuildGenerated`
+
+Called after the static paths are generated. When the platform asks for them (`serverOutput.staticHeaders`), it receives the response headers of each prerendered path, so the platform can serve them, for example as a `_headers` file. This is `astro:build:generated`.
+
+```js
+pages.onBuildGenerated(({ routeToHeaders }) => {
+  for (const [pathname, { headers }] of routeToHeaders) addHeaders(pathname, headers);
+});
+```
+
+#### `onBuildDone`
+
+Called once after the build has written all of its output, with the client output directory and the routes. This is `astro:build:done`.
+
+```js
+pages.onBuildDone(async ({ dir, routes }) => {
+  await writeSitemap(dir, routes);
+});
+```
+
+#### `setPrerenderer`
+
+Replaces how static paths are rendered at build time. By default they render in Node. A platform can render them in its own runtime instead (Cloudflare renders them in workerd). Pass a function to wrap the default prerenderer instead of replacing it. This is the adapter's `setPrerenderer()`.
+
+```js
+pages.setPrerenderer((defaultPrerenderer) => ({
+  ...defaultPrerenderer,
+  name: 'my-platform',
+  render: (request, options) => platformRuntime.fetch(request),
+}));
+```
+
+#### `onPrerenderDone`
+
+Called after every static path is written, but before the prerenderer shuts down. Callbacks can still read from the prerenderer's runtime, for example to collect what the pages registered while rendering.
+
+```js
+pages.onPrerenderDone(async ({ prerenderer }) => {
+  if (prerenderer) await emitCollectedImages(prerenderer);
+});
+```
+
+#### `onPrerenderPathRestored`
+
+With incremental builds, called for each static path that the build skips because nothing it depends on changed. It receives the metadata the path recorded in the previous build, so a plugin can replay what rendering it would have done. For example, the assets plugin re-registers the images the page used.
+
+```js
+pages.onPrerenderPathRestored(({ pathname, metadata }) => {
+  for (const image of metadata.staticImages ?? []) queueImage(image);
+});
+```
+
+#### `addChunkPostHook`
+
+Some features emit a placeholder in server code that can only be filled once every server environment has been built. Content collections use this for the styles of rendered entries. The hook runs after the server builds, for each chunk that contains the marker, and the callback can rewrite those chunks.
+
+```js
+pages.addChunkPostHook('$$CONTENT_STYLES$$', ({ chunks, mutate }) => {
+  for (const chunk of chunks) {
+    mutate(chunk.fileName, chunk.code.replace('$$CONTENT_STYLES$$', styles), chunk.prerender);
+  }
+});
+```
 
 ### Extension API
 
