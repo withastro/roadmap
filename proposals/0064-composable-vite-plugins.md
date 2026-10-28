@@ -131,7 +131,7 @@ So a feature whose API is implemented by third parties has two packages. `@astro
 
 | Core package        | What it contains                                                                        | Used by                         |
 | ------------------- | --------------------------------------------------------------------------------------- | ------------------------------- |
-| `@astrojs/content`  | The loader API, `glob()` and `file()`, `defineCollection` and the data store.             | `@astrojs/vite-plugin-content`  |
+| `@astrojs/content`  | The loader API (including the `DataStore` interface), `glob()`, `file()` and `defineCollection`. | `@astrojs/vite-plugin-content`  |
 | `@astrojs/assets`   | The image service API and the built-in services (Sharp, no-op).                           | `@astrojs/vite-plugin-assets`   |
 | `@astrojs/sessions` | The session driver API and the built-in drivers.                                         | `@astrojs/vite-plugin-sessions` |
 | `@astrojs/cache`    | The cache provider API, the memory provider and helpers for writing providers.           | `@astrojs/vite-plugin-cache`    |
