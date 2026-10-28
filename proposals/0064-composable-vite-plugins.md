@@ -648,7 +648,37 @@ Other drawbacks:
 
 # Alternatives
 
-<!-- TODO -->
+### Only the language plugin
+
+The original proposal ([#1378](https://github.com/withastro/roadmap/discussions/1378)) covered only `.astro` files in Vite. That is a smaller change, and it is the first PR here as well. On its own, though, it leaves the rest of Astro as one package, and the boundaries between the language, routing and features would be designed one at a time. Pages, islands in pages, server islands and `Astro.*` all touch the language layer, so designing the boundaries together avoids redoing the language plugin later.
+
+### One plugin with feature flags
+
+```js
+astro({ pages: true, i18n: { ... }, actions: false });
+```
+
+This is a single package and a single entry point, which is simpler to document. But the code for every feature is still installed, so the package doesn't get smaller. It also offers no way to replace a feature with another library, and features keep sharing internals because nothing forces them apart. An all-in-one plugin can still be built on top of the separate plugins later (see Stretch goals).
+
+### Make features optional inside `astro`
+
+The same result for CLI users (features you don't use aren't loaded) could come from lazy loading and config flags inside today's package, without new packages. That improves bundle size, but it does nothing for Vite users, and the install size stays the same.
+
+### Support integrations in plain Vite
+
+A Vite plugin could run the integration API, so existing integrations work in `vite.config.js`. This keeps one extension model, but integrations are built around the Astro config, the CLI lifecycle and `astro:config:setup`. Supporting them means bringing most of the framework into the plugin, which defeats the purpose. Instead, the CLI maps integrations onto the plugin APIs, and integrations can add Vite plugins for Vite users.
+
+### Improve the Container API
+
+The Container API already renders components outside of a page. Extending it would avoid new packages, but it runs inside an Astro project and doesn't provide what a Vite app needs, like dev server styles, HMR, or client builds for islands. In this design the container is built on the same render core as the plugins.
+
+### Separate implementations
+
+The plugins could be new code, written for Vite, while `astro` keeps its own. That avoids a large refactor, but the two would drift. Every bug would need fixing twice, and the plugins wouldn't get `astro`'s test coverage. Moving the code means there is one implementation, tested by the existing suite.
+
+### Renderers as Vite plugins
+
+`plugins: [astro(), react()]`, with each renderer package providing a Vite plugin that registers itself. This looks like most Vite framework plugins, but the order of renderers matters when several frameworks use JSX, and as separate plugins that order would come from the order of `plugins`. It also bundles each framework's own Vite plugin into the renderer. Instead, renderers are plain data passed to `astro()`, and users add each framework's Vite plugin themselves (see [Renderers](#renderers)).
 
 # Adoption strategy
 
