@@ -726,7 +726,7 @@ Adapters keep working through the CLI. New platform support can be written again
 
 ### A future major
 
-The compatibility re-exports in `astro/*` can be removed in a major release. Projects that import from them would switch to the plugin packages. The dev and build hook order can also be unified further, by creating the route table only inside Vite. This would affect integrations that read the build output in `astro:config:done`, so it requires a major.
+The dev and build hook order can also be unified further, by creating the route table only inside Vite. This would affect integrations that read the build output in `astro:config:done`, so it requires a major.
 
 # Unresolved Questions
 
