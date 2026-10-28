@@ -102,7 +102,7 @@ This proposal grew out of [Standalone `.astro` file usage](https://github.com/wi
 All packages are published under the `@astrojs/` scope. Each plugin package's default export is a function that returns Vite plugins.
 
 ```
-astro → vite-plugin-pages (+ feature plugins) → vite-plugin-astro → runtime
+astro → vite-plugin-pages (+ feature plugins → core packages) → vite-plugin-astro → runtime
 ```
 
 | Layer       | Package                            | Plugin         | What it contains                                                                                                                                              |
@@ -122,6 +122,22 @@ astro → vite-plugin-pages (+ feature plugins) → vite-plugin-astro → runtim
 |             | `@astrojs/vite-plugin-prefetch`    | `prefetch()`   | Link prefetching and speculation rules.                                                                                                                       |
 |             | `@astrojs/vite-plugin-sessions`    | `sessions()`   | `Astro.session` and session drivers.                                                                                                                          |
 | Framework   | `astro`                            | —              | The CLI, config loading, integrations and adapters, `astro sync` / `check` / `add`, and the existing `astro/*` entrypoints, which re-export the packages above. |
+
+### Core packages
+
+Some features have an API that other packages implement: content loaders, image services, session drivers, cache providers and font providers. Code written against these APIs doesn't need Vite. A loader fetches data, and an image service transforms images. Their authors shouldn't have to depend on a Vite plugin.
+
+So a feature whose API is implemented by third parties has two packages. `@astrojs/<feature>` contains that API, its types and the built-in implementations, without depending on Vite. `@astrojs/vite-plugin-<feature>` is the plugin, and it depends on the core package. Features without such an API only have the plugin package.
+
+| Core package        | What it contains                                                                        | Used by                         |
+| ------------------- | --------------------------------------------------------------------------------------- | ------------------------------- |
+| `@astrojs/content`  | The loader API, `glob()` and `file()`, `defineCollection` and the data store.             | `@astrojs/vite-plugin-content`  |
+| `@astrojs/assets`   | The image service API and the built-in services (Sharp, no-op).                           | `@astrojs/vite-plugin-assets`   |
+| `@astrojs/sessions` | The session driver API and the built-in drivers.                                         | `@astrojs/vite-plugin-sessions` |
+| `@astrojs/cache`    | The cache provider API, the memory provider and helpers for writing providers.           | `@astrojs/vite-plugin-cache`    |
+| `@astrojs/fonts`    | The font provider API and the built-in providers.                                        | `@astrojs/vite-plugin-fonts`    |
+
+`@astrojs/runtime` follows the same rule for the language. The framework's existing paths, such as `astro/loaders` and `astro/assets/services/sharp`, re-export the core packages.
 
 ## The language plugin
 
