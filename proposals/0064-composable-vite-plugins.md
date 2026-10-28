@@ -730,8 +730,11 @@ The dev and build hook order can be unified further, by creating the route table
 
 # Unresolved Questions
 
-- How do plugins share configuration and find each other? For example, how does `pages()` learn `site` from `astro()`?
-- What is the `@astrojs/runtime` API, and how does island and style metadata reach it without the full framework?
-- How do `astro.config.mjs` and the integration API map onto the plugins?
-- Package naming: `@astrojs/vite-plugin-*` (as in the examples) or unscoped `vite-plugin-astro` (as in the prototype, to match plugins like `vite-plugin-react`)?
-- Which features depend on each other (e.g. does `content()` require `markdown()`?), and how is a missing dependency reported?
+- **Request-level members in the render API.** Standalone, `Astro` only has the members that depend on the component. Server frameworks already know the route params and often have per-request data, so `renderToResponse` could accept `params` and `locals`, and support `Astro.cookies`, `Astro.redirect()` and `Astro.response`, since it returns the `Response`. Which of these to support, and whether their implementations move from `pages()` into the runtime so both use the same code.
+- **Missing standalone features.** Without `pages()`, a few settings have no option yet: the scoped style strategy, inlining stylesheets, `assetsPrefix`, CSP and `<ClientRouter />`. Which of these the language plugin should support on its own.
+- **Renderer fields for other frameworks.** The declarative renderer fields (dependencies to pre-bundle and dedupe, a dev head script) are designed from what React needs. Vue, Svelte, Preact and Solid have to be checked against them, and may need more.
+- **Stability of the plugin APIs.** `api.astro`, `api.astroPages` and the hooks start as experimental. What is required before they are stable, and whether they stabilize together or one at a time.
+- **Types of absent plugins.** A plugin's additions to `Astro` are declared through declaration merging, which applies whenever its types are loaded. So `Astro.session` type-checks even when `sessions()` isn't in `plugins`, and reads `undefined` at runtime. Whether that is acceptable, or the types should depend on the configured plugins.
+- **Composing the request pipeline by hand.** A custom `src/fetch.ts` composes the pipeline from `astro/fetch` (`sessions()`, `i18n()`, `pages()`, …). In a Vite project without `astro`, these functions would come from the plugin packages, for example `@astrojs/vite-plugin-sessions/fetch`.
+- **Adapter API.** Adapters keep working through the CLI, and new platform support can use `pages()`'s server output options directly. Whether, and when, the current adapter entrypoint API (`serverEntrypoint`, `exports`, `args`) is deprecated in favor of them.
+- **An all-in-one plugin.** For Vite users who want the whole framework, a single plugin that enables every feature. Its name, and how its options relate to the Astro config.
