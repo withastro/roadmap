@@ -682,7 +682,35 @@ The plugins could be new code, written for Vite, while `astro` keeps its own. Th
 
 # Adoption strategy
 
-<!-- TODO -->
+### Existing Astro projects
+
+No action is needed. `astro.config.mjs`, integrations, adapters and the `astro` commands keep working, and the existing `astro/*` import paths re-export the new packages. This ships in a minor release of `astro`.
+
+The one visible change is the dev hook order: `astro:routes:resolved` now runs before `astro:config:done`, as it already does in builds. Integrations that depend on the old dev order should be rare. The change is called out in the release notes.
+
+### Vite users
+
+The plugin packages are new and start at `0.x`. Their options mirror the Astro config, so they are stable from the start. The plugin APIs (`api.astro`, `api.astroPages` and the hooks) are documented as experimental until they reach `1.0`, which gives room to adjust them once third-party plugins use them.
+
+The packages can be released one layer at a time. The language plugin and the runtime are useful on their own, for rendering `.astro` components from another server framework, so they can ship before the pages plugin and the feature plugins.
+
+The docs get a "Using Astro with Vite" section:
+
+- a guide for adding Astro components to an existing Vite app;
+- a guide for a Vite site that uses `pages()`;
+- for each feature, a short note on its plugin and options.
+
+The framework remains the documented default for new projects.
+
+### Integration and renderer authors
+
+Nothing breaks. Authors who want their package to work in plain Vite projects can ship a Vite plugin alongside the integration, and use the integration to add it. Renderer packages ship their renderer as plain data and rely on the framework's own Vite plugin (see [Renderers](#renderers)). Astro's own framework integrations follow this pattern, which serves as the example to follow.
+
+Adapters keep working through the CLI. New platform support can be written against `pages()`'s server output options and hooks, so that the same code serves both Astro projects and plain Vite projects.
+
+### A future major
+
+The compatibility re-exports in `astro/*` can be removed in a major release. Projects that import from them would switch to the plugin packages. The dev and build hook order can also be unified further, by creating the route table only inside Vite. This would affect integrations that read the build output in `astro:config:done`, so it requires a major.
 
 # Unresolved Questions
 
