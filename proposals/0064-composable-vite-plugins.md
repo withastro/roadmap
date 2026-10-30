@@ -146,7 +146,6 @@ So a feature whose API is implemented by third parties has two packages. `@astro
 ```js
 astro({
   site: 'https://example.com',
-  srcDir: './src',
   compressHTML: true,
   renderers: [],
   clientDirectives: [],
@@ -539,7 +538,7 @@ Many settings are needed by more than one plugin. `site` is set for the language
 The answer is that each setting belongs to one plugin, and the others read it from that plugin:
 
 - **Vite** owns `root`, `base`, `publicDir`, the dev server and the output directory. The Astro plugins read them from Vite's resolved config, and no plugin has an option for them.
-- **`astro()`** owns the settings that affect how components render: `srcDir`, `site`, `trailingSlash`, `compressHTML`, the renderers and the client directives.
+- **`astro()`** owns the settings that affect how components render: `site`, `trailingSlash`, `compressHTML`, the renderers and the client directives.
 - **`pages()`** owns routing and build settings: `output`, `build.*`, `redirects`, `security.*` and how the server output is deployed.
 - **Each feature plugin** owns its own section of the config.
 
@@ -583,7 +582,7 @@ The CLI loads and validates `astro.config.mjs`, then turns each section into the
 ```js
 // roughly what `astro dev` builds from an Astro config
 [
-  astro({ site, srcDir, trailingSlash, compressHTML, renderers }),
+  astro({ site, trailingSlash, compressHTML, renderers }),
   pages({ output, build, redirects, security, serverOutput }),
   env(config.env),
   i18n(config.i18n),
