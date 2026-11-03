@@ -14,7 +14,7 @@
 
 - Start Date: 2026-11-02
 - Reference Issues: https://github.com/withastro/roadmap/discussions/1440, https://github.com/withastro/roadmap/discussions/1385
-- Implementation PR: <!-- leave empty -->
+- Implementation PR: https://github.com/withastro/astro/pull/18576 (collection storage, stacked PRs)
 - Stage 2 Issue: https://github.com/withastro/roadmap/issues/1448
 - Stage 3 PR: https://github.com/withastro/roadmap/pull/1459
 
@@ -50,7 +50,7 @@ import { z } from 'astro/zod';
 const docs = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/docs' }),
   schema: z.object({ title: z.string() }),
-  storage: sqlite(),
+  storage: sqlite({ url: 'libsql://docs-example.turso.io', authTokenEnv: 'DOCS_DATABASE_TOKEN' }),
 });
 
 const authors = defineCollection({
@@ -113,7 +113,7 @@ The library then finds them by role, whatever the user named them:
 // inside the library's injected route
 import { getCollectionsMetadata, getCollection } from 'astro:content';
 
-const collections = await getCollectionsMetadata();
+const collections = (await getCollectionsMetadata()).filter((c) => c.type === 'build-time');
 const docs = collections.filter((c) => c.descriptors.starlight === 'docs');
 const i18n = collections.filter((c) => c.descriptors.starlight === 'i18n');
 
@@ -203,7 +203,7 @@ defineCollection({
 `content.config.ts` is not part of the server bundle, so the value passed to `storage` can't be a driver instance: it must survive serialization into the build. A driver package exports a function returning a **storage descriptor**:
 
 ```ts
-interface CollectionStorageDescriptor<TConfig extends Record<string, JSONValue> = Record<string, JSONValue>> {
+interface CollectionStorageDescriptor<TConfig extends Record<string, unknown> = Record<string, unknown>> {
   /** URL or package specifier of a module whose default export creates the driver. */
   entrypoint: string | URL;
   /** Options passed to the driver factory. Must be JSON-serializable. */
@@ -213,7 +213,7 @@ interface CollectionStorageDescriptor<TConfig extends Record<string, JSONValue> 
 
 ```ts
 // @astrojs/collection-storage-sqlite
-export function sqlite(config: SqliteConfig = {}): CollectionStorageDescriptor<SqliteConfig> {
+export function sqlite(config: SqliteConfig): CollectionStorageDescriptor<SqliteConfig> {
   return {
     entrypoint: '@astrojs/collection-storage-sqlite/driver',
     config,
@@ -221,7 +221,7 @@ export function sqlite(config: SqliteConfig = {}): CollectionStorageDescriptor<S
 }
 ```
 
-Astro validates that `config` is JSON-serializable when the content config is loaded, and throws if it isn't.
+Astro validates that `config` is JSON-serializable when the content config is loaded, and throws if it isn't. Collections sharing the same descriptor share a driver and a snapshot.
 
 `config` is written into the server bundle, so it must never contain secrets. Drivers read credentials from the runtime environment themselves (for example, the SQLite driver reads an auth token from an environment variable), so a token is never baked into the build output.
 
@@ -279,7 +279,7 @@ The contract is deliberately small. There is no per-entry `set`, `delete`, or `c
 
 At runtime, a server reads only the snapshot its own build wrote, never newer data. The build already freezes things the entries depend on (the image import map, compiled MDX modules), so reading newer data could point at assets that don't exist in the deployed build. It would also let deployments sharing one storage, such as a production deploy and a deploy preview, overwrite each other's content.
 
-At the start of each build, Astro obtains a snapshot ID, from `createSnapshotId()` when the driver implements it or by generating a random one. The ID is passed to `openWriter()` during sync and to `openReader()` when reading, and it is stored in the server manifest so the deployed server reads the same snapshot. Users can't set it.
+At the start of each build, Astro obtains a snapshot ID, from `createSnapshotId()` when the driver implements it or by generating a random one. The ID is passed to `openWriter()` during sync and to `openReader()` when reading. Sync records it next to the driver's entrypoint and config, and both are bundled with the server, so the deployed server reads the same snapshot. Users can't set it.
 
 What a driver does with the ID depends on where it keeps data:
 
@@ -298,11 +298,11 @@ Loaders are unchanged. During sync, every loader writes to the same synchronous,
 
 Reference validation, image imports, and content module imports are computed from the in-memory store, as today, so they work the same for every storage.
 
-Because collections are written in full at the end of sync, every build writes a fresh snapshot. No data is reused from a previous build.
+Because collections are written in full at the end of sync, every build writes a fresh snapshot. No data is reused from a previous build. The in-memory store is still cached between builds as today, so loaders keep their incremental behavior.
 
 ### Reading entries
 
-`getCollection()`, `getEntry()`, `getEntries()`, `render()` and `reference()` work the same for every storage. For a collection with a storage driver, Astro opens a reader for the snapshot recorded in the manifest, once per process, and:
+`getCollection()`, `getEntry()`, `getEntries()`, `render()` and `reference()` work the same for every storage. For a collection with a storage driver, Astro creates the driver and opens a reader for the snapshot of its build on the first read, once per process, and:
 
 - `getEntry()` reads one entry with `reader.get()`.
 - `getCollection()` reads every entry with `reader.entries()`, then applies the filter in JavaScript. As today, the whole collection is returned.
@@ -320,7 +320,7 @@ const doc = await getEntry('docs', 'intro', { content: false });
 const related = await getEntries(doc.data.related, { content: false });
 ```
 
-The return type omits `body` and `rendered`. Passing such an entry to `render()` throws an `AstroError`.
+The return type omits `body` and `rendered`. Passing such an entry to `render()` throws an `AstroError`, including for MDX and `deferRender` entries, which could be rendered without their content. This can be relaxed later without breaking anyone.
 
 The option works for every storage, including the bundled store. With a storage driver, it means the driver never loads the content, so a `getStaticPaths()` that lists IDs doesn't pull every entry's HTML into memory.
 
@@ -328,20 +328,22 @@ The option works for every storage, including the bundled store. With a storage 
 
 `astro dev` uses storage drivers too, so driver and runtime problems (for example, a driver that only works in Node used with the Cloudflare adapter) surface during development rather than after deploying.
 
-After each sync, including those triggered by file changes, Astro writes the collections that changed to a new snapshot, commits it, and switches readers to it. HMR otherwise works as today. Rewriting a collection on every change is slower than updating the in-memory store, which is an accepted cost for the experimental phase.
+After each sync, and after each change loaders make to the store outside of a sync (for example when a watched file changes), Astro writes every collection with a storage driver to a new snapshot, commits it, and switches readers to it. A snapshot has to be complete, and the contract can't copy collections from the previous one, so unchanged collections are written again. HMR otherwise works as today. Rewriting collections on every change is slower than updating the in-memory store, which is an accepted cost for the experimental phase.
 
 ### `@astrojs/collection-storage-sqlite`
 
 A first-party driver backed by [libSQL](https://github.com/tursodatabase/libsql), which covers local SQLite files and remote Turso databases:
 
 ```ts
-interface SqliteConfig {
-  /** A `libsql://` or `https://` URL of a remote database. When omitted, a local file is written into the build output. */
-  url?: string;
+type SqliteConfig = {
+  /** `file:` followed by the path of a local SQLite file, or the `libsql://` or `https://` URL of a remote database. */
+  url: string;
   /** Name of the environment variable holding the auth token of a remote database. */
   authTokenEnv?: string;
-}
+};
 ```
+
+Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. The driver reads the auth token from the environment variable when it starts, at build time and at runtime.
 
 The package ships a Node implementation for sync and Node servers, and a web implementation (through `exports` conditions) for runtimes without native modules, which can only use remote databases.
 
@@ -369,10 +371,24 @@ interface CollectionMetadata {
   name: string;
   type: 'build-time' | 'live';
   loader: { name: string };
-  /** Descriptors from the loader and from `defineCollection()`, the latter taking precedence. */
+  /** Descriptors from the loader and from the collection config, the latter taking precedence. */
   descriptors: Record<string, JSONValue>;
   /** JSON Schema of the collection's schema, when its validator can produce one. */
   schema?: JSONSchema;
+}
+```
+
+Build-time collections come first, in the order they are defined, then live collections. Collections defined with an inline loader function have `loader.name` set to `'inline'`. Each call returns new copies, so changing the result doesn't affect other callers. Calling it while `experimental.collectionMetadata` is disabled throws an `AstroError`.
+
+The `CollectionMetadata` type of `astro:content` is a union on `type`, where `name` is the name of a build-time or a live collection. Code that passes `name` to `getCollection()` filters on `type` first:
+
+```ts
+const docs = (await getCollectionsMetadata())
+  .filter((c) => c.type === 'build-time')
+  .filter((c) => c.descriptors.starlight === 'docs');
+
+for (const { name } of docs) {
+  await getCollection(name);
 }
 ```
 
@@ -400,7 +416,7 @@ export function docsLoader(): Loader {
 }
 ```
 
-Users can add or override descriptors on any collection:
+Users can add or override descriptors on any collection, with `defineCollection()` or `defineLiveCollection()`:
 
 ```ts
 defineCollection({
@@ -409,7 +425,7 @@ defineCollection({
 });
 ```
 
-The loader's and user's descriptors are shallow-merged, the user's taking precedence: a user descriptor replaces the loader's value for the same key entirely. Libraries should use a single key as their namespace (e.g. `starlight`) and put the collection's role in its value, so one library can mark several kinds of collections and two libraries don't collide. Values must be JSON-serializable: Astro validates them when the content config is loaded.
+The loader's and user's descriptors are shallow-merged, the user's taking precedence: a user descriptor replaces the loader's value for the same key entirely. Libraries should use a single key as their namespace (e.g. `starlight`) and put the collection's role in its value, so one library can mark several kinds of collections and two libraries don't collide. Values must be JSON-serializable: Astro validates build-time collections when the content config is loaded, and live collections when `getCollectionsMetadata()` is called. Descriptors are ignored while `experimental.collectionMetadata` is disabled, so a library can set them on its loaders whether or not its users enable the flag.
 
 Descriptors come from loaders and `defineCollection()` rather than from schemas: with the [validators RFC](https://github.com/withastro/roadmap/pull/1438), a schema can come from any validator, so there is no portable way for a schema to carry a marker.
 
@@ -417,13 +433,13 @@ Descriptors come from loaders and `defineCollection()` rather than from schemas:
 
 When a collection's schema implements [Standard JSON Schema](https://standardschema.dev/json-schema), `CollectionMetadata.schema` holds its JSON Schema, generated with the same options the validators RFC uses for data collection `.schema.json` files. It is omitted when the collection has no schema or its validator doesn't implement the spec.
 
-This depends on the validators RFC and will be implemented during the experimental phase.
+This depends on the validators RFC, and will be implemented once it lands. Generating it with Zod's `z.toJSONSchema()` in the meantime would be misleading, since schemas won't be limited to Zod.
 
 ### Integrations and Markdown plugins
 
 Some consumers need collection metadata before `astro:content` is available. For example, Starlight's Markdown plugins run during sync. Two additions cover them:
 
-- A new integration hook, `astro:collections:resolved`, called after the content config is loaded and before any loader runs, and again in development when the content config changes:
+- A new integration hook, `astro:collections:resolved`, called with the metadata of the build-time collections after the content config is loaded and before any loader runs, and again in development when the content config changes. Live collections aren't included, because `live.config.ts` is not loaded during sync:
 
   ```ts
   'astro:collections:resolved': (options: {
@@ -432,23 +448,31 @@ Some consumers need collection metadata before `astro:content` is available. For
   }) => void | Promise<void>;
   ```
 
-- Markdown plugins (remark, rehype, and Sätteri) receive the metadata of the collection being rendered as `file.data.astro.collection`.
+- Markdown plugins (remark, rehype, and Sätteri) receive the metadata of the collection being rendered as `file.data.astro.collection` (`ctx.data.astro.collection` in Sätteri). It is set wherever Astro renders an entry's Markdown:
+  - for Markdown rendered by `glob()` during sync;
+  - for Markdown rendered with `renderMarkdown()` in custom loaders;
+  - for MDX entries and `deferRender` entries, which are compiled as modules. Sync records the collection of each of these files, and the MDX and Markdown Vite plugins look it up when compiling them. A file loaded by more than one collection is compiled once for all of them, so its collection is left `undefined`. In development, the modules of a file are compiled again when its collection changes.
 
-Both will be implemented during the experimental phase.
+  It is `undefined` for Markdown outside collections, and for live collections, whose loaders render their own content.
+
+  This adds an optional `collection` to the options of a Markdown processor's `render()`, an optional fourth argument to an MDX renderer's `process()`, and an optional second argument to `ContentEntryRenderFunction`. Third-party processors that ignore them keep working.
 
 # Testing Strategy
 
 - Unit tests for the storage descriptor validation, the entry serialization format, snapshot ID handling, and `{ content: false }` typing and runtime behavior.
-- A published conformance suite for driver authors, run against `@astrojs/collection-storage-sqlite` and a test-only in-memory driver. It checks that a snapshot isn't readable before `commit()`, that two snapshots stay separate, that `content: false` omits content, and that `get()` and `entries()` return what was written.
+- A conformance suite for driver authors, `createStorageDriverTests()` from `astro/content/storage-driver-tests`. It returns test cases independent of any test runner, and runs against `@astrojs/collection-storage-sqlite` and a test-only in-memory driver. It checks that a snapshot isn't readable before `commit()`, that snapshots and collections stay separate, and that `get()` and `entries()` return what was written, with and without content.
 - Integration tests with fixtures mixing bundled and stored collections, for static builds, server builds and `astro dev`, including references, images, and MDX entries in stored collections.
 - An integration test checking that stored entries are not inlined in the server bundle.
 - An integration test with the Cloudflare adapter, reading a stored collection from `workerd`.
-- Unit and integration tests for `getCollectionsMetadata()`, descriptor merging and validation, and JSON Schema generation across validators.
+- Unit and integration tests for `getCollectionsMetadata()`, descriptor merging and validation, the `astro:collections:resolved` hook, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
+- Once the validators RFC lands, tests for JSON Schema generation across validators.
 
 # Drawbacks
 
 - **Two places for entries.** Debugging a collection now depends on its storage, and a driver is one more moving part in a deployment.
-- **Slower development with large stored collections.** Each change rewrites the affected collection in the driver.
+- **Slower development with large stored collections.** Each change rewrites every collection with a storage driver to a new snapshot.
+- **Every sync writes a snapshot.** `astro sync` and `astro check` run the content sync, so they write a snapshot too.
+- **Rendered HTML can keep stale descriptors.** Markdown rendered by `glob()` is cached between builds, and only rendered again when the content config, the Astro config or the Astro version changes. When a library updates the descriptors of its loader, cached entries keep the previous `collection` in their Markdown plugins' data until one of those changes.
 - **Snapshots accumulate.** Remote drivers keep one snapshot per build, and Astro doesn't clean them up.
 - **Partial benefit for MDX-heavy sites.** Compiled MDX and `deferRender` modules stay in the bundle, so sites where most entries are MDX gain less.
 - **Sync memory is unchanged.** Large collections still need to fit in memory during sync.
@@ -478,8 +502,9 @@ Libraries such as Starlight can adopt descriptors through their own loaders, and
 # Unresolved Questions
 
 - **A `get()` method on `CollectionMetadata`.** Returning a collection's entries from its metadata is convenient, but calling it in a loop loads every collection into memory, and a method makes the metadata non-serializable. It will be explored during the experimental phase, and only added if it supports `{ content: false }` and integrations still receive plain data.
-- **Snapshots created in development.** Each sync in `astro dev` creates a snapshot. Whether dev snapshots should be reused or cleaned up, and by whom, is to be decided during the experimental phase.
-- **Reading secrets from the environment.** Drivers read credentials at runtime, but sync runs outside the server runtime. Whether drivers should use `astro:env`, `process.env`, or something else that works in both is to be decided.
-- **Where file-based drivers write.** A driver that ships its data with the build needs a location inside the build output that is available both during sync and at runtime. The writer and reader contexts may need to provide it.
-- **Live collections in `astro:collections:resolved`.** `live.config.ts` is not loaded during sync today, so the hook may only be able to report build-time collections without additional work.
+- **Snapshots created in development.** Each change in `astro dev` creates a snapshot. Whether dev snapshots should be reused or cleaned up, and by whom, is to be decided during the experimental phase.
+- **Reading secrets from the environment.** Drivers read credentials at runtime, but sync runs outside the server runtime. The SQLite driver reads `process.env`, which works on Node; whether drivers should use `astro:env` or something else that also works on runtimes such as Cloudflare Workers is to be decided.
+- **Where file-based drivers write.** A driver that ships its data with the build needs a location inside the build output that is available both during sync and at runtime. The writer and reader contexts may need to provide it. Until then, `sqlite()` requires a `url`, and doesn't default to a file shipped with the build.
+- **Testing in `workerd`.** Reading a stored collection from a Cloudflare Worker needs a remote database or another way to reach the snapshot, so there is no end-to-end test in `workerd` yet.
+- **Live collections in `astro:collections:resolved`.** `live.config.ts` is not loaded during sync today, so the hook only reports build-time collections. Loading it during sync would run code meant for the server runtime.
 - **Flag names.** `collectionStorageDrivers` and `collectionMetadata` are working names.
