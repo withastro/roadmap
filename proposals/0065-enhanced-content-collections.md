@@ -429,6 +429,32 @@ The loader's and user's descriptors are shallow-merged, the user's taking preced
 
 Descriptors come from loaders and `defineCollection()` rather than from schemas: with the [validators RFC](https://github.com/withastro/roadmap/pull/1438), a schema can come from any validator, so there is no portable way for a schema to carry a marker.
 
+#### Types
+
+Descriptors are typed with generics, like the data of live loaders. `Loader` and `LiveLoader` take a `TDescriptors` parameter, so a loader's descriptors are checked and autocompleted against the type its author declares:
+
+```ts
+export function docsLoader(): Loader<{ starlight: 'docs' }> {
+  return {
+    name: 'starlight-docs',
+    descriptors: { starlight: 'docs' }, // `{ starlight: 'dosc' }` is a type error
+    load: async (context) => {
+      // ...
+    },
+  };
+}
+```
+
+`defineCollection()` and `defineLiveCollection()` keep the literal types of the descriptors they are given. `astro sync` then generates the `CollectionMetadata` type of `astro:content` as a union with one member per collection, whose `descriptors` combine the types of its loader's and its config's descriptors, the latter taking precedence:
+
+```ts
+type CollectionMetadata =
+  | { name: 'docs'; type: 'build-time'; loader: { name: string }; descriptors: { starlight: 'docs' } }
+  | { name: 'products'; type: 'live'; loader: { name: string }; descriptors: { shop: true } };
+```
+
+The type of `descriptors` also has an index signature, so code can read a key on every collection, including collections that don't set it: `c.descriptors.starlight` is `'docs'` for a collection known to set it, and `JSONValue | undefined` otherwise. Comparing a nested key, as in `c.descriptors.starlight === 'docs'`, doesn't narrow the union to the matching collections, so code that needs their exact types narrows on `name` or `type` first.
+
 ### Schemas
 
 When a collection's schema implements [Standard JSON Schema](https://standardschema.dev/json-schema), `CollectionMetadata.schema` holds its JSON Schema, generated with the same options the validators RFC uses for data collection `.schema.json` files. It is omitted when the collection has no schema or its validator doesn't implement the spec.
