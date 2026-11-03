@@ -345,7 +345,7 @@ type SqliteConfig = {
 
 Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. The driver reads the auth token from the environment variable when it starts, at build time and at runtime.
 
-The package ships a Node implementation for sync and Node servers, and a web implementation (through `exports` conditions) for runtimes without native modules, which can only use remote databases.
+The package only ships a Node implementation, used during sync and by Node servers. It doesn't ship a web version: runtimes without Node APIs, such as Cloudflare Workers, are expected to use a driver built for them, for example a D1 driver shipped by the Cloudflare adapter.
 
 ## Collection metadata
 
