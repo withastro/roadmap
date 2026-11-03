@@ -8,11 +8,11 @@
 
 # Summary
 
-Decouple Astro's public APIs from Zod: content collection schemas and action inputs accept any [Standard Schema](https://standardschema.dev) validator, and the Zod-only helpers they were built around (`image()`, `reference()`, form `input`, `astro/zod`) are replaced by validator-agnostic equivalents.
+Decouple Astro's public APIs from Zod. Content collection schemas and action inputs accept any [Standard Schema](https://standardschema.dev) validator. Astro replaces the Zod-only helpers (`image()`, `reference()`, form `input`, and `astro/zod`) with validator-agnostic equivalents.
 
 # Example
 
-A collection validated by Valibot, with no Zod anywhere in the project:
+This example validates a collection with Valibot and does not use Zod:
 
 ```ts
 // src/content.config.ts
@@ -31,7 +31,7 @@ const blog = defineCollection({
 export const collections = { blog };
 ```
 
-Images and references become ordinary functions you call from inside a schema transform, instead of schema factories Astro hands you:
+Images and references become ordinary functions that you call from a schema transform. They no longer act as schema factories supplied by Astro:
 
 ```diff
   import { defineCollection, reference } from 'astro:content';
@@ -51,7 +51,7 @@ Images and references become ordinary functions you call from inside a schema tr
   });
 ```
 
-Because they are plain values now, their results can be validated further:
+Because these functions return plain values, you can validate their results in later schema steps:
 
 ```ts
 cover: z
@@ -60,7 +60,7 @@ cover: z
   .refine((cover) => (cover.width ?? 0) >= 1000, 'cover must be at least 1000px wide'),
 ```
 
-Actions accept any validator for JSON payloads:
+Actions accept any Standard Schema validator for JSON payloads. For example:
 
 ```ts
 // src/actions/index.ts
@@ -77,7 +77,7 @@ export const server = {
 };
 ```
 
-And form actions parse their own `FormData`, with the validator of their choice:
+Form actions parse their own `FormData` with the validator of their choice:
 
 ```diff
 + import { parseFormData } from '@standard-community/standard-form';
@@ -97,7 +97,7 @@ And form actions parse their own `FormData`, with the validator of their choice:
 +         throw new ActionError({ code: 'BAD_REQUEST', message: result.issues[0].message });
 +       }
 +       const { comment } = result.value;
-        // ...
+        return comment;
       },
     }),
   };
@@ -105,29 +105,29 @@ And form actions parse their own `FormData`, with the validator of their choice:
 
 # Background & Motivation
 
-Astro has used Zod for a long time, both internally and in its public APIs. This RFC is only about the public ones.
+Astro has used Zod for a long time, both internally and in its public APIs. This RFC changes only the public APIs.
 
-Working on Astro 6 made it clear how expensive that coupling is. Astro ships a copy of Zod through `astro/zod`, so a Zod major is an Astro major: users cannot upgrade Zod without us, and we cannot upgrade Zod without breaking them. Users who prefer Valibot or ArkType, or who already use one elsewhere in their stack, have to keep a second validator installed for their content config alone, and bundle it.
+Work on Astro 6 exposed the cost of that coupling. Astro ships a copy of Zod through `astro/zod`, so each Zod major becomes an Astro major. Users cannot upgrade Zod independently, and Astro cannot upgrade Zod without risking a breaking change. Users who prefer Valibot or ArkType, or already use one elsewhere in their stack, must install and bundle a second validator just for their content config.
 
-[Standard Schema](https://standardschema.dev) exists to solve exactly this, and the ecosystem has converged on it. Adopting it is not a drop-in change, though, because our public APIs do more than validate:
+[Standard Schema](https://standardschema.dev) addresses this problem, and the ecosystem has converged on it. Adopting it is not a drop-in change because Astro's public APIs do more than validate:
 
 - `astro/zod` re-exports Astro's own copy of Zod.
-- Collection schemas are handed Zod schema factories: `image()` from the schema context, and `reference()` from `astro:content`.
-- Form actions coerce `FormData` into an object by walking the Zod schema, which needs introspection the spec deliberately does not describe.
+- Astro provides Zod schema factories to collection schemas: `image()` from the schema context and `reference()` from `astro:content`.
+- Form actions coerce `FormData` into an object by walking the Zod schema. This requires introspection that the spec does not describe.
 - `astro sync` writes each collection's entry type by resolving the Zod schema it found.
 
-So the work is not "call `~standard.validate` instead of `safeParse`". It is redesigning the four places where Astro reaches into a schema rather than through it.
+The work is not limited to calling `~standard.validate` instead of `safeParse`. Astro must redesign the four places where it inspects or constructs schemas rather than using them only for validation.
 
 # Goals
 
 - Allow users to use other validators than Zod
 - Be backward compatible
-- Ensure Astro's internal validator does not leak in the runtime
+- Ensure Astro's internal validator does not leak into the runtime
 
-# Non-Goals
+# Non-goals
 
-- Change Astro's internal validator for something else than Zod. Astro keeps parsing its own config, manifests and loader returns with Zod; this is invisible to users.
-- Remove the deprecated APIs in this RFC. Everything below ships as a minor, and the removals are scheduled for Astro 8.
+- Replace Zod as Astro's internal validator. Astro continues to parse its own config, manifests, and loader returns with Zod. Users do not see this internal use.
+- Remove the deprecated APIs in this RFC. The changes ship in a minor release, and the removals are scheduled for Astro 8.
 - Ship a first-party `FormData` parser. Astro defers that to a community package (see [Form actions](#form-actions)).
 - Support validators that do not implement Standard Schema.
 
@@ -135,9 +135,9 @@ So the work is not "call `~standard.validate` instead of `safeParse`". It is red
 
 ## Terminology
 
-- **Standard Schema**: the [spec](https://standardschema.dev) a validator implements by exposing a `~standard` property with a `validate()` method. Zod (3.24+), Valibot (1.0+), ArkType (2.0+) and many others implement it.
+- **Standard Schema**: the [spec](https://standardschema.dev) a validator implements by exposing a `~standard` property with a `validate()` method. Zod (3.24+), Valibot (1.0+), ArkType (2.0+), and many others implement it.
 - **Standard JSON Schema**: the [companion spec](https://standardschema.dev/json-schema) for describing a schema as JSON Schema. It is optional, and Astro treats it as a capability rather than a requirement.
-- **Vendor**: the validator behind a schema, read from `schema['~standard'].vendor` (`'zod'`, `'valibot'`, `'arktype'`, …).
+- **Vendor**: the validator behind a schema, read from `schema['~standard'].vendor` (`'zod'`, `'valibot'`, `'arktype'`, and other values).
 
 Astro validates through `schema['~standard'].validate(data)`, which may return a promise. That is what keeps async transforms working.
 
@@ -156,36 +156,41 @@ type CollectionConfig<S extends BaseSchema> = {
 };
 ```
 
-A schema that is not a Standard Schema validator is now rejected with a dedicated `InvalidCollectionSchemaError` rather than failing deep inside the content layer. Validation issues from every vendor are formatted the same way, into the bulleted list Astro's schema errors already used, and the YAML line of the first issue is still resolved from its path so the error points at the right line of the entry.
+A schema that does not implement Standard Schema is rejected with `InvalidCollectionSchemaError`. This avoids a failure deep in the content layer. Astro formats validation issues from every vendor as the existing bulleted schema-error list. It also resolves the YAML line for the first issue from its path, so the error points to the relevant line in the entry.
 
 The same applies to loaders: `Loader['schema']` and `Loader['createSchema']` are typed as `StandardSchemaV1` instead of `z.$ZodType`.
 
 ### From schema factories to plain functions
 
-`image()` and `reference()` were Zod-specific for one concrete reason: they returned Zod schemas. `image()` handed back a Zod string with a transform attached, and `reference()` handed back a Zod type that parsed an id into a reference object. Using either one meant dropping a schema Astro built into the middle of a schema the user built, which only works when both come from the same library.
+`image()` and `reference()` were Zod-specific because they returned Zod schemas. `image()` returned a Zod string with a transform, and `reference()` returned a Zod type that parsed an ID into a reference object. Users could include these schemas in their own schemas only when both schemas used the same library.
 
-Standard Schema does not fix that by itself. It describes how to validate *with* a schema, not how to construct one, and there is no portable schema constructor to write against. So instead of building a schema in a library it does not know about, Astro stops building schemas at all. Both helpers become plain functions from a value to a value, and the user plugs them into the transform mechanism their own validator already has:
+Standard Schema does not address schema construction. It describes how to validate *with* a schema, but it does not define a portable schema constructor. Astro therefore stops building schemas for these helpers. Both become functions that transform values, and users call them through their validator's transform mechanism:
 
 ```ts
-// Zod
 cover: z.string().transform((src) => image(context, { src })),
+```
 
-// Valibot
+The Zod example uses `.transform()`. The Valibot equivalent uses `v.pipeAsync()` and `v.transformAsync()`:
+
+```ts
 cover: v.pipeAsync(v.string(), v.transformAsync((src) => image(context, { src }))),
+```
 
-// ArkType
+The ArkType equivalent uses `.pipe()`:
+
+```ts
 author: type('string').pipe((id) => reference('authors', id)),
 ```
 
-Astro supplies the behaviour and the validator supplies the plumbing. Neither helper knows or cares which validator called it, and the one line of library-specific glue is written by the user, in the idiom they are already using for the rest of the schema.
+Astro supplies the behavior, and each validator supplies its own transform mechanism. Users write the validator-specific call in the same style as the rest of the schema.
 
-This is also what makes the results validatable. The old helpers were terminal: whatever `image()` returned was the end of that field. The new ones hand a value back in the middle of the user's own chain, so anything after them (`.refine()`, `v.check()`, another `.pipe()`) sees it.
+This also makes the results available for further validation. The old helpers ended the field's schema. The new functions return a value to the user's schema chain, so later steps such as `.refine()`, `v.check()`, or another `.pipe()` can validate it.
 
-One constraint is worth stating plainly, because "any Standard Schema validator" overstates it. This approach needs the validator to have a transform escape hatch, and `image()` needs an *async* one, since it reads the file. Zod and Valibot have both. ArkType has sync morphs but [does not support async ones](https://arktype.io/docs/faq), so `image()` cannot be inlined in an ArkType schema today. `reference()`, which is synchronous, works there fine. An ArkType user with images in a collection has to resolve them outside the schema, or use a different validator for that collection.
+The phrase "any Standard Schema validator" has one constraint. A validator must provide a transform mechanism, and `image()` requires an *async* transform because it reads the file. Zod and Valibot support both. ArkType has synchronous morphs but [does not support asynchronous morphs](https://arktype.io/docs/faq), so users cannot call `image()` inside an ArkType schema. The synchronous `reference()` function works with ArkType. Users who use ArkType for a collection with images must resolve those images outside the schema or choose another validator for that collection.
 
 ### `image()`
 
-The `image` helper used to come from the schema context and return a Zod schema, which meant two problems: it only worked with Zod, and its result could not be validated any further.
+The `image` helper used to come from the schema context and return a Zod schema. As a result, it worked only with Zod, and users could not validate its result in later schema steps.
 
 It becomes an ordinary function, exported from a new `astro/content/image` entrypoint:
 
@@ -200,9 +205,9 @@ It becomes an ordinary function, exported from a new `astro/content/image` entry
     });
 ```
 
-It is a separate entrypoint, not an `astro:content` export, for the same reason `astro/loaders` is one: it touches the filesystem. `astro:content` must stay free of Node builtins so it can run on Cloudflare and Deno, and a CI check enforces that. A content config, by contrast, only ever runs in Node.
+Astro exports this function from a separate entry point rather than from `astro:content`, following the pattern used by `astro/loaders`. The function accesses the filesystem, while `astro:content` must remain free of Node built-ins so it can run on Cloudflare and Deno. A continuous integration check enforces that boundary. Content configs run in Node.
 
-`image(context, { src })` returns a marker object carrying `src`, plus `width`, `height` and `format` read from the file:
+`image(context, { src })` returns a marker object with `src`, `width`, `height`, and `format` values read from the file:
 
 ```ts
 type ContentImageField = {
@@ -210,7 +215,7 @@ type ContentImageField = {
 } & Partial<Omit<ImageMetadata, 'src' | 'fsPath'>>;
 ```
 
-For example, an image helper call for a 1200 × 800 PNG can return a value like this during sync:
+For example, during sync, the helper can return this value for a 1200 × 800 PNG:
 
 ```ts
 {
@@ -221,7 +226,7 @@ For example, an image helper call for a 1200 × 800 PNG can return a value like 
 }
 ```
 
-The exact `src` depends on Vite and the build mode. If an application wants a different validated shape, the user can adapt the helper's value in another transform. This example adds a nested `dimensions` field and validates it, while keeping the top-level `src` marker that Astro resolves at read time:
+The exact `src` depends on Vite and the build mode. Users can adapt the helper's value in another transform to produce a different validated shape. This example adds a nested `dimensions` field and validates it. The top-level `src` marker remains for Astro to resolve at read time:
 
 ```ts
 cover: z.string()
@@ -242,18 +247,18 @@ cover: z.string()
   })),
 ```
 
-Resolution happens while content is synced, in three steps:
+Astro resolves the image while syncing content:
 
-1. A remote URL, or an entry whose loader gives no absolute path, passes straight through.
-2. A sibling file is located directly on disk. A bare filename that hits this path is normalized to `./name`, so it resolves the same way as in Markdown frontmatter. A `./` or `../` source that misses is an error immediately, since nothing else is going to resolve it.
-3. Anything else (a Vite alias, a root-absolute path, a bare specifier with no sibling file) goes through Vite's plugin container, matching how the same source is resolved at read time. The resolver is installed for the duration of a sync, and `image()` reads it ambiently; without one (a loader running outside a sync) resolution is deferred to read time, as before.
+1. A remote URL passes through unchanged. So does an entry whose loader does not provide an absolute path.
+2. Astro looks for a sibling file directly on disk. It normalizes a bare filename found this way to `./name`, matching Markdown frontmatter resolution. If a `./` or `../` source does not resolve, Astro reports an error immediately.
+3. Astro passes other sources, such as a Vite alias, a root-absolute path, or a bare specifier with no sibling file, to Vite's plugin container. This matches how Vite resolves the source at read time. The resolver is available for the duration of a sync, and `image()` reads it from the current context. If no resolver is available, as when a loader runs outside a sync, Astro defers resolution to read time.
 
-Two things follow from resolving during sync rather than at read time:
+Resolving images during sync has two effects:
 
-- A missing image, a broken alias or a bad root-absolute path is reported while syncing, with the entry that caused it, instead of surfacing at read time.
-- The dimensions are available to the schema, so they can be validated, and to any transform downstream of `image()`.
+- Astro reports a missing image, broken alias, or invalid root-absolute path during sync and identifies the entry. The error does not wait until read time.
+- The schema and later transforms can access and validate the image dimensions.
 
-`src` is deliberately *not* final at this point: it is a `/@fs/…` URL in dev and a hashed emitted asset in a build, and only Vite knows which. It stays a marker until read time, where the real `ImageMetadata` is merged *over* the stored object, so fields a transform added after `image()` survive. SVGs, which resolve to a component factory rather than metadata, replace the value instead of merging into it.
+At this point, `src` is not final. It is a `/@fs/...` URL in development and a hashed emitted asset in a build. Only Vite knows the final value. Astro keeps `src` as a marker until read time, then merges the real `ImageMetadata` over the stored object so fields added by later transforms survive. SVGs resolve to a component factory rather than metadata, so Astro replaces the value instead of merging into it.
 
 The `({ image })` form still works, accepts the same sources, and is routed through the same resolver so legacy schemas gain the up-front validation too. It is deprecated and removed in Astro 8.
 
@@ -275,26 +280,26 @@ export function reference<C extends CollectionKey | (string & {})>(
 ): ReferenceDataEntry<C>;
 ```
 
-The lookup accepts what the schema form accepted: an entry id as a string or a number, or a reference object an earlier parse produced, so re-parsing already-transformed data is a no-op. Anything else throws `InvalidContentReferenceError` during sync, rather than being reported as a validation issue on the field.
+The lookup accepts the values supported by the schema form: an entry identifier as a string or number, or a reference object produced by an earlier parse. Re-parsing already-transformed data is therefore a no-op. Any other value causes `InvalidContentReferenceError` during sync rather than a validation issue on the field.
 
-What is *not* checked there: whether the entry exists. A reference may point at a collection whose loader has not run yet, so existence is still verified once every loader has finished, by walking the store.
+Astro does not check whether the entry exists at this point. A reference can point to a collection whose loader has not run yet. Astro verifies that each referenced entry exists after all loaders finish by walking the store.
 
 The single-argument form still returns a Zod schema, is routed through the same resolution (reporting failures as validation issues, so they are collected alongside the schema's others), and is removed in Astro 8.
 
 ### JSON Schema for data collections
 
-Data collections get a `.schema.json` file that gives them autocompletion and validation in editors. It was generated with `z.toJSONSchema()`; it now goes through [Standard JSON Schema](https://standardschema.dev/json-schema), detected at runtime via `~standard.jsonSchema.input`.
+Astro generates a `.schema.json` file for each data collection to provide editor completion and validation. Astro previously generated the file with `z.toJSONSchema()`. It now uses [Standard JSON Schema](https://standardschema.dev/json-schema), detected at runtime through `~standard.jsonSchema.input`.
 
-Two things are normalized across validators through `libraryOptions`, the spec's escape hatch for vendor-specific parameters, because both are the default everywhere else in Astro:
+Astro uses `libraryOptions`, the spec's mechanism for vendor-specific parameters, to normalize two behaviors across validators. These behaviors match Astro's defaults elsewhere:
 
-- A type with no JSON representation degrades to `{}` instead of aborting the conversion, so one such field does not cost the collection its whole `.schema.json`.
+- A type with no JSON representation degrades to `{}` instead of aborting conversion. This preserves the collection's `.schema.json` when one field has no JSON representation.
 - A date is described as the ISO string a data file actually holds.
 
-Zod, Valibot and ArkType have entries; any other validator is converted with its own defaults. When a validator does not implement the spec at all, the file is skipped and Astro logs which collection it skipped. Everything else about the collection keeps working.
+Zod, Valibot, and ArkType provide entries. Astro converts schemas from other validators with their own defaults. If a validator does not implement the spec, Astro skips the file and logs the collection name. The rest of the collection continues to work.
 
 ### Type inference
 
-`astro sync` used to resolve every collection's schema and write the resulting type into `.astro/content.d.ts`. That only worked because the schema was Zod. The generated file now points at the config instead, and the types are inferred from it:
+`astro sync` used to resolve each collection's schema and write its resulting type into `.astro/content.d.ts`. This worked only for Zod schemas. The generated file now points to the config, and TypeScript infers the types from it:
 
 ```ts
 declare module 'astro:content' {
@@ -310,11 +315,11 @@ declare module 'astro:content' {
 }
 ```
 
-`DataMap` maps a collection name to the type of its entry `data`, and everything else in `astro:content` derives from it. This has a side benefit: entry types now stay accurate as schemas are edited, instead of being a snapshot of the last sync.
+`DataMap` maps each collection name to the type of its entry's `data`. The other types in `astro:content` derive from `DataMap`. Entry types therefore stay accurate as users edit schemas instead of reflecting only the last sync.
 
-The collection *names* are written out one per line rather than inferred as a whole map, and that asymmetry is load-bearing: `reference()` is called from inside the content config and is typed by `keyof DataMap`, so a `DataMap` inferred wholesale would make the config's type depend on itself, and every collection in it would silently collapse to `any`. Writing the names out breaks the cycle. `InferData<TConfig>`, which does infer the whole map, is exported for configs that never call `reference()`.
+Astro writes each collection name on a separate line instead of inferring the whole map. This distinction prevents a type cycle. The content config calls `reference()`, whose type depends on `keyof DataMap`. Inferring the entire `DataMap` would make the config's type depend on itself and cause every collection to resolve to `any`. Writing the collection names explicitly breaks the cycle. Astro also exports `InferData<TConfig>`, which infers the whole map for configs that do not call `reference()`.
 
-`DataMap` is an interface, so a project that types a collection by hand, or an integration shipping a collection Astro cannot infer, augments it:
+`DataMap` is an interface. Projects can augment it to provide a collection type manually or to describe a collection shipped by an integration that Astro cannot infer:
 
 ```ts
 declare module 'astro:content' {
@@ -324,9 +329,9 @@ declare module 'astro:content' {
 }
 ```
 
-An empty `DataMap`, as in a project that has not synced yet, falls back to `Record<string, any>`, so a missing sync is not a wall of type errors.
+When `DataMap` is empty, as in a project that has not synced, it falls back to `Record<string, any>`. This prevents missing sync output from causing type errors throughout the project.
 
-Live collections get `LiveDataMap`, keyed by collection name and mapping to the set of types its loader works with. Only the parts a project uses have to be declared:
+Live collections use `LiveDataMap`, keyed by collection name and mapping to the types accepted or returned by each loader. A project declares only the parts it uses:
 
 ```ts
 declare module 'astro:content' {
@@ -336,15 +341,15 @@ declare module 'astro:content' {
 }
 ```
 
-- `data` is what the loader returns, or what the collection's schema produces when it has one
-- `entryFilter` and `collectionFilter` are what `getLiveEntry()` and `getLiveCollection()` accept
-- `error` is what the loader can fail with
+- `data` is the loader's return type, or the collection schema's output type when the collection has a schema.
+- `entryFilter` and `collectionFilter` are the types accepted by `getLiveEntry()` and `getLiveCollection()`.
+- `error` is the type of error the loader can return.
 
-Live collections are not read at sync time, so their names cannot be written out the way `DataMap`'s are. Nothing calls into `LiveDataMap` from inside a live config, though, so inferring the whole map is safe there.
+Astro does not read live collections at sync time, so it cannot write their names out as it does for `DataMap`. Inferring the whole `LiveDataMap` is safe because live configs do not reference it.
 
-A collection with no schema is `any`, as before. A collection whose loader builds its schema while loading (`createSchema()`) has nothing in the config to infer from, so `astro sync` keeps generating its types into a file of its own.
+As before, a collection with no schema has type `any`. A loader that builds its schema while loading through `createSchema()` has no schema in the config for TypeScript to infer. In this case, `astro sync` continues to generate its types in a separate file.
 
-The following are still exported, deprecated, and removed in Astro 8:
+The following types remain exported until Astro 8, when Astro removes them:
 
 | Deprecated | Replacement |
 | --- | --- |
@@ -354,13 +359,13 @@ The following are still exported, deprecated, and removed in Astro 8:
 | `ContentCollectionKey` | `CollectionKey` |
 | `DataCollectionKey` | `CollectionKey` |
 
-`@astrojs/yaml2ts` is updated to type Markdown frontmatter with `CollectionEntry<C>['data']`.
+`@astrojs/yaml2ts` uses `CollectionEntry<C>['data']` to type Markdown frontmatter.
 
 ## Actions
 
 ### JSON actions
 
-`input` accepts any Standard Schema validator. The handler receives the validator's *output* type and the client is typed by its *input* type, matching what Zod gave before:
+The `input` option accepts any Standard Schema validator. The handler receives the validator's *output* type, and the client uses its *input* type. This matches the existing Zod behavior:
 
 ```ts
 export function defineAction<TOutput, TInputSchema extends StandardSchemaV1 | undefined>(params: {
@@ -370,37 +375,37 @@ export function defineAction<TOutput, TInputSchema extends StandardSchemaV1 | un
 }): ActionClient<TOutput, 'json', TInputSchema> & string;
 ```
 
-Validation is `await inputSchema['~standard'].validate(unparsedInput)`, and issues are thrown as `ActionInputError` as before.
+Astro validates input with `await inputSchema['~standard'].validate(unparsedInput)`. It throws validation issues as `ActionInputError`, as before.
 
 ### Form actions
 
-Turning `FormData` into the value a schema expects (`age=25` into `{ age: 25 }`, a checkbox into a boolean, dotted keys into nested objects) requires asking the schema what shape it wants. Standard Schema deliberately covers validation only, and offers no portable way to ask. Astro's implementation walks the Zod AST, so it can never support anything else.
+Converting `FormData` into the value a schema expects requires knowing the schema's shape. For example, the parser might convert `age=25` to `{ age: 25 }`, a checkbox to a boolean, or dotted keys to nested objects. Standard Schema covers validation but does not provide a portable way to inspect a schema. Astro's current implementation walks the Zod abstract syntax tree, so it cannot support other validators.
 
-That option has also drawn complaints for being too opinionated: the coercion rules are Astro's, not the user's, and a form that does not fit them has no way out.
+Users have also found this option too opinionated. Astro defines the coercion rules, and users cannot change them when a form needs different behavior.
 
-So `input` on a form action is deprecated rather than generalized. Users parse the `FormData` in the handler with [`@standard-community/standard-form`](https://github.com/standard-community/standard-form), which does the same job with the validator of their choice and leaves the coercion and error reporting under their control. It resolves a per-vendor handler from `~standard.vendor` and imports it lazily, so a project only installs the validators it uses; Zod is built in, and `loadVendor()` registers or overrides others.
+Astro deprecates `input` on form actions rather than generalizing it. Users parse `FormData` in the handler with [`@standard-community/standard-form`](https://github.com/standard-community/standard-form). The package supports the user's validator and leaves coercion and error reporting under their control. It selects a handler by `~standard.vendor` and imports that handler lazily, so projects install only the validators they use. Zod support is built in, and `loadVendor()` registers or overrides other handlers.
 
-For the deprecation window, Astro's own form handling is routed through that same package, so behaviour does not fork while both paths exist. A form action given a non-Zod `input` throws `ActionsInvalidInputSchemaError` naming the vendor and pointing at the handler-side approach. `input` on form actions is removed in Astro 8.
+During the deprecation window, Astro routes its own form handling through the same package so both paths behave consistently. A form action with a non-Zod `input` throws `ActionsInvalidInputSchemaError`. The error names the vendor and directs users to parse input in the handler. Astro removes form action `input` in Astro 8.
 
-Two smaller details:
+Two additional details affect `defineAction`:
 
-- `defineAction` becomes three overloads: form, JSON, and a fallback for an `accept` that is not a literal (forwarded from a wrapper, say). The fallback is Zod-only, matching what such a call could accept before, and goes away in Astro 8 with form `input`.
-- `defineAction` validates `input` at runtime with an `isStandardSchema` guard. Types already rule it out, but an untyped actions file would otherwise fail much further in.
+- `defineAction` has three overloads: form, JSON, and a fallback for a non-literal `accept` value, such as a value forwarded from a wrapper. The fallback remains Zod-only, matching the existing behavior. Astro removes it in Astro 8 along with form action `input`.
+- `defineAction` checks `input` at runtime with an `isStandardSchema` guard. Types reject invalid schemas, but an untyped actions file would otherwise fail later in the request.
 
 ### `ActionInputError`
 
-`ActionInputError#fields` is built from Standard Schema issues, handling both path segment shapes the spec allows (a key, or a `{ key }` object). `#issues` stays typed as `z.$ZodIssue[]` for now: changing it is a breaking change for anyone reading `issue.code`. Non-Zod issues are mapped onto that shape with `code: 'custom'`, which is Zod's own code for an issue no built-in check produced, and the property becomes `StandardSchemaV1.Issue[]` in Astro 8.
+`ActionInputError#fields` is built from Standard Schema issues. It supports both path segment shapes allowed by the spec: a key or a `{ key }` object. The `#issues` property remains typed as `z.$ZodIssue[]` because changing it would break users who read `issue.code`. Astro maps non-Zod issues to that shape with `code: 'custom'`, Zod's code for issues that do not come from a built-in check. In Astro 8, the property changes to `StandardSchemaV1.Issue[]`.
 
 ## `astro/zod`
 
-With collections and actions taking any validator, Astro no longer needs to hand one out. `astro/zod` is deprecated, along with the already-deprecated `z` exports of `astro:schema` and `astro:content`. Users install `zod` and import from it:
+Because collections and actions accept any validator, Astro no longer needs to provide Zod to users. Astro deprecates `astro/zod` and the already-deprecated `z` exports from `astro:schema` and `astro:content`. Users install `zod` and import from that package:
 
 ```diff
 - import { z } from 'astro/zod';
 + import { z } from 'zod';
 ```
 
-All three are removed in Astro 8. Astro keeps Zod as an internal dependency for its own config and manifest parsing, where it is invisible to users.
+Astro removes all three exports in Astro 8. Zod remains an internal dependency for Astro's config and manifest parsing, which are not exposed to users.
 
 ## New errors
 
@@ -412,58 +417,52 @@ All three are removed in Astro 8. Astro keeps Zod as an internal dependency for 
 
 # Testing Strategy
 
-The implementation PR covers, and this RFC expects:
+The implementation pull request covers these tests:
 
-- **Unit tests** for the pieces with branchy logic: `defineAction` overload and guard behaviour, `ActionInputError` field extraction across vendors, schema validation through the Standard interface, the `image()` source resolution ladder (sibling / relative miss / alias / root-absolute / remote / no resolver), the ambient resolver's scoping across overlapping syncs, and data transforms through the store.
-- **Type tests**, which matter more than usual here since most of the surface is types. Fixtures cover a Zod collection, a non-Zod collection, a collection with no schema, a loader schema, a `createSchema()` loader, a collection whose schema calls `reference()` (the circularity case), hand-augmented `DataMap` and `LiveDataMap` entries, and action input/output inference for each validator.
-- **Integration tests** for the end-to-end paths: `astro sync` output, content collection fixtures using `image()` and `reference()` in both forms, `.schema.json` generation across vendors and its absence for a validator without the capability, and image errors surfacing during sync rather than at read time.
-- **Regression coverage** for the deprecated forms, which have to keep behaving identically for the whole deprecation window.
+- **Unit tests** cover `defineAction` overloads and runtime guards, `ActionInputError` field extraction across vendors, schema validation through the Standard Schema interface, `image()` source resolution (sibling, relative miss, alias, root-absolute, remote, and no resolver), resolver scoping across overlapping syncs, and data transforms through the store.
+- **Type tests** cover a Zod collection, a non-Zod collection, a collection with no schema, a loader schema, a `createSchema()` loader, a collection whose schema calls `reference()`, manually augmented `DataMap` and `LiveDataMap` entries, and action input and output inference for each validator.
+- **Integration tests** cover `astro sync` output, content collection fixtures using both `image()` and `reference()` forms, `.schema.json` generation across vendors, omission of that file when a validator lacks the capability, and image errors reported during sync rather than at read time.
+- **Regression tests** verify that deprecated forms behave as before throughout the deprecation window.
 
 # Drawbacks
 
-- **More deprecated surface.** `astro/zod`, `astro:schema`, `image()` as a context helper, `reference(collection)`, form `input`, and five content types are all deprecated at once. That is a lot of warnings for users who are perfectly happy with Zod, and a lot to carry until Astro 8.
-- **`image()` and `reference()` get more verbose.** `z.string().transform((src) => image(context, { src }))` is a lot of characters next to `image()`, and the wrapper is boilerplate the old API hid. What it buys is composition: being able to validate the result at all, which was not possible before.
-- **Form parsing moves to userland.** Users who liked `input` on form actions have to write four lines they did not write before, against a package Astro does not own. This is a real regression in convenience, traded for a coercion story users can actually control.
-- **The helpers depend on the validator having a transform escape hatch.** `image()` needs an async one, which ArkType does not have, so "any Standard Schema validator" carries a footnote for collections with images. Standard Schema cannot paper over this, since it has nothing to say about transforms.
-- **Weaker error messages in places.** Astro's collection errors could lean on Zod's issue codes; a bare Standard Schema issue guarantees only `message` and `path`. Errors stay useful, but less structured for non-Zod validators.
-- **Teaching cost.** "Any validator" means docs and examples have to pick one anyway, and users now have one more decision to make before writing their first collection. The mitigation is to not present it as a decision: the docs and the official examples keep using Zod throughout, and other validators are documented as an opt-in for users who want one.
+- **More deprecated APIs.** Astro deprecates `astro/zod`, `astro:schema`, `image()` as a context helper, `reference(collection)`, form `input`, and five content types at the same time. Users who prefer Zod receive multiple deprecation warnings and must manage them until Astro 8.
+- **More verbose `image()` and `reference()` calls.** `z.string().transform((src) => image(context, { src }))` is longer than `image()`, and the wrapper adds code that the old API hid. The new form supports composition, so users can validate the result in later schema steps.
+- **Form parsing moves to a community package.** Users who prefer the existing `input` option must parse `FormData` in the handler with a package Astro does not own. This reduces convenience but gives users control over coercion and error reporting.
+- **Transform support varies by validator.** `image()` requires an async transform, which ArkType does not support. Therefore, users cannot call `image()` inside an ArkType schema. Standard Schema does not define transforms, so it cannot address this limitation.
+- **Some errors have less detail.** Astro's collection errors previously used Zod issue codes. Standard Schema guarantees only `message` and `path`, so errors from non-Zod validators contain less structure.
+- **More choices for users to learn.** Documentation and examples must still choose a validator, and users face this choice when creating their first collection. The docs and official examples continue to use Zod, while explaining other validators as an option for users who need them.
 
 # Alternatives
 
-**Keep Zod, upgrade it more aggressively.** Does not solve anything: Zod majors stay Astro majors, and users still cannot bring their own validator.
+**Keep Zod and upgrade it more often.** This does not resolve the coupling. Zod major versions remain tied to Astro major versions, and users still cannot choose another validator.
 
-**Make `zod` a peer dependency instead.** Users control the version, but they are still forced into Zod, and peer dependency ranges are their own kind of upgrade pain.
+**Make `zod` a peer dependency.** Users control the version, but must still use Zod. Peer dependency ranges also create version-management work.
 
-**Per-vendor adapters for `image()` and `reference()`.** Astro could keep them as schema factories and ship a Zod adapter, a Valibot adapter, and so on. That multiplies the maintenance surface by the number of validators we choose to support, and still leaves the result unvalidatable. Making them plain functions supports every validator with no adapter at all.
+**Provide adapters for each validator.** Astro could keep these helpers as schema factories and ship adapters for Zod, Valibot, and other validators. This multiplies maintenance work by the number of supported validators and still prevents users from validating the helper's result. Plain functions support every validator without adapters.
 
-**Ship a first-party `FormData` parser.** Astro could generalize its coercion by asking each vendor for its shape through a vendor-specific introspection layer. That is the same per-vendor maintenance problem, for a feature users already find too opinionated, and it is genuinely useful outside Astro, which is the argument for it being a community package rather than an Astro one.
+**Ship a first-party `FormData` parser.** Astro could generalize coercion by inspecting each validator through a vendor-specific API. This creates the same per-vendor maintenance burden for a feature users already find too opinionated. A general-purpose parser is also useful outside Astro, which supports providing it as a community package instead.
 
-**Infer `DataMap` as a whole.** Simpler generated output, but it makes the content config's type depend on itself as soon as a schema calls `reference()`, and every collection silently becomes `any`. `InferData<TConfig>` is exported for the configs where it is safe.
+**Infer the whole `DataMap`.** This produces simpler generated output, but makes the content config's type depend on itself when a schema calls `reference()`. Every collection then silently becomes `any`. Astro exports `InferData<TConfig>` for configs where whole-map inference is safe.
 
-**Do nothing.** Astro stays tied to Zod's release cadence, users keep bundling a validator they may not want, and the two most-requested discussions on this subject (#1272, #1116) stay open.
+**Do nothing.** Astro remains tied to Zod's release cadence, and users continue to bundle a validator they might not want. The two most-requested discussions on this subject, [1272](https://github.com/withastro/roadmap/discussions/1272) and [1116](https://github.com/withastro/roadmap/discussions/1116), remain unresolved.
 
 # Adoption strategy
 
-This ships as a **minor**, in Astro 7.x. Nothing breaks.
+This ships in an Astro 7.x minor release. Existing behavior remains compatible.
 
-- Existing Zod schemas keep working unchanged, including the `schema: (context) => …` function form.
-- `({ image })`, `reference(collection)`, form `input`, `astro/zod`, `astro:schema`, and the deprecated content types all keep working, and are routed through the new implementations so there is one behaviour, not two.
-- Users adopt the new APIs at their own pace, or never, until Astro 8.
+- Existing Zod schemas continue to work, including the `schema: (context) => ...` function form.
+- The deprecated `({ image })`, `reference(collection)`, form `input`, `astro/zod`, `astro:schema`, and content types continue to work. Astro routes them through the new implementations to maintain one behavior path.
+- Users can adopt the new APIs at any time before Astro 8.
 
-The deprecations are removed in **Astro 8**, which gives a full major of overlap. Most of the migration is mechanical and codemod-able:
+Astro removes the deprecated APIs in **Astro 8**, providing a full major release for migration. Most changes are mechanical and can be automated with a codemod:
 
-- `import { z } from 'astro/zod'` → `import { z } from 'zod'` (plus adding the dependency) is a pure rewrite.
-- `image()` → `z.string().transform((src) => image(context, { src }))` and `reference('x')` → `z.string().transform((id) => reference('x', id))` are mechanical, including renaming the destructured `({ image })` parameter to `(context)`.
-- `InferEntrySchema<C>` → `CollectionEntry<C>['data']` and `DataEntryMap` → `DataMap` are renames.
+- Replace `import { z } from 'astro/zod'` with `import { z } from 'zod'` and add the `zod` dependency.
+- Replace `image()` with `z.string().transform((src) => image(context, { src }))`. Replace `reference('x')` with `z.string().transform((id) => reference('x', id))`. Rename a destructured `({ image })` parameter to `(context)`.
+- Replace `InferEntrySchema<C>` with `CollectionEntry<C>['data']`, and replace `DataEntryMap` with `DataMap`.
 
-Form `input` is the one migration that is not mechanical: the handler has to parse, and decide what to do with the issues. It gets the longest runway and the most explicit docs.
+Form action `input` requires a manual migration. The handler must parse the form and decide how to handle validation issues. This change has the longest deprecation period and the most detailed documentation.
 
-**Ecosystem impact.** Integrations that ship collections or loaders are the group most affected. Loader `schema` types widen from Zod to Standard Schema, which is source-compatible for existing Zod loaders. Integrations augmenting `DataEntryMap` should move to `DataMap`. Integrations re-exporting `astro/zod` should depend on `zod` directly. None of this is urgent before Astro 8.
+**Ecosystem impact.** Integrations that provide collections or loaders are most affected. Loader `schema` types widen from Zod to Standard Schema, which remains source-compatible with existing Zod loaders. Integrations that augment `DataEntryMap` should switch to `DataMap`. Integrations that re-export `astro/zod` should depend on `zod` directly. These changes are not required before Astro 8.
 
-**Docs.** The content collections and actions guides need their examples reworked, a validator-agnostic framing in the introductions, a migration section for each deprecated API, and an upgrade guide entry.
-
-# Unresolved Questions
-
-- **`@standard-community/standard-form` ownership and publishing.** The package currently lives in the Astro monorepo as a placeholder. It is expected to move to the [standard-community](https://github.com/standard-community) organization, alongside its sibling `standard-json`, and be published before this lands. Astro's own dependency on it is temporary: it only backs the deprecated form `input` for the length of the deprecation window, and goes away in Astro 8, after which only users who choose it depend on it. What still needs deciding is who owns and maintains it in the meantime.
-- **Should `image()` live somewhere friendlier than `astro/content/image`?** A second import in the content config is a papercut, and the reason for it (keeping `astro:content` free of Node builtins) is invisible to users. `astro/loaders` sets the precedent, but it is worth asking whether `astro/content` as a whole would read better.
-- **Is skipping `.schema.json` quiet enough, or too quiet?** It is currently a debug log. A user on a validator without JSON Schema support loses editor autocompletion for data collections with nothing visible to explain why.
+**Documentation.** The content collections and actions guides need updated examples and validator-agnostic introductions. They also need migration sections for each deprecated API and an entry in the upgrade guide.
