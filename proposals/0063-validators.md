@@ -210,6 +210,38 @@ type ContentImageField = {
 } & Partial<Omit<ImageMetadata, 'src' | 'fsPath'>>;
 ```
 
+For example, an image helper call for a 1200 × 800 PNG can return a value like this during sync:
+
+```ts
+{
+  src: '/@fs/project/src/content/blog/cover.png',
+  width: 1200,
+  height: 800,
+  format: 'png',
+}
+```
+
+The exact `src` depends on Vite and the build mode. If an application wants a different validated shape, the user can adapt the helper's value in another transform. This example adds a nested `dimensions` field and validates it, while keeping the top-level `src` marker that Astro resolves at read time:
+
+```ts
+cover: z.string()
+  .transform((src) => image(context, { src }))
+  .transform((cover) => ({
+    ...cover,
+    dimensions: { width: cover.width, height: cover.height },
+  }))
+  .pipe(z.object({
+    src: z.string(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    format: z.string().optional(),
+    dimensions: z.object({
+      width: z.number().optional(),
+      height: z.number().optional(),
+    }),
+  })),
+```
+
 Resolution happens while content is synced, in three steps:
 
 1. A remote URL, or an entry whose loader gives no absolute path, passes straight through.
