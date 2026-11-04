@@ -15,7 +15,7 @@ Split `astro` into a set of independently usable Vite plugins — the `.astro` l
 ```js
 // vite.config.js
 import astro from '@astrojs/vite-plugin-astro';
-import react from '@astrojs/react/renderer';
+import react from '@astrojs/react-renderer';
 
 export default {
   plugins: [
@@ -204,7 +204,7 @@ A renderer only renders. It tells Astro how to render a framework's components t
 
 ```js
 import astro from '@astrojs/vite-plugin-astro';
-import react from '@astrojs/react/renderer';
+import react from '@astrojs/react-renderer';
 import viteReact from '@vitejs/plugin-react';
 
 export default {
@@ -219,7 +219,7 @@ A renderer is plain data: its server and client entrypoints, its options, and a 
 
 The order of `renderers` is the order in which Astro tries them. This matters when several frameworks use JSX, as it does today.
 
-The framework integrations become a composition of the same two parts. `@astrojs/react`'s integration adds `@vitejs/plugin-react` and registers the renderer from `@astrojs/react/renderer`, so the CLI and a plain Vite project use the same code. The other renderers follow the same pattern with their frameworks' plugins: `@vitejs/plugin-vue`, `@sveltejs/vite-plugin-svelte`, `@preact/preset-vite` and `vite-plugin-solid`.
+The framework integrations become a composition of the same two parts. `@astrojs/react`'s integration adds `@vitejs/plugin-react` and registers the renderer from `@astrojs/react-renderer`, so the CLI and a plain Vite project use the same code. The renderer is its own package, with no dependency on `astro`, so a Vite project doesn't install the CLI. The other renderers follow the same pattern with their frameworks' plugins: `@vitejs/plugin-vue`, `@sveltejs/vite-plugin-svelte`, `@preact/preset-vite` and `vite-plugin-solid`.
 
 ## The pages plugin
 
