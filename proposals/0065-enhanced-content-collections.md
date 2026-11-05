@@ -256,13 +256,13 @@ interface CollectionStorageDriver {
   openReader(context: { snapshot: string }): Promise<CollectionStorageReader>;
 
   /** Lists the committed snapshots, in any order. */
-  listSnapshots?(): Promise<SnapshotInfo[]>;
+  listSnapshots?(): Promise<CollectionStorageSnapshot[]>;
 
   /** Deletes a snapshot and its entries. */
   deleteSnapshot?(snapshot: string): Promise<void>;
 }
 
-interface SnapshotInfo {
+interface CollectionStorageSnapshot {
   snapshot: string;
   committedAt: Date;
   /** Whether `astro dev` wrote the snapshot. */
@@ -323,7 +323,7 @@ Integrations that know, for example an adapter aware of the platform's live depl
       /** Whether pages rendered on demand read the snapshot. */
       readAtRuntime: boolean;
       /** Present when the driver implements it. */
-      listSnapshots?(): Promise<SnapshotInfo[]>;
+      listSnapshots?(): Promise<CollectionStorageSnapshot[]>;
       /** Present when the driver implements it. */
       deleteSnapshot?(snapshot: string): Promise<void>;
     }>;
@@ -409,7 +409,7 @@ type SqliteConfig = {
 };
 ```
 
-Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. Opening a writer on a committed snapshot deletes its entries on commit before keeping the new ones, and the snapshots table records whether `astro dev` wrote each snapshot. The driver implements `listSnapshots()` and `deleteSnapshot()`, which deletes a snapshot's entries and its row in one transaction. The driver reads the auth token with `getSecret()` from `astro:env/server` when it starts, at build time, where it can come from a `.env` file, and at runtime.
+Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. Opening a writer clears the snapshot's entries, so a dev server can write its snapshot again, and the snapshots table records whether `astro dev` wrote each snapshot. The driver implements `listSnapshots()` and `deleteSnapshot()`, which deletes a snapshot's entries and its row in one transaction. The driver reads the auth token with `getSecret()` from `astro:env/server` when it starts, at build time, where it can come from a `.env` file, and at runtime.
 
 `@libsql/client` is a peer dependency that projects install alongside the driver. It loads a native binding, which only works when the server build keeps it external, and the build only does so for dependencies of the project.
 
@@ -577,7 +577,7 @@ Integrations that validate or post-process content after a build, such as docume
 },
 ```
 
-`entries()` returns plain data: the entries' `data` as loaders stored it, with references and images unresolved, and without `render()`. Bundled collections are read from the build's data store, and stored collections from the snapshot the build wrote. Live collections aren't included, as they have no entries at build time. `collections` is only passed to `astro:build:done`, the one point where a build's data and snapshot are final.
+`entries()` returns plain data: the entries' `data` as loaders stored it, with references and images unresolved, and without `render()`. They are read from the data store the build's sync wrote, which keeps every collection, including the ones it wrote to a storage driver. Live collections aren't included, as they have no entries at build time. `collections` is only passed to `astro:build:done`, the one point where a build's data and snapshot are final.
 
 # Testing Strategy
 
