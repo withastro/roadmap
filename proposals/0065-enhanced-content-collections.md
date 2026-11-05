@@ -215,7 +215,7 @@ interface CollectionStorageDescriptor<TConfig extends Record<string, unknown> = 
 // @astrojs/collection-storage-sqlite
 export function sqlite(config: SqliteConfig): CollectionStorageDescriptor<SqliteConfig> {
   return {
-    entrypoint: '@astrojs/collection-storage-sqlite/driver',
+    entrypoint: new URL('./driver.js', import.meta.url),
     config,
   };
 }
@@ -223,7 +223,9 @@ export function sqlite(config: SqliteConfig): CollectionStorageDescriptor<Sqlite
 
 Astro validates that `config` is JSON-serializable when the content config is loaded, and throws if it isn't. Collections sharing the same descriptor share a driver and a snapshot.
 
-`config` is written into the server bundle, so it must never contain secrets. Drivers read credentials from the runtime environment themselves (for example, the SQLite driver reads an auth token from an environment variable), so a token is never baked into the build output.
+`config` is written into the server bundle, so it must never contain secrets. Drivers read credentials themselves, with `getSecret()` from `astro:env/server` (for example, the SQLite driver reads an auth token this way), so a token is never baked into the build output.
+
+Astro loads drivers through Vite wherever they run: during sync, with the Vite runner that loads the content config, and at runtime, bundled with the server. Entrypoints resolve from the project root, and drivers can import virtual modules such as `astro:env/server` in both places. The server build bundles a driver's dependencies, unless the project can resolve them itself: a dependency that loads a native binding, such as libSQL, must be a direct dependency of the project, so it stays external and can find its binding.
 
 The entrypoint is resolved separately in each Vite environment that loads it. A driver package can use [`exports` conditions](https://nodejs.org/api/packages.html#conditional-exports) to provide a Node implementation for sync and a different one for a runtime such as `workerd`, without any Astro-specific API.
 
@@ -347,7 +349,9 @@ type SqliteConfig = {
 };
 ```
 
-Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. The driver reads the auth token from the environment variable when it starts, at build time and at runtime.
+Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. The driver reads the auth token with `getSecret()` from `astro:env/server` when it starts, at build time, where it can come from a `.env` file, and at runtime.
+
+`@libsql/client` is a peer dependency that projects install alongside the driver. It loads a native binding, which only works when the server build keeps it external, and the build only does so for dependencies of the project.
 
 The package only ships a Node implementation, used during sync and by Node servers. It doesn't ship a web version: runtimes without Node APIs, such as Cloudflare Workers, are expected to use a driver built for them, for example a D1 driver shipped by the Cloudflare adapter.
 
@@ -533,7 +537,6 @@ Libraries such as Starlight can adopt descriptors through their own loaders, and
 
 - **A `get()` method on `CollectionMetadata`.** Returning a collection's entries from its metadata is convenient, but calling it in a loop loads every collection into memory, and a method makes the metadata non-serializable. It will be explored during the experimental phase, and only added if it supports `{ content: false }` and integrations still receive plain data.
 - **Snapshots created in development.** Each change in `astro dev` creates a snapshot. Whether dev snapshots should be reused or cleaned up, and by whom, is to be decided during the experimental phase.
-- **Reading secrets from the environment.** Drivers read credentials at runtime, but sync runs outside the server runtime. The SQLite driver reads `process.env`, which works on Node; whether drivers should use `astro:env` or something else that also works on runtimes such as Cloudflare Workers is to be decided.
 - **Where file-based drivers write.** A driver that ships its data with the build needs a location inside the build output that is available both during sync and at runtime. The writer and reader contexts may need to provide it. Until then, `sqlite()` requires a `url`, and doesn't default to a file shipped with the build.
 - **Testing in `workerd`.** Reading a stored collection from a Cloudflare Worker needs a remote database or another way to reach the snapshot, so there is no end-to-end test in `workerd` yet.
 - **Live collections in `astro:collections:resolved`.** `live.config.ts` is not loaded during sync today, so the hook only reports build-time collections. Loading it during sync would run code meant for the server runtime.
