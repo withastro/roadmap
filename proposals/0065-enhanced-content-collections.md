@@ -241,27 +241,44 @@ type CollectionStorageDriverFactory<TConfig> = (
 interface CollectionStorageDriver {
   /**
    * Returns the ID of the snapshot a build is about to write.
-   * When omitted, Astro generates a random ID.
+   * When omitted, Astro generates a random ID. Not called in development.
    */
   createSnapshotId?(): string | Promise<string>;
 
-  /** Opens a snapshot for writing. Called during sync. */
-  openWriter(context: { snapshot: string }): Promise<CollectionStorageWriter>;
+  /**
+   * Opens a snapshot for writing. Called during sync. `dev` is `true` when `astro dev` writes
+   * the snapshot. In development, it is called again on the same snapshot after each change:
+   * the entries written then replace the snapshot's entries on `commit()`.
+   */
+  openWriter(context: { snapshot: string; dev: boolean }): Promise<CollectionStorageWriter>;
 
   /** Opens a snapshot for reading. Called while prerendering and at runtime. */
   openReader(context: { snapshot: string }): Promise<CollectionStorageReader>;
+
+  /** Lists the committed snapshots, in any order. */
+  listSnapshots?(): Promise<SnapshotInfo[]>;
+
+  /** Deletes a snapshot and its entries. */
+  deleteSnapshot?(snapshot: string): Promise<void>;
+}
+
+interface SnapshotInfo {
+  snapshot: string;
+  committedAt: Date;
+  /** Whether `astro dev` wrote the snapshot. */
+  dev: boolean;
 }
 
 interface CollectionStorageWriter {
   /** Writes every entry of a collection. Called at most once per collection per snapshot. */
-  write(collection: string, entries: AsyncIterable<StoredEntry>): Promise<void>;
+  write(collection: string, entries: StoredEntry[]): Promise<void>;
   /** Makes the snapshot readable. Nothing written before `commit()` resolves may be visible to a reader. */
   commit(): Promise<void>;
 }
 
 interface CollectionStorageReader {
   get(collection: string, id: string, options: { content: boolean }): Promise<StoredEntry | undefined>;
-  entries(collection: string, options: { content: boolean }): AsyncIterable<StoredEntry>;
+  entries(collection: string, options: { content: boolean }): Promise<StoredEntry[]>;
 }
 
 interface StoredEntry {
@@ -275,7 +292,7 @@ interface StoredEntry {
 
 Drivers store `metadata` and `content` as opaque strings. Astro owns their format, and a server only reads the snapshot its build wrote, with the same version of Astro, so the format can change between versions without breaking drivers. Splitting the two is what makes [`{ content: false }`](#reading-entries-without-content) cheap: a driver can skip loading `content` entirely.
 
-The contract is deliberately small. There is no per-entry `set`, `delete`, or `clear`: a snapshot is written once, in full, and then only read.
+The contract is deliberately small. There is no per-entry `set`, `delete`, or `clear`: a snapshot is written in full, and then only read. `listSnapshots()` and `deleteSnapshot()` are optional, and only used to [remove old snapshots](#removing-old-snapshots).
 
 ### Snapshots
 
@@ -288,7 +305,48 @@ What a driver does with the ID depends on where it keeps data:
 - A driver that writes its data into the build output (for example, a local SQLite file shipped with the server) can ignore the ID: each build produces new files.
 - A driver backed by a shared remote database uses the ID to keep snapshots apart, for example as a namespace or table prefix. A driver can implement `createSnapshotId()` to align snapshots with its platform's deployment IDs.
 
-Removing old snapshots is the driver's or the user's responsibility. Astro never deletes snapshots.
+### Removing old snapshots
+
+Astro never deletes snapshots. Every deployed server reads the snapshot of its own build, including deploy previews and the targets of rollbacks, and Astro can't know which of them are still running, so it can't tell which snapshots are safe to delete.
+
+Integrations that know, for example an adapter aware of the platform's live deployments, or a project's own integration keeping the last few builds, remove them at the end of a build. With `experimental.collectionStorageDrivers`, `astro:build:done` receives a handle for each storage descriptor in use:
+
+```ts
+'astro:build:done': (options: {
+  // ...
+  collections: {
+    storage?: Array<{
+      /** The collections kept with this descriptor. */
+      collections: string[];
+      /** The snapshot this build wrote. */
+      snapshot: string;
+      /** Whether pages rendered on demand read the snapshot. */
+      readAtRuntime: boolean;
+      /** Present when the driver implements it. */
+      listSnapshots?(): Promise<SnapshotInfo[]>;
+      /** Present when the driver implements it. */
+      deleteSnapshot?(snapshot: string): Promise<void>;
+    }>;
+  };
+}) => void | Promise<void>;
+```
+
+```ts
+// Keeps the 5 most recent build snapshots
+'astro:build:done': async ({ collections }) => {
+  for (const storage of collections.storage ?? []) {
+    if (!storage.listSnapshots || !storage.deleteSnapshot) continue;
+    const builds = (await storage.listSnapshots())
+      .filter((snapshot) => !snapshot.dev)
+      .sort((a, b) => b.committedAt.getTime() - a.committedAt.getTime());
+    for (const { snapshot } of builds.slice(5)) {
+      await storage.deleteSnapshot(snapshot);
+    }
+  }
+},
+```
+
+The handle's `deleteSnapshot()` refuses to delete the snapshot the build just wrote when `readAtRuntime` is `true`, as the server about to be deployed reads it. When no page renders on demand, nothing reads the snapshot after the build, and it can be deleted too. Astro can't protect the snapshots older deployments read, nor deletions made outside the hook, for example by a script connecting to the database.
 
 ### Sync
 
@@ -334,7 +392,9 @@ The option works for every storage, including the bundled store. With a storage 
 
 `astro dev` uses storage drivers too, so driver and runtime problems (for example, a driver that only works in Node used with the Cloudflare adapter) surface during development rather than after deploying.
 
-After each sync, and after each change loaders make to the store outside of a sync (for example when a watched file changes), Astro writes every collection with a storage driver to a new snapshot, commits it, and switches readers to it. A snapshot has to be complete, and the contract can't copy collections from the previous one, so unchanged collections are written again. HMR otherwise works as today. Rewriting collections on every change is slower than updating the in-memory store, which is an accepted cost for the experimental phase.
+A dev server writes a single snapshot. Its ID is generated randomly when `astro dev` starts, and `createSnapshotId()` isn't called: it may return the ID of a real deployment, whose snapshot development would then overwrite. After each sync, and after each change loaders make to the store outside of a sync (for example when a watched file changes), Astro opens a writer on that snapshot again, with `dev: true`, writes every collection with a storage driver, and commits it, which replaces the snapshot's entries. Readers may see a partially rewritten snapshot while it's written, which is acceptable as only the dev server reads it.
+
+The contract can't copy collections from one write to the next, so unchanged collections are written again. HMR otherwise works as today. Rewriting collections on every change is slower than updating the in-memory store, which is an accepted cost for the experimental phase. Each dev server leaves its snapshot in the storage when it stops, marked as `dev` by `listSnapshots()`, so [integrations removing old snapshots](#removing-old-snapshots) can tell it apart from builds.
 
 ### `@astrojs/collection-storage-sqlite`
 
@@ -349,7 +409,7 @@ type SqliteConfig = {
 };
 ```
 
-Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. The driver reads the auth token with `getSecret()` from `astro:env/server` when it starts, at build time, where it can come from a `.env` file, and at runtime.
+Snapshots share two tables: entries belong to a snapshot, and a snapshot is listed in a snapshots table only once its writer committed it, so a reader refuses to open an uncommitted snapshot. Entries are written and read in pages. Opening a writer on a committed snapshot deletes its entries on commit before keeping the new ones, and the snapshots table records whether `astro dev` wrote each snapshot. The driver implements `listSnapshots()` and `deleteSnapshot()`, which deletes a snapshot's entries and its row in one transaction. The driver reads the auth token with `getSecret()` from `astro:env/server` when it starts, at build time, where it can come from a `.env` file, and at runtime.
 
 `@libsql/client` is a peer dependency that projects install alongside the driver. It loads a native binding, which only works when the server build keeps it external, and the build only does so for dependencies of the project.
 
@@ -491,12 +551,41 @@ Some consumers need collection metadata before `astro:content` is available. For
 
   This adds an optional `collection` to the options of a Markdown processor's `render()`, an optional fourth argument to an MDX renderer's `process()`, and an optional second argument to `ContentEntryRenderFunction`. Third-party processors that ignore them keep working.
 
+### Reading collections at the end of a build
+
+Integrations that validate or post-process content after a build, such as documentation tools checking links across entries, need the entries of every collection, whatever their storage. With `experimental.collectionMetadata`, `astro:build:done` receives them in the same `collections` option as the [storage handles](#removing-old-snapshots):
+
+```ts
+'astro:build:done': (options: {
+  // ...
+  collections: {
+    /** The metadata of the build-time collections. */
+    metadata?: CollectionMetadata[];
+    /** Returns the entries of a build-time collection, as the build read them. */
+    entries?(name: string, options?: { content?: boolean }): Promise<DataEntry[]>;
+  };
+}) => void | Promise<void>;
+```
+
+```ts
+'astro:build:done': async ({ collections }) => {
+  const docs = collections.metadata?.filter((c) => c.descriptors.starlight === 'docs') ?? [];
+  for (const { name } of docs) {
+    const entries = await collections.entries!(name, { content: false });
+    // ...
+  }
+},
+```
+
+`entries()` returns plain data: the entries' `data` as loaders stored it, with references and images unresolved, and without `render()`. Bundled collections are read from the build's data store, and stored collections from the snapshot the build wrote. Live collections aren't included, as they have no entries at build time. `collections` is only passed to `astro:build:done`, the one point where a build's data and snapshot are final.
+
 # Testing Strategy
 
 - Unit tests for the storage descriptor validation, the entry serialization format, snapshot ID handling, and `{ content: false }` typing and runtime behavior.
-- A conformance suite for driver authors, `createStorageDriverTests()` from `astro/content/storage-driver-tests`. It returns test cases independent of any test runner, and runs against `@astrojs/collection-storage-sqlite` and a test-only in-memory driver. It checks that a snapshot isn't readable before `commit()`, that snapshots and collections stay separate, and that `get()` and `entries()` return what was written, with and without content.
+- A conformance suite for driver authors, `createStorageDriverTests()` from `astro/content/storage-driver-tests`. It returns test cases independent of any test runner, and runs against `@astrojs/collection-storage-sqlite` and a test-only in-memory driver. It checks that a snapshot isn't readable before `commit()`, that snapshots and collections stay separate, that `get()` and `entries()` return what was written, with and without content, that writing a committed snapshot again replaces its entries, and, for drivers that implement them, that `listSnapshots()` and `deleteSnapshot()` list and delete committed snapshots.
 - Integration tests with fixtures mixing bundled and stored collections, for static builds, server builds and `astro dev`, including references, images, and MDX entries in stored collections.
 - An integration test checking that stored entries are not inlined in the server bundle.
+- Unit and integration tests for the `collections` option of `astro:build:done`: the storage handles, the protection of the build's snapshot, and `metadata` and `entries()` for bundled and stored collections.
 - An integration test with the Cloudflare adapter, reading a stored collection from `workerd`.
 - Unit and integration tests for `getCollectionsMetadata()`, descriptor merging and validation, the `astro:collections:resolved` hook, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
 - Once the validators RFC lands, tests for JSON Schema generation across validators.
@@ -507,7 +596,7 @@ Some consumers need collection metadata before `astro:content` is available. For
 - **Slower development with large stored collections.** Each change rewrites every collection with a storage driver to a new snapshot.
 - **Every sync writes a snapshot.** `astro sync` and `astro check` run the content sync, so they write a snapshot too.
 - **Rendered HTML can keep stale descriptors.** Markdown rendered by `glob()` is cached between builds, and only rendered again when the content config, the Astro config or the Astro version changes. When a library updates the descriptors of its loader, cached entries keep the previous `collection` in their Markdown plugins' data until one of those changes.
-- **Snapshots accumulate.** Remote drivers keep one snapshot per build, and Astro doesn't clean them up.
+- **Snapshots accumulate unless an integration removes them.** Remote drivers keep one snapshot per build, and one per dev server. Astro doesn't delete them, and can't protect the snapshots older deployments still read from an integration that does.
 - **Partial benefit for MDX-heavy sites.** Compiled MDX and `deferRender` modules stay in the bundle, so sites where most entries are MDX gain less.
 - **Sync memory is unchanged.** Large collections still need to fit in memory during sync.
 - **Descriptors are a convention, not a contract.** Recognizing a collection by descriptor only works if the library that defines it and the library that reads it agree on the descriptor.
@@ -536,7 +625,6 @@ Libraries such as Starlight can adopt descriptors through their own loaders, and
 # Unresolved Questions
 
 - **A `get()` method on `CollectionMetadata`.** Returning a collection's entries from its metadata is convenient, but calling it in a loop loads every collection into memory, and a method makes the metadata non-serializable. It will be explored during the experimental phase, and only added if it supports `{ content: false }` and integrations still receive plain data.
-- **Snapshots created in development.** Each change in `astro dev` creates a snapshot. Whether dev snapshots should be reused or cleaned up, and by whom, is to be decided during the experimental phase.
 - **Where file-based drivers write.** A driver that ships its data with the build needs a location inside the build output that is available both during sync and at runtime. The writer and reader contexts may need to provide it. Until then, `sqlite()` requires a `url`, and doesn't default to a file shipped with the build.
 - **Testing in `workerd`.** Reading a stored collection from a Cloudflare Worker needs a remote database or another way to reach the snapshot, so there is no end-to-end test in `workerd` yet.
 - **Live collections in `astro:collections:resolved`.** `live.config.ts` is not loaded during sync today, so the hook only reports build-time collections. Loading it during sync would run code meant for the server runtime.
