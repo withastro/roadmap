@@ -221,7 +221,7 @@ export function sqlite(config: SqliteConfig): CollectionStorageDescriptor<Sqlite
 }
 ```
 
-Astro validates that `config` is JSON-serializable when the content config is loaded, and throws if it isn't. Collections sharing the same descriptor share a driver and a snapshot.
+Collections sharing the same descriptor share a driver and a snapshot.
 
 `config` is written into the server bundle, so it must never contain secrets. Drivers read credentials themselves, with `getSecret()` from `astro:env/server` (for example, the SQLite driver reads an auth token this way), so a token is never baked into the build output.
 
@@ -273,7 +273,7 @@ interface StoredEntry {
 }
 ```
 
-Drivers store `metadata` and `content` as opaque strings. Astro owns their format and includes a format version in them, so it can change the format without breaking drivers. Splitting the two is what makes [`{ content: false }`](#reading-entries-without-content) cheap: a driver can skip loading `content` entirely.
+Drivers store `metadata` and `content` as opaque strings. Astro owns their format, and a server only reads the snapshot its build wrote, with the same version of Astro, so the format can change between versions without breaking drivers. Splitting the two is what makes [`{ content: false }`](#reading-entries-without-content) cheap: a driver can skip loading `content` entirely.
 
 The contract is deliberately small. There is no per-entry `set`, `delete`, or `clear`: a snapshot is written once, in full, and then only read.
 
