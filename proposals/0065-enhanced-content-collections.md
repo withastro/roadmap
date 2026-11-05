@@ -71,7 +71,7 @@ import { getCollection, getEntry, render } from 'astro:content';
 
 export async function getStaticPaths() {
   // Entries without `body` and `rendered`
-  const docs = await getCollection('docs', undefined, { content: false });
+  const docs = await getCollection({ collection: 'docs', content: false });
   return docs.map((doc) => ({ params: { id: doc.id } }));
 }
 
@@ -118,7 +118,7 @@ const docs = collections.filter((c) => c.descriptors.starlight === 'docs');
 const i18n = collections.filter((c) => c.descriptors.starlight === 'i18n');
 
 for (const { name } of docs) {
-  const entries = await getCollection(name, undefined, { content: false });
+  const entries = await getCollection({ collection: name, content: false });
   // ...
 }
 ```
@@ -312,10 +312,14 @@ Images referenced by entries are resolved through the bundled image import map, 
 
 ### Reading entries without content
 
-`getCollection()`, `getEntry()` and `getEntries()` accept a `content` option. With `content: false`, entries are returned without `body` and `rendered`:
+`getEntry()` and `getEntries()` accept a `content` option. `getCollection()` accepts it in a query object, alongside the collection and an optional filter, so callers without a filter don't pass `undefined` in its place. `getCollection(collection, filter?)` keeps working as today. With `content: false`, entries are returned without `body` and `rendered`:
 
 ```ts
-const docs = await getCollection('docs', ({ data }) => !data.draft, { content: false });
+const docs = await getCollection({
+  collection: 'docs',
+  filter: ({ data }) => !data.draft,
+  content: false,
+});
 const doc = await getEntry('docs', 'intro', { content: false });
 const related = await getEntries(doc.data.related, { content: false });
 ```
