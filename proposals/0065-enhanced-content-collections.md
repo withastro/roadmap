@@ -586,7 +586,6 @@ Integrations that validate or post-process content after a build, such as docume
 - Integration tests with fixtures mixing bundled and stored collections, for static builds, server builds and `astro dev`, including references, images, and MDX entries in stored collections.
 - An integration test checking that stored entries are not inlined in the server bundle.
 - Unit and integration tests for the `collections` option of `astro:build:done`: the storage handles, the protection of the build's snapshot, and `metadata` and `entries()` for bundled and stored collections.
-- An integration test with the Cloudflare adapter, reading a stored collection from `workerd`.
 - Unit and integration tests for `getCollectionsMetadata()`, descriptor merging and validation, the `astro:collections:resolved` hook, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
 - Once the validators RFC lands, tests for JSON Schema generation across validators.
 
@@ -626,6 +625,6 @@ Libraries such as Starlight can adopt descriptors through their own loaders, and
 
 - **A `get()` method on `CollectionMetadata`.** Returning a collection's entries from its metadata is convenient, but calling it in a loop loads every collection into memory, and a method makes the metadata non-serializable. It will be explored during the experimental phase, and only added if it supports `{ content: false }` and integrations still receive plain data.
 - **Where file-based drivers write.** A driver that ships its data with the build needs a location inside the build output that is available both during sync and at runtime. The writer and reader contexts may need to provide it. Until then, `sqlite()` requires a `url`, and doesn't default to a file shipped with the build.
-- **Testing in `workerd`.** Reading a stored collection from a Cloudflare Worker needs a remote database or another way to reach the snapshot, so there is no end-to-end test in `workerd` yet.
+- **A D1 driver for Cloudflare.** Workers can't run the SQLite driver, so the Cloudflare adapter is expected to ship a D1 driver: its readers use the Worker's D1 binding, and its writers, which run during sync in Node, can reach D1 through Wrangler's `getPlatformProxy()`, with a local database in development and remote bindings at build time. It isn't part of this implementation, so there is no end-to-end test in `workerd` until it exists.
 - **Live collections in `astro:collections:resolved`.** `live.config.ts` is not loaded during sync today, so the hook only reports build-time collections. Loading it during sync would run code meant for the server runtime.
 - **Flag names.** `collectionStorageDrivers` and `collectionMetadata` are working names.
