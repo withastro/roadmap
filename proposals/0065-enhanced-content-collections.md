@@ -386,7 +386,7 @@ const related = await getEntries(doc.data.related, { content: false });
 
 The return type omits `body` and `rendered`. Passing such an entry to `render()` throws an `AstroError`, including for MDX and `deferRender` entries, which could be rendered without their content. This can be relaxed later without breaking anyone.
 
-The option works for every storage, including the bundled store. With a storage driver, it means the driver never loads the content, so a `getStaticPaths()` that lists IDs doesn't pull every entry's HTML into memory.
+The option works for every storage, including the bundled store, and requires `experimental.collectionStorageDrivers`: with the flag disabled, passing it throws an `AstroError`, and the generated types don't accept it. With a storage driver, it means the driver never loads the content, so a `getStaticPaths()` that lists IDs doesn't pull every entry's HTML into memory.
 
 ### Development
 
@@ -493,7 +493,7 @@ defineCollection({
 });
 ```
 
-The loader's and user's descriptors are shallow-merged, the user's taking precedence: a user descriptor replaces the loader's value for the same key entirely. Libraries should use a single key as their namespace (e.g. `starlight`) and put the collection's role in its value, so one library can mark several kinds of collections and two libraries don't collide. Values must be JSON-serializable: Astro validates build-time collections when the content config is loaded, and live collections when `getCollectionsMetadata()` is called. Descriptors are ignored while `experimental.collectionMetadata` is disabled, so a library can set them on its loaders whether or not its users enable the flag.
+The loader's and user's descriptors are shallow-merged, the user's taking precedence: a user descriptor replaces the loader's value for the same key entirely. Libraries should use a single key as their namespace (e.g. `starlight`) and put the collection's role in its value, so one library can mark several kinds of collections and two libraries don't collide. Values must be JSON-serializable, which the `JSONValue` type of descriptors enforces. Astro doesn't check them at runtime. Descriptors are ignored, and not checked at all, while `experimental.collectionMetadata` is disabled, so a library can set them on its loaders whether or not its users enable the flag.
 
 Descriptors come from loaders and `defineCollection()` rather than from schemas: with the [validators RFC](https://github.com/withastro/roadmap/pull/1438), a schema can come from any validator, so there is no portable way for a schema to carry a marker.
 
@@ -586,7 +586,7 @@ Integrations that validate or post-process content after a build, such as docume
 - Integration tests with fixtures mixing bundled and stored collections, for static builds, server builds and `astro dev`, including references, images, and MDX entries in stored collections.
 - An integration test checking that stored entries are not inlined in the server bundle.
 - Unit and integration tests for the `collections` option of `astro:build:done`: the storage handles, the protection of the build's snapshot, and `metadata` and `entries()` for bundled and stored collections.
-- Unit and integration tests for `getCollectionsMetadata()`, descriptor merging and validation, the `astro:collections:resolved` hook, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
+- Unit and integration tests for `getCollectionsMetadata()`, descriptor merging, descriptors being ignored without the flag, the `astro:collections:resolved` hook, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
 - Once the validators RFC lands, tests for JSON Schema generation across validators.
 
 # Drawbacks
