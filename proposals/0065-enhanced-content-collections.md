@@ -577,7 +577,7 @@ Integrations that validate or post-process content after a build, such as docume
 },
 ```
 
-`entries()` returns plain data: the entries' `data` as loaders stored it, with references and images unresolved, and without `render()`. They are read from the data store the build's sync wrote, which keeps every collection, including the ones it wrote to a storage driver. Live collections aren't included, as they have no entries at build time. `collections` is only passed to `astro:build:done`, the one point where a build's data and snapshot are final.
+`entries()` returns plain data: the entries' `data` as loaders stored it, with references and images unresolved, and without `render()`. They are read from the data store the build's sync wrote, which keeps every collection, including the ones it wrote to a storage driver. Each call reads only its collection and keeps nothing once it returns, so integrations hold only the entries they keep: with a chunked data store, only the parts of the collection are read, while a single-file data store has to be parsed whole on each call. Live collections aren't included, as they have no entries at build time. `collections` is only passed to `astro:build:done`, the one point where a build's data and snapshot are final.
 
 # Testing Strategy
 
