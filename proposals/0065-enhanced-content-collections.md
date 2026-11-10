@@ -247,7 +247,7 @@ interface CollectionStorageDriver {
 
   /**
    * Opens a snapshot for writing. Called during sync. `dev` is `true` when `astro dev` writes
-   * the snapshot. In development, it is called again on the same snapshot after each change:
+   * the snapshot `dev`. In development, it is called again on that snapshot after each change:
    * the entries written then replace the snapshot's entries on `commit()`.
    */
   openWriter(context: { snapshot: string; dev: boolean }): Promise<CollectionStorageWriter>;
@@ -392,9 +392,9 @@ The option works for every storage, including the bundled store, and requires `e
 
 `astro dev` uses storage drivers too, so driver and runtime problems (for example, a driver that only works in Node used with the Cloudflare adapter) surface during development rather than after deploying.
 
-A dev server writes a single snapshot. Its ID is generated randomly when `astro dev` starts, and `createSnapshotId()` isn't called: it may return the ID of a real deployment, whose snapshot development would then overwrite. After each sync, and after each change loaders make to the store outside of a sync (for example when a watched file changes), Astro opens a writer on that snapshot again, with `dev: true`, writes every collection with a storage driver, and commits it, which replaces the snapshot's entries. Readers may see a partially rewritten snapshot while it's written, which is acceptable as only the dev server reads it.
+Development has a single snapshot: every dev server, in every session, writes the snapshot `dev`. `createSnapshotId()` isn't called, as it may return the ID of a real deployment, whose snapshot development would then overwrite. After each sync, and after each change loaders make to the store outside of a sync (for example when a watched file changes), Astro opens a writer on that snapshot again, with `dev: true`, writes every collection with a storage driver, and commits it, which replaces the snapshot's entries. Readers may see a partially rewritten snapshot while it's written, which is acceptable as only the dev server reads it.
 
-The contract can't copy collections from one write to the next, so unchanged collections are written again. HMR otherwise works as today. Rewriting collections on every change is slower than updating the in-memory store, which is an accepted cost for the experimental phase. Each dev server leaves its snapshot in the storage when it stops, marked as `dev` by `listSnapshots()`, so [integrations removing old snapshots](#removing-old-snapshots) can tell it apart from builds.
+The contract can't copy collections from one write to the next, so unchanged collections are written again. HMR otherwise works as today. Rewriting collections on every change is slower than updating the in-memory store, which is an accepted cost for the experimental phase. The dev snapshot stays in the storage when the dev server stops, marked as `dev` by `listSnapshots()`, so [integrations removing old snapshots](#removing-old-snapshots) can tell it apart from builds.
 
 ### `@astrojs/collection-storage-sqlite`
 
@@ -595,7 +595,7 @@ Integrations that validate or post-process content after a build, such as docume
 - **Slower development with large stored collections.** A dev server keeps a single snapshot, but each change rewrites every collection with a storage driver into it, including the collections that didn't change.
 - **Every sync writes a snapshot.** `astro sync` and `astro check` run the content sync, so they write a snapshot too.
 - **Rendered HTML can keep stale descriptors.** Markdown rendered by `glob()` is cached between builds, and only rendered again when the content config, the Astro config or the Astro version changes. When a library updates the descriptors of its loader, cached entries keep the previous `collection` in their Markdown plugins' data until one of those changes.
-- **Snapshots accumulate unless an integration removes them.** Remote drivers keep one snapshot per build, and one per dev server. Astro doesn't delete them, and can't protect the snapshots older deployments still read from an integration that does.
+- **Snapshots accumulate unless an integration removes them.** Remote drivers keep one snapshot per build, plus the dev snapshot. Astro doesn't delete them, and can't protect the snapshots older deployments still read from an integration that does.
 - **Partial benefit for MDX-heavy sites.** Compiled MDX and `deferRender` modules stay in the bundle, so sites where most entries are MDX gain less.
 - **Sync memory is unchanged.** Large collections still need to fit in memory during sync.
 - **Descriptors are a convention, not a contract.** Recognizing a collection by descriptor only works if the library that defines it and the library that reads it agree on the descriptor.
