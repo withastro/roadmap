@@ -358,7 +358,7 @@ Loaders are unchanged. During sync, every loader writes to the same synchronous,
 
 Reference validation, image imports, and content module imports are computed from the in-memory store, as today, so they work the same for every storage.
 
-Because collections are written in full at the end of sync, every build writes a fresh snapshot. No data is reused from a previous build. The in-memory store is still cached between builds as today, so loaders keep their incremental behavior.
+Because collections are written in full at the end of sync, every build writes a fresh snapshot. `astro sync` and `astro check` run the same sync, but write no snapshot: nothing would read it, as builds and dev servers write their own. No data is reused from a previous build. The in-memory store is still cached between builds as today, so loaders keep their incremental behavior.
 
 ### Reading entries
 
@@ -593,7 +593,6 @@ Integrations that validate or post-process content after a build, such as docume
 
 - **Two places for entries.** Debugging a collection now depends on its storage, and a driver is one more moving part in a deployment.
 - **Slower development with large stored collections.** A dev server keeps a single snapshot, but each change rewrites every collection with a storage driver into it, including the collections that didn't change.
-- **Every sync writes a snapshot.** `astro sync` and `astro check` run the content sync, so they write a snapshot too.
 - **Rendered HTML can keep stale descriptors.** Markdown rendered by `glob()` is cached between builds, and only rendered again when the content config, the Astro config or the Astro version changes. When a library updates the descriptors of its loader, cached entries keep the previous `collection` in their Markdown plugins' data until one of those changes.
 - **Snapshots accumulate unless an integration removes them.** Remote drivers keep one snapshot per build, plus the dev snapshot. Astro doesn't delete them, and can't protect the snapshots older deployments still read from an integration that does.
 - **Partial benefit for MDX-heavy sites.** Compiled MDX and `deferRender` modules stay in the bundle, so sites where most entries are MDX gain less.
