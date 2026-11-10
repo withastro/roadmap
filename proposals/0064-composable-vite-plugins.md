@@ -6,7 +6,7 @@
 
 # Summary
 
-Split `astro` into a set of independently usable Vite plugins — the `.astro` language, a pages router, and one plugin per feature — and rebuild the `astro` CLI as a composition of them.
+Split `astro` into a set of independently usable Vite plugins — the `.astro` language, a router, and one plugin per feature — and rebuild the `astro` CLI as a composition of them.
 
 # Example
 
@@ -37,13 +37,13 @@ const app = new Hono();
 app.get('/hello/:name', (c) => renderToResponse(Page, { props: { name: c.req.param('name') } }));
 ```
 
-**Pages** — a site with file routing and nothing else:
+**Routing** — a site with file routing and nothing else:
 
 ```js
 import astro from '@astrojs/vite-plugin-astro';
-import pages from '@astrojs/vite-plugin-pages';
+import router from '@astrojs/vite-plugin-router';
 
-export default { plugins: [astro(), pages()] }; // vite dev / vite build
+export default { plugins: [astro(), router()] }; // vite dev / vite build
 ```
 
 **Pick your features:**
@@ -52,7 +52,7 @@ export default { plugins: [astro(), pages()] }; // vite dev / vite build
 export default {
   plugins: [
     astro({ site: 'https://example.com' }),
-    pages({ output: 'server' }),
+    router({ output: 'server' }),
     content(),
     markdown(),
     assets(),
@@ -102,14 +102,14 @@ This proposal grew out of [Standalone `.astro` file usage](https://github.com/wi
 All packages are published under the `@astrojs/` scope. Each plugin package's default export is a function that returns Vite plugins.
 
 ```
-astro → vite-plugin-pages (+ feature plugins → core packages) → vite-plugin-astro → runtime
+astro → vite-plugin-router (+ feature plugins → core packages) → vite-plugin-astro → runtime
 ```
 
 | Layer       | Package                            | Plugin         | What it contains                                                                                                                                              |
 | ----------- | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Runtime     | `@astrojs/runtime`                 | —              | What compiled components run: the render runtime, client directive scripts, the JSX runtime, head propagation, `AstroError`, the base render types and the render API (`renderToResponse`). No dependency on Vite, the compiler or a bundler. |
 | Language    | `@astrojs/vite-plugin-astro`       | `astro()`      | The `.astro` compiler plugins, scoped styles, islands, client directives, `<script>` processing and renderers.                                                   |
-| Routing     | `@astrojs/vite-plugin-pages`       | `pages()`      | File-based routing, the request pipeline, middleware, the dev server, the production build (prerendering, server entry, manifest), server islands, the client router, and the API feature plugins build on. |
+| Routing     | `@astrojs/vite-plugin-router`      | `router()`     | File-based routing, the request pipeline, middleware, the dev server, the production build (prerendering, server entry, manifest), server islands, the client router, and the API feature plugins build on. |
 | Features    | `@astrojs/vite-plugin-actions`     | `actions()`    | `astro:actions`, the action endpoint and form actions.                                                                                                        |
 |             | `@astrojs/vite-plugin-assets`      | `assets()`     | `astro:assets`, image services, the image endpoint and build-time image generation.                                                                           |
 |             | `@astrojs/vite-plugin-cache`       | `cache()`      | `Astro.cache`, route rules and cache providers.                                                                                                               |
@@ -165,7 +165,7 @@ Compiling a component doesn't provide this metadata, so `astro()` has to. The re
 
 ### The `Astro` global
 
-Standalone, `Astro` has the members that only depend on the component: `props`, `slots`, `self`, `request`, `url`, `site` and `generator`. Request-level members (`cookies`, `params`, `redirect`, `locals`, `session`, …) come from `pages()` and its feature plugins.
+Standalone, `Astro` has the members that only depend on the component: `props`, `slots`, `self`, `request`, `url`, `site` and `generator`. Request-level members (`cookies`, `params`, `redirect`, `locals`, `session`, …) come from `router()` and its feature plugins.
 
 ## The runtime
 
@@ -196,7 +196,7 @@ const { renderToString } = createRenderer({
 
 This renders components compiled ahead of time, for example with `@astrojs/compiler-rs`, in any JavaScript runtime. It is the base for tooling other than Vite.
 
-`pages()` renders with the same runtime, but builds its own per-request context. That context adds the request-level members of `Astro` (see [The `Astro` global](#the-astro-global)).
+`router()` renders with the same runtime, but builds its own per-request context. That context adds the request-level members of `Astro` (see [The `Astro` global](#the-astro-global)).
 
 ## Renderers
 
@@ -221,15 +221,15 @@ The order of `renderers` is the order in which Astro tries them. This matters wh
 
 The framework integrations become a composition of the same two parts. `@astrojs/react`'s integration adds `@vitejs/plugin-react` and registers the renderer from `@astrojs/react-renderer`, so the CLI and a plain Vite project use the same code. The renderer is its own package, with no dependency on `astro`, so a Vite project doesn't install the CLI. The other renderers follow the same pattern with their frameworks' plugins: `@vitejs/plugin-vue`, `@sveltejs/vite-plugin-svelte`, `@preact/preset-vite` and `vite-plugin-solid`.
 
-## The pages plugin
+## The router plugin
 
-`pages()` turns `src/pages` into a site. It owns everything that today happens between a request and a rendered component: the route table, `getStaticPaths`, endpoints, redirects, rewrites, `src/middleware`, 404 and 500 pages, server islands, the `<ClientRouter />`, and the request-level members of `Astro`. `vite dev` serves the routes, and `vite build` builds them.
+`router()` turns `src/pages` into a site. It owns everything that today happens between a request and a rendered component: the route table, `getStaticPaths`, endpoints, redirects, rewrites, `src/middleware`, 404 and 500 pages, server islands, the `<ClientRouter />`, and the request-level members of `Astro`. `vite dev` serves the routes, and `vite build` builds them.
 
 ```js
 export default {
   plugins: [
     astro(),
-    pages({ output: 'server', redirects: { '/old': '/new' } }),
+    router({ output: 'server', redirects: { '/old': '/new' } }),
   ],
 };
 ```
@@ -250,23 +250,23 @@ Otherwise the build also emits a server entry, `dist/server/entry.mjs`, which by
 
 Adapters are an integration concept and stay in the CLI. In a plain Vite project, the server entry is a standard `fetch` handler, so anything that runs one can deploy it: a platform's Vite plugin (such as `@cloudflare/vite-plugin`), a Node server, or a framework that mounts it.
 
-What an adapter configures today becomes options of `pages()` (`serverOutput.*`): a custom server entry, headers for internal fetches, skew-protection query parameters, and whether the platform runs middleware at the edge. [Hooks](#hooks) give a platform plugin the same information an adapter receives from `astro:build:*`.
+What an adapter configures today becomes options of `router()` (`serverOutput.*`): a custom server entry, headers for internal fetches, skew-protection query parameters, and whether the platform runs middleware at the edge. [Hooks](#hooks) give a platform plugin the same information an adapter receives from `astro:build:*`.
 
 In the CLI, the existing adapter API is mapped onto those same options and hooks, so adapters keep working unchanged.
 
 ### Hooks
 
-Other plugins observe the route table and the build through callbacks on `api.astroPages`. Plugins read the API in `configResolved`, so plugin order doesn't matter:
+Other plugins observe the route table and the build through callbacks on `api.astroRouter`. Plugins read the API in `configResolved`, so plugin order doesn't matter:
 
 ```js
-import { getPagesApi } from '@astrojs/vite-plugin-pages';
+import { getRouterApi } from '@astrojs/vite-plugin-router';
 
 function myPlugin() {
   return {
     name: 'my-plugin',
     configResolved(config) {
-      const pages = getPagesApi(config);
-      pages.onRoutesResolved((routes) => { /* ... */ });
+      const router = getRouterApi(config);
+      router.onRoutesResolved((routes) => { /* ... */ });
     },
   };
 }
@@ -279,7 +279,7 @@ Most hooks correspond to an integration hook, and in the CLI the integration hoo
 Called for each route when the route table is created, and in dev whenever a route's `prerender` export changes. The callback can change how the route is built. Setting `prerender = false` on any route turns a static build into a server build. This is `astro:route:setup`.
 
 ```js
-pages.onRouteSetup((route) => {
+router.onRouteSetup((route) => {
   if (route.component.startsWith('src/pages/api/')) route.prerender = false;
 });
 ```
@@ -289,7 +289,7 @@ pages.onRouteSetup((route) => {
 Called with the full route table when the dev server or the build starts, and again in dev after each change to the route table. Use it to generate something from the routes, like types or a sitemap. This is `astro:routes:resolved`.
 
 ```js
-pages.onRoutesResolved((routes) => {
+router.onRoutesResolved((routes) => {
   writeRouteTypes(routes.map((r) => r.pattern));
 });
 ```
@@ -299,7 +299,7 @@ pages.onRoutesResolved((routes) => {
 Called during a server build, with the serialized manifest, before it is written into the server bundle. A platform plugin uses it to learn the routes and assets it will serve. Static builds don't call it. This is `astro:build:ssr`.
 
 ```js
-pages.onServerManifest(({ manifest }) => {
+router.onServerManifest(({ manifest }) => {
   platformConfig.routes = manifest.routes.map((r) => r.routeData.route);
 });
 ```
@@ -309,7 +309,7 @@ pages.onServerManifest(({ manifest }) => {
 Called after the static paths are generated. When the platform asks for them (`serverOutput.staticHeaders`), it receives the response headers of each prerendered path, so the platform can serve them, for example as a `_headers` file. This is `astro:build:generated`.
 
 ```js
-pages.onBuildGenerated(({ routeToHeaders }) => {
+router.onBuildGenerated(({ routeToHeaders }) => {
   for (const [pathname, { headers }] of routeToHeaders) addHeaders(pathname, headers);
 });
 ```
@@ -319,7 +319,7 @@ pages.onBuildGenerated(({ routeToHeaders }) => {
 Called once after the build has written all of its output, with the client output directory and the routes. This is `astro:build:done`.
 
 ```js
-pages.onBuildDone(async ({ dir, routes }) => {
+router.onBuildDone(async ({ dir, routes }) => {
   await writeSitemap(dir, routes);
 });
 ```
@@ -329,7 +329,7 @@ pages.onBuildDone(async ({ dir, routes }) => {
 Replaces how static paths are rendered at build time. By default they render in Node. A platform can render them in its own runtime instead (Cloudflare renders them in workerd). Pass a function to wrap the default prerenderer instead of replacing it. This is the adapter's `setPrerenderer()`.
 
 ```js
-pages.setPrerenderer((defaultPrerenderer) => ({
+router.setPrerenderer((defaultPrerenderer) => ({
   ...defaultPrerenderer,
   name: 'my-platform',
   render: (request, options) => platformRuntime.fetch(request),
@@ -341,7 +341,7 @@ pages.setPrerenderer((defaultPrerenderer) => ({
 Called after every static path is written, but before the prerenderer shuts down. Callbacks can still read from the prerenderer's runtime, for example to collect what the pages registered while rendering.
 
 ```js
-pages.onPrerenderDone(async ({ prerenderer }) => {
+router.onPrerenderDone(async ({ prerenderer }) => {
   if (prerenderer) await emitCollectedImages(prerenderer);
 });
 ```
@@ -351,7 +351,7 @@ pages.onPrerenderDone(async ({ prerenderer }) => {
 With incremental builds, called for each static path that the build skips because nothing it depends on changed. It receives the metadata the path recorded in the previous build, so a plugin can replay what rendering it would have done. For example, the assets plugin re-registers the images the page used.
 
 ```js
-pages.onPrerenderPathRestored(({ pathname, metadata }) => {
+router.onPrerenderPathRestored(({ pathname, metadata }) => {
   for (const image of metadata.staticImages ?? []) queueImage(image);
 });
 ```
@@ -361,7 +361,7 @@ pages.onPrerenderPathRestored(({ pathname, metadata }) => {
 Some features emit a placeholder in server code that can only be filled once every server environment has been built. Content collections use this for the styles of rendered entries. The hook runs after the server builds, for each chunk that contains the marker, and the callback can rewrite those chunks.
 
 ```js
-pages.addChunkPostHook('$$CONTENT_STYLES$$', ({ chunks, mutate }) => {
+router.addChunkPostHook('$$CONTENT_STYLES$$', ({ chunks, mutate }) => {
   for (const chunk of chunks) {
     mutate(chunk.fileName, chunk.code.replace('$$CONTENT_STYLES$$', styles), chunk.prerender);
   }
@@ -370,17 +370,17 @@ pages.addChunkPostHook('$$CONTENT_STYLES$$', ({ chunks, mutate }) => {
 
 ### Extension API
 
-`pages()` exposes an API to other Vite plugins, `api.astroPages`, through which feature plugins add their behavior: injecting routes, adding middleware and request handlers, extending the manifest and the `Astro` global, adding page scripts, and hooking into the build. See [Feature plugins](#feature-plugins).
+`router()` exposes an API to other Vite plugins, `api.astroRouter`, through which feature plugins add their behavior: injecting routes, adding middleware and request handlers, extending the manifest and the `Astro` global, adding page scripts, and hooking into the build. See [Feature plugins](#feature-plugins).
 
 ## Feature plugins
 
-Each feature of Astro is a small plugin that owns its config and its runtime code. It builds only on the APIs `pages()` and `astro()` expose. This is the same API anyone can use to write their own feature.
+Each feature of Astro is a small plugin that owns its config and its runtime code. It builds only on the APIs `router()` and `astro()` expose. This is the same API anyone can use to write their own feature.
 
 ```js
 export default {
   plugins: [
     astro(),
-    pages(),
+    router(),
     i18n({ defaultLocale: 'en', locales: ['en', 'fr'] }),
     sessions({ driver: sessionDrivers.redis({ url: process.env.REDIS_URL }) }),
     actions(),
@@ -392,38 +392,38 @@ The options of each plugin are its section of today's Astro config, and the CLI 
 
 ### The plugins
 
-- **`env()`** adds `astro:env` and private `import.meta.env` variables. It works with or without `pages()`.
-- **`i18n()`** adds locale routing, fallbacks, domains and `astro:i18n`. It requires `pages()`.
-- **`sessions()`** adds `Astro.session` and session drivers. It requires `pages()`.
-- **`cache()`** adds `Astro.cache`, route rules and cache providers. It requires `pages()`.
-- **`actions()`** adds `astro:actions`, the action endpoint and form actions. It requires `pages()`.
-- **`markdown()`** makes `.md` files importable and routable as pages. It requires `pages()`.
-- **`assets()`** adds `astro:assets`, image services, the image endpoint and build-time image optimization. It requires `pages()`.
-- **`fonts()`** adds font providers, optimized fallbacks and `<Font />`. It requires `pages()`, and adds `<Font />` to `astro:assets` when `assets()` is present.
-- **`prefetch()`** adds link prefetching and speculation rules. It requires `pages()`.
-- **`devToolbar()`** adds the dev toolbar and its app API. It requires `pages()`.
-- **`content()`** adds content collections. It requires only `astro()`: collections can be queried from any server code. It uses `pages()` and `assets()` when present, for rendering entries and optimizing their images.
+- **`env()`** adds `astro:env` and private `import.meta.env` variables. It works with or without `router()`.
+- **`i18n()`** adds locale routing, fallbacks, domains and `astro:i18n`. It requires `router()`.
+- **`sessions()`** adds `Astro.session` and session drivers. It requires `router()`.
+- **`cache()`** adds `Astro.cache`, route rules and cache providers. It requires `router()`.
+- **`actions()`** adds `astro:actions`, the action endpoint and form actions. It requires `router()`.
+- **`markdown()`** makes `.md` files importable and routable as pages. It requires `router()`.
+- **`assets()`** adds `astro:assets`, image services, the image endpoint and build-time image optimization. It requires `router()`.
+- **`fonts()`** adds font providers, optimized fallbacks and `<Font />`. It requires `router()`, and adds `<Font />` to `astro:assets` when `assets()` is present.
+- **`prefetch()`** adds link prefetching and speculation rules. It requires `router()`.
+- **`devToolbar()`** adds the dev toolbar and its app API. It requires `router()`.
+- **`content()`** adds content collections. It requires only `astro()`: collections can be queried from any server code. It uses `router()` and `assets()` when present, for rendering entries and optimizing their images.
 
 All of them except `env()` and `prefetch()` also require `astro()`.
 
 A plugin that needs another one looks it up by name when Vite resolves the config, and fails with an error naming the missing plugin:
 
 ```
-`pages()` from @astrojs/vite-plugin-pages is missing from the Vite `plugins` array.
+`router()` from @astrojs/vite-plugin-router is missing from the Vite `plugins` array.
 ```
 
 Because the lookup happens in `configResolved`, plugin order never matters.
 
 ### Registration API
 
-Feature plugins add behavior through registration methods on `api.astroPages`, alongside the [Hooks](#hooks). Registrations take **module entrypoints, not functions**. A plugin runs in Vite's config process, but requests are handled in the server environment, which may be a different runtime such as workerd. `pages()` includes the registered modules in the server build.
+Feature plugins add behavior through registration methods on `api.astroRouter`, alongside the [Hooks](#hooks). Registrations take **module entrypoints, not functions**. A plugin runs in Vite's config process, but requests are handled in the server environment, which may be a different runtime such as workerd. `router()` includes the registered modules in the server build.
 
 #### `injectRoute`
 
 Adds a route that isn't a file in `src/pages`. Actions uses it for its RPC endpoint. This is the integration API's `injectRoute`. Pass `{ internal: true }` for framework endpoints that only serve on-demand requests, like the image endpoint. An internal route always renders on demand, but never turns a static site into a server build, and `onRouteSetup` doesn't run for it.
 
 ```js
-pages.injectRoute({
+router.injectRoute({
   pattern: '/_actions/[...path]',
   entrypoint: new URL('./runtime/route.js', import.meta.url),
   prerender: false,
@@ -435,7 +435,7 @@ pages.injectRoute({
 Adds middleware that runs before (`'pre'`) or after (`'post'`) the project's `src/middleware`. This is the integration API's `addMiddleware`.
 
 ```js
-pages.addMiddleware(new URL('./runtime/middleware.js', import.meta.url), 'pre');
+router.addMiddleware(new URL('./runtime/middleware.js', import.meta.url), 'pre');
 ```
 
 #### `addFetchHandler`
@@ -443,7 +443,7 @@ pages.addMiddleware(new URL('./runtime/middleware.js', import.meta.url), 'pre');
 Adds a step to the request pipeline, which runs before middleware and routing. A handler receives the request state and `next`, and can return a response without calling `next`. Sessions, cache and i18n are fetch handlers. `wraps` orders a handler relative to others without depending on plugin order. For example, cache runs before i18n so that a cached response includes i18n's redirects.
 
 ```js
-pages.addFetchHandler('cache', {
+router.addFetchHandler('cache', {
   entrypoint: new URL('./runtime/fetch-handler.js', import.meta.url),
   order: 'pre',
   wraps: ['i18n'],
@@ -462,7 +462,7 @@ export default async function cacheHandler(state, next) {
 Adds a member to `Astro` and to the endpoint `context`. The module's default export is called once per request and provides the value. The value is created the first time it is read, so a session is never created for a page that doesn't use `Astro.session`. Its type is declared by extending `AstroGlobalExtensions` (see [The `Astro` global](#the-astro-global)).
 
 ```js
-pages.extendRenderContext('session', new URL('./runtime/render-context.js', import.meta.url));
+router.extendRenderContext('session', new URL('./runtime/render-context.js', import.meta.url));
 ```
 
 #### `extendManifest` and `setManifestData`
@@ -470,8 +470,8 @@ pages.extendRenderContext('session', new URL('./runtime/render-context.js', impo
 Add data to the server manifest, which the runtime modules read. `setManifestData` adds a serializable value. `extendManifest` adds a module that is imported lazily, for code that depends on configuration, like a session driver or a cache provider.
 
 ```js
-pages.setManifestData('sessionConfig', { cookie: 'astro-session', ttl: 3600 });
-pages.extendManifest('sessionDriver', 'virtual:my-session-driver');
+router.setManifestData('sessionConfig', { cookie: 'astro-session', ttl: 3600 });
+router.extendManifest('sessionDriver', 'virtual:my-session-driver');
 ```
 
 #### `transformRoutes`
@@ -479,7 +479,7 @@ pages.extendManifest('sessionDriver', 'virtual:my-session-driver');
 Edits the route table each time it is created. i18n uses it to add a localized copy of each route.
 
 ```js
-pages.transformRoutes((routes) => [...routes, ...routes.map(localize)]);
+router.transformRoutes((routes) => [...routes, ...routes.map(localize)]);
 ```
 
 #### `extendRouting`
@@ -487,7 +487,7 @@ pages.transformRoutes((routes) => [...routes, ...routes.map(localize)]);
 Adds a module that takes part in matching a request to a route at runtime, for routing that depends on the request rather than the file system. i18n uses it for domains and fallbacks.
 
 ```js
-pages.extendRouting(new URL('./runtime/routing-extension.js', import.meta.url));
+router.extendRouting(new URL('./runtime/routing-extension.js', import.meta.url));
 ```
 
 #### `addPageExtension`
@@ -495,7 +495,7 @@ pages.extendRouting(new URL('./runtime/routing-extension.js', import.meta.url));
 Makes files with another extension routable as pages. The module they compile to must default-export an Astro component. Markdown uses it for `.md`, and an MDX plugin would use it for `.mdx`.
 
 ```js
-pages.addPageExtension('.md');
+router.addPageExtension('.md');
 ```
 
 #### `addPageScript`
@@ -503,8 +503,8 @@ pages.addPageExtension('.md');
 Adds a script to the `<head>` of every page: a module, or inline content. Inline scripts are included in the CSP policy. This is the integration API's `injectScript('page', ...)` and `injectScript('head-inline', ...)`. Prefetch uses it for its runtime and for speculation rules.
 
 ```js
-pages.addPageScript(new URL('./runtime/prefetch.js', import.meta.url));
-pages.addPageScript(JSON.stringify(rules), { stage: 'head-inline', type: 'speculationrules' });
+router.addPageScript(new URL('./runtime/prefetch.js', import.meta.url));
+router.addPageScript(JSON.stringify(rules), { stage: 'head-inline', type: 'speculationrules' });
 ```
 
 #### `addClientRouterInit`
@@ -512,7 +512,7 @@ pages.addPageScript(JSON.stringify(rules), { stage: 'head-inline', type: 'specul
 Adds a browser module that runs when `<ClientRouter />` initializes. Prefetch uses it to prefetch links on navigation.
 
 ```js
-pages.addClientRouterInit(new URL('./runtime/client-router-init.js', import.meta.url));
+router.addClientRouterInit(new URL('./runtime/client-router-init.js', import.meta.url));
 ```
 
 #### `addCspSources`
@@ -520,7 +520,7 @@ pages.addClientRouterInit(new URL('./runtime/client-router-init.js', import.meta
 With CSP enabled, adds style hashes and font sources to the policy. Fonts uses it for the styles and font files it generates.
 
 ```js
-pages.addCspSources({ styleHashes: [hash], fontResources: ['https://fonts.example.com'] });
+router.addCspSources({ styleHashes: [hash], fontResources: ['https://fonts.example.com'] });
 ```
 
 ### Feature plugin APIs
@@ -533,13 +533,13 @@ getAssetsApi(config).addExports(fileURLToPath(new URL('./assets-exports.js', imp
 
 ## Shared configuration
 
-Many settings are needed by more than one plugin. `site` is set for the language, because components read `Astro.site`, but `pages()` also needs it for absolute URLs, and so do `i18n()` and sitemap-like plugins. `trailingSlash` affects both how links render and how routes match. Every plugin needs `root`. In the CLI these all come from one Astro config object. Once the features are separate plugins, each needs a way to read settings it doesn't own, without the user repeating them.
+Many settings are needed by more than one plugin. `site` is set for the language, because components read `Astro.site`, but `router()` also needs it for absolute URLs, and so do `i18n()` and sitemap-like plugins. `trailingSlash` affects both how links render and how routes match. Every plugin needs `root`. In the CLI these all come from one Astro config object. Once the features are separate plugins, each needs a way to read settings it doesn't own, without the user repeating them.
 
 The answer is that each setting belongs to one plugin, and the others read it from that plugin:
 
 - **Vite** owns `root`, `base`, `publicDir`, the dev server and the output directory. The Astro plugins read them from Vite's resolved config, and no plugin has an option for them.
 - **`astro()`** owns the settings that affect how components render: `site`, `trailingSlash`, `compressHTML`, the renderers and the client directives.
-- **`pages()`** owns routing and build settings: `output`, `build.*`, `redirects`, `security.*` and how the server output is deployed.
+- **`router()`** owns routing and build settings: `output`, `build.*`, `redirects`, `security.*` and how the server output is deployed.
 - **Each feature plugin** owns its own section of the config.
 
 So `site` is set once, on `astro()`, and every other plugin reads it from there.
@@ -550,20 +550,20 @@ Each plugin exposes an API object on its Vite plugin (`plugin.api`). Others look
 
 ```js
 import { getAstroApi } from '@astrojs/vite-plugin-astro';
-import { getPagesApi } from '@astrojs/vite-plugin-pages';
+import { getRouterApi } from '@astrojs/vite-plugin-router';
 
 function myPlugin() {
   return {
     name: 'my-plugin',
     configResolved(config) {
       const { site, trailingSlash } = getAstroApi(config).config;
-      const { output } = getPagesApi(config).config;
+      const { output } = getRouterApi(config).config;
     },
   };
 }
 ```
 
-`getAstroApi()` reads `api.astro` and `getPagesApi()` reads `api.astroPages`. They throw with the missing plugin's name if it isn't in `plugins`. Every lookup and registration happens in `configResolved`, after Vite has created all of the plugins, so plugin order doesn't matter.
+`getAstroApi()` reads `api.astro` and `getRouterApi()` reads `api.astroRouter`. They throw with the missing plugin's name if it isn't in `plugins`. Every lookup and registration happens in `configResolved`, after Vite has created all of the plugins, so plugin order doesn't matter.
 
 The resolved config objects are read-only. They contain absolute URLs for directories, Vite's resolved `base`, and defaults applied. They are the only config that crosses a package boundary. The CLI's internal settings object stays inside `astro`.
 
@@ -583,7 +583,7 @@ The CLI loads and validates `astro.config.mjs`, then turns each section into the
 // roughly what `astro dev` builds from an Astro config
 [
   astro({ site, trailingSlash, compressHTML, renderers }),
-  pages({ output, build, redirects, security, serverOutput }),
+  router({ output, build, redirects, security, serverOutput }),
   env(config.env),
   i18n(config.i18n),
   sessions(config.session),
@@ -616,11 +616,11 @@ The mapping is in one place in `astro`, and integrations don't have to change. O
 
 ### Adapters
 
-Adapters stay in the CLI too. The CLI maps what an adapter declares (its server entrypoint, its features, `setPrerenderer`, middleware mode, headers) onto `pages({ serverOutput })` and the [Hooks](#hooks). Existing adapters work unchanged. New ones can be written against `serverOutput` and the hooks directly.
+Adapters stay in the CLI too. The CLI maps what an adapter declares (its server entrypoint, its features, `setPrerenderer`, middleware mode, headers) onto `router({ serverOutput })` and the [Hooks](#hooks). Existing adapters work unchanged. New ones can be written against `serverOutput` and the hooks directly.
 
 ### Hook order in dev
 
-The route table is now created by `pages()`, so the CLI resolves Vite's config before `astro:config:done` to learn the routes. In builds this keeps today's order: `astro:routes:resolved` before `astro:config:done`. In dev the order used to be reversed, and it now matches the build. As a side effect, routes injected by features, such as the actions endpoint and the image endpoint, are visible in `astro:routes:resolved` for the first time.
+The route table is now created by `router()`, so the CLI resolves Vite's config before `astro:config:done` to learn the routes. In builds this keeps today's order: `astro:routes:resolved` before `astro:config:done`. In dev the order used to be reversed, and it now matches the build. As a side effect, routes injected by features, such as the actions endpoint and the image endpoint, are visible in `astro:routes:resolved` for the first time.
 
 ### What stays in `astro`
 
@@ -636,7 +636,7 @@ This is mostly a refactor of existing code, so the main protection is the test s
 
 The existing suite can't show that the plugins work without `astro`, so each package adds its own tests for that:
 
-- **Plugin tests** run each plugin in a plain Vite project, with no `astro` dependency. They cover its options, its API, and dev and build. Feature plugins are tested against `pages()` alone, so a feature never silently depends on something only the CLI provides. Tests also build with the plugins in different orders, to check that order doesn't matter.
+- **Plugin tests** run each plugin in a plain Vite project, with no `astro` dependency. They cover its options, its API, and dev and build. Feature plugins are tested against `router()` alone, so a feature never silently depends on something only the CLI provides. Tests also build with the plugins in different orders, to check that order doesn't matter.
 - **Standalone fixtures** cover the cases that need more than compilation, in both `vite dev` and `vite build`: rendering a component with scoped styles, hydrating a React island, and rendering a page.
 - **Runtime tests** compile a component with the compiler and render it with `@astrojs/runtime` in plain Node, without Vite. A check fails the build if the runtime package imports Vite, the compiler or a bundler.
 - **Package resolution:** a test project outside the monorepo, installed with strict pnpm, checks that a project depending only on the plugin packages resolves everything it needs.
@@ -656,7 +656,7 @@ Package size is tracked in CI: the size of the `astro` package, the install size
 
 Other drawbacks:
 
-- **The internal APIs become public.** `api.astro`, `api.astroPages` and the hooks are how features are built today, and today they can change in any release. Once third-party plugins use them, changing them needs the same care as the integration API.
+- **The internal APIs become public.** `api.astro`, `api.astroRouter` and the hooks are how features are built today, and today they can change in any release. Once third-party plugins use them, changing them needs the same care as the integration API.
 - **More packages.** Thirteen new packages to version, publish and keep compatible with each other. The packages are released from the monorepo together, but a user can still end up with mismatched versions.
 - **A larger install for the whole framework.** The `astro` package gets much smaller, but installing all of the packages together is slightly larger than today's `astro`, because of package boundaries and re-exports.
 - **A large refactor.** Most of `astro` moves. This affects open PRs, `git blame`, and contributors who know where code used to be. The existing `astro/*` paths stay as re-exports, so adapters and integrations aren't affected.
@@ -670,7 +670,7 @@ The original proposal ([#1378](https://github.com/withastro/roadmap/discussions/
 ### One plugin with feature flags
 
 ```js
-astro({ pages: true, i18n: { ... }, actions: false });
+astro({ router: true, i18n: { ... }, actions: false });
 ```
 
 This is a single package and a single entry point, which is simpler to document. But the code for every feature is still installed, so the package doesn't get smaller. It also offers no way to replace a feature with another library, and features keep sharing internals because nothing forces them apart. An all-in-one plugin can still be built on top of the separate plugins later (see Stretch goals).
@@ -705,14 +705,14 @@ The one visible change is the dev hook order: `astro:routes:resolved` now runs b
 
 ### Vite users
 
-The plugin packages are new and start at `0.x`. Their options mirror the Astro config, so they are stable from the start. The plugin APIs (`api.astro`, `api.astroPages` and the hooks) are documented as experimental until they reach `1.0`, which gives room to adjust them once third-party plugins use them.
+The plugin packages are new and start at `0.x`. Their options mirror the Astro config, so they are stable from the start. The plugin APIs (`api.astro`, `api.astroRouter` and the hooks) are documented as experimental until they reach `1.0`, which gives room to adjust them once third-party plugins use them.
 
-The packages can be released one layer at a time. The language plugin and the runtime are useful on their own, for rendering `.astro` components from another server framework, so they can ship before the pages plugin and the feature plugins.
+The packages can be released one layer at a time. The language plugin and the runtime are useful on their own, for rendering `.astro` components from another server framework, so they can ship before the router plugin and the feature plugins.
 
 The docs get a "Using Astro with Vite" section:
 
 - a guide for adding Astro components to an existing Vite app;
-- a guide for a Vite site that uses `pages()`;
+- a guide for a Vite site that uses `router()`;
 - for each feature, a short note on its plugin and options.
 
 The framework remains the documented default for new projects.
@@ -721,7 +721,7 @@ The framework remains the documented default for new projects.
 
 Nothing breaks. Authors who want their package to work in plain Vite projects can ship a Vite plugin alongside the integration, and use the integration to add it. Renderer packages ship their renderer as plain data and rely on the framework's own Vite plugin (see [Renderers](#renderers)). Astro's own framework integrations follow this pattern, which serves as the example to follow.
 
-Adapters keep working through the CLI. New platform support can be written against `pages()`'s server output options and hooks, so that the same code serves both Astro projects and plain Vite projects.
+Adapters keep working through the CLI. New platform support can be written against `router()`'s server output options and hooks, so that the same code serves both Astro projects and plain Vite projects.
 
 ### A future major
 
@@ -729,11 +729,11 @@ The dev and build hook order can be unified further, by creating the route table
 
 # Unresolved Questions
 
-- **Request-level members in the render API.** Standalone, `Astro` only has the members that depend on the component. Server frameworks already know the route params and often have per-request data, so `renderToResponse` could accept `params` and `locals`, and support `Astro.cookies`, `Astro.redirect()` and `Astro.response`, since it returns the `Response`. Which of these to support, and whether their implementations move from `pages()` into the runtime so both use the same code.
-- **Missing standalone features.** Without `pages()`, a few settings have no option yet: the scoped style strategy, inlining stylesheets, `assetsPrefix`, CSP and `<ClientRouter />`. Which of these the language plugin should support on its own.
+- **Request-level members in the render API.** Standalone, `Astro` only has the members that depend on the component. Server frameworks already know the route params and often have per-request data, so `renderToResponse` could accept `params` and `locals`, and support `Astro.cookies`, `Astro.redirect()` and `Astro.response`, since it returns the `Response`. Which of these to support, and whether their implementations move from `router()` into the runtime so both use the same code.
+- **Missing standalone features.** Without `router()`, a few settings have no option yet: the scoped style strategy, inlining stylesheets, `assetsPrefix`, CSP and `<ClientRouter />`. Which of these the language plugin should support on its own.
 - **Renderer fields for other frameworks.** The declarative renderer fields (dependencies to pre-bundle and dedupe, a dev head script) are designed from what React needs. Vue, Svelte, Preact and Solid have to be checked against them, and may need more.
-- **Stability of the plugin APIs.** `api.astro`, `api.astroPages` and the hooks start as experimental. What is required before they are stable, and whether they stabilize together or one at a time.
+- **Stability of the plugin APIs.** `api.astro`, `api.astroRouter` and the hooks start as experimental. What is required before they are stable, and whether they stabilize together or one at a time.
 - **Types of absent plugins.** A plugin's additions to `Astro` are declared through declaration merging, which applies whenever its types are loaded. So `Astro.session` type-checks even when `sessions()` isn't in `plugins`, and reads `undefined` at runtime. Whether that is acceptable, or the types should depend on the configured plugins.
 - **Composing the request pipeline by hand.** A custom `src/fetch.ts` composes the pipeline from `astro/fetch` (`sessions()`, `i18n()`, `pages()`, …). In a Vite project without `astro`, these functions would come from the plugin packages, for example `@astrojs/vite-plugin-sessions/fetch`.
-- **Adapter API.** Adapters keep working through the CLI, and new platform support can use `pages()`'s server output options directly. Whether, and when, the current adapter entrypoint API (`serverEntrypoint`, `exports`, `args`) is deprecated in favor of them.
+- **Adapter API.** Adapters keep working through the CLI, and new platform support can use `router()`'s server output options directly. Whether, and when, the current adapter entrypoint API (`serverEntrypoint`, `exports`, `args`) is deprecated in favor of them.
 - **An all-in-one plugin.** For Vite users who want the whole framework, a single plugin that enables every feature. Its name, and how its options relate to the Astro config.
