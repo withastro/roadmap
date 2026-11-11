@@ -542,6 +542,12 @@ Some consumers need collection metadata before `astro:content` is available. For
   }) => void | Promise<void>;
   ```
 
+  The hook is called during the content sync, after `astro:config:done` and before any loader runs:
+
+  - In `astro build`, on every build, before `astro:build:start`. This is guaranteed: the build's Vite pipeline hasn't loaded any module yet, so integrations can prepare what their Vite plugins serve, such as virtual modules, from the collections. The only modules loaded before are the ones `content.config.ts` imports, which sync loads to read the content config.
+  - In `astro dev`, after `astro:server:setup` and before `astro:server:start`, and again when the content config changes.
+  - In `astro sync` and `astro check`, after `astro:config:done`.
+
 - Markdown plugins (remark, rehype, and Sätteri) receive the metadata of the collection being rendered as `file.data.astro.collection` (`ctx.data.astro.collection` in Sätteri). It is set wherever Astro renders an entry's Markdown:
   - for Markdown rendered by `glob()` during sync;
   - for Markdown rendered with `renderMarkdown()` in custom loaders;
@@ -586,7 +592,7 @@ Integrations that validate or post-process content after a build, such as docume
 - Integration tests with fixtures mixing bundled and stored collections, for static builds, server builds and `astro dev`, including references, images, and MDX entries in stored collections.
 - An integration test checking that stored entries are not inlined in the server bundle.
 - Unit and integration tests for the `collections` option of `astro:build:done`: the storage handles, the protection of the build's snapshot, and `metadata` and `entries()` for bundled and stored collections.
-- Unit and integration tests for `getCollectionsMetadata()`, descriptor merging, descriptors being ignored without the flag, the `astro:collections:resolved` hook, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
+- Unit and integration tests for `getCollectionsMetadata()`, descriptor merging, descriptors being ignored without the flag, the `astro:collections:resolved` hook and its order in a build, and the collection given to Markdown plugins for `glob()`, `renderMarkdown()`, MDX and `deferRender` entries, including files loaded by several collections and recompilation in development.
 - Once the validators RFC lands, tests for JSON Schema generation across validators.
 
 # Drawbacks
