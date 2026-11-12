@@ -8,7 +8,7 @@
 
 # Summary
 
-Decouple Astro's public APIs from Zod. Content collection schemas and action inputs accept any [Standard Schema](https://standardschema.dev) validator. Astro replaces the Zod-only helpers (`image()`, `reference()`, form `input`, and `astro/zod`) with validator-agnostic equivalents.
+Decouple Astro's public APIs from Zod. Content collection schemas and action inputs accept any [Standard Schema](https://standardschema.dev) validator. Astro replaces the Zod-only helpers (`image()`, `reference()`, and form `input`) with validator-agnostic equivalents.
 
 # Example
 
@@ -398,14 +398,7 @@ Two additional details affect `defineAction`:
 
 ## `astro/zod`
 
-Because collections and actions accept any validator, Astro no longer needs to provide Zod to users. Astro deprecates `astro/zod` and the already-deprecated `z` exports from `astro:schema` and `astro:content`. Users install `zod` and import from that package:
-
-```diff
-- import { z } from 'astro/zod';
-+ import { z } from 'zod';
-```
-
-Astro removes all three exports in Astro 8. Zod remains an internal dependency for Astro's config and manifest parsing, which are not exposed to users.
+`astro/zod` stays so that libraries and integrations can continue to use it.
 
 ## New errors
 
@@ -426,7 +419,7 @@ The implementation pull request covers these tests:
 
 # Drawbacks
 
-- **More deprecated APIs.** Astro deprecates `astro/zod`, `astro:schema`, `image()` as a context helper, `reference(collection)`, form `input`, and five content types at the same time. Users who prefer Zod receive multiple deprecation warnings and must manage them until Astro 8.
+- **More deprecated APIs.** Astro deprecates `astro:schema`, `image()` as a context helper, `reference(collection)`, form `input`, and five content types at the same time. Users who prefer Zod receive multiple deprecation warnings and must manage them until Astro 8.
 - **More verbose `image()` and `reference()` calls.** `z.string().transform((src) => image(context, { src }))` is longer than `image()`, and the wrapper adds code that the old API hid. The new form supports composition, so users can validate the result in later schema steps.
 - **Form parsing moves to a community package.** Users who prefer the existing `input` option must parse `FormData` in the handler with a package Astro does not own. This reduces convenience but gives users control over coercion and error reporting.
 - **Transform support varies by validator.** `image()` requires an async transform, which ArkType does not support. Therefore, users cannot call `image()` inside an ArkType schema. Standard Schema does not define transforms, so it cannot address this limitation.
@@ -452,17 +445,16 @@ The implementation pull request covers these tests:
 This ships in an Astro 7.x minor release. Existing behavior remains compatible.
 
 - Existing Zod schemas continue to work, including the `schema: (context) => ...` function form.
-- The deprecated `({ image })`, `reference(collection)`, form `input`, `astro/zod`, `astro:schema`, and content types continue to work. Astro routes them through the new implementations to maintain one behavior path.
+- The deprecated `({ image })`, `reference(collection)`, form `input`, `astro:schema`, and content types continue to work. Astro routes them through the new implementations to maintain one behavior path.
 - Users can adopt the new APIs at any time before Astro 8.
 
 Astro removes the deprecated APIs in **Astro 8**, providing a full major release for migration. Most changes are mechanical and can be automated with a codemod:
 
-- Replace `import { z } from 'astro/zod'` with `import { z } from 'zod'` and add the `zod` dependency.
 - Replace `image()` with `z.string().transform((src) => image(context, { src }))`. Replace `reference('x')` with `z.string().transform((id) => reference('x', id))`. Rename a destructured `({ image })` parameter to `(context)`.
 - Replace `InferEntrySchema<C>` with `CollectionEntry<C>['data']`, and replace `DataEntryMap` with `DataMap`.
 
 Form action `input` requires a manual migration. The handler must parse the form and decide how to handle validation issues. This change has the longest deprecation period and the most detailed documentation.
 
-**Ecosystem impact.** Integrations that provide collections or loaders are most affected. Loader `schema` types widen from Zod to Standard Schema, which remains source-compatible with existing Zod loaders. Integrations that augment `DataEntryMap` should switch to `DataMap`. Integrations that re-export `astro/zod` should depend on `zod` directly. These changes are not required before Astro 8.
+**Ecosystem impact.** Integrations that provide collections or loaders are most affected. Loader `schema` types widen from Zod to Standard Schema, which remains source-compatible with existing Zod loaders. Integrations that augment `DataEntryMap` should switch to `DataMap`. Integrations can continue to use `astro/zod`.
 
 **Documentation.** The content collections and actions guides need updated examples and validator-agnostic introductions. They also need migration sections for each deprecated API and an entry in the upgrade guide.
