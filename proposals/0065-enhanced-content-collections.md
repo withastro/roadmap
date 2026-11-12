@@ -521,7 +521,18 @@ type CollectionMetadata =
   | { name: 'products'; type: 'live'; loader: { name: string }; descriptors: { shop: true } };
 ```
 
-The type of `descriptors` also has an index signature, so code can read a key on every collection, including collections that don't set it: `c.descriptors.starlight` is `'docs'` for a collection known to set it, and `JSONValue | undefined` otherwise. Comparing a nested key, as in `c.descriptors.starlight === 'docs'`, doesn't narrow the union to the matching collections, so code that needs their exact types narrows on `name` or `type` first.
+The type of `descriptors` also has an index signature, so code can read a key on every collection, including collections that don't set it: `c.descriptors.starlight` is `'docs'` for a collection known to set it, and `JSONValue | undefined` otherwise. Comparing a nested key, as in `c.descriptors.starlight === 'docs'`, doesn't narrow the union to the matching collections. For this, `astro:content` exports a `CollectionMetadataWith<D, T>` type: the members of `CollectionMetadata` that have the descriptors `D`, and optionally the type `T`, to use in a type guard:
+
+```ts
+import { type CollectionMetadata, type CollectionMetadataWith, getCollectionsMetadata } from 'astro:content';
+
+type StarlightDocs = CollectionMetadataWith<{ starlight: 'docs' }, 'build-time'>;
+
+const isStarlightDocs = (c: CollectionMetadata): c is StarlightDocs =>
+  c.type === 'build-time' && c.descriptors.starlight === 'docs';
+
+const docs = (await getCollectionsMetadata()).filter(isStarlightDocs);
+```
 
 ### Schemas
 
