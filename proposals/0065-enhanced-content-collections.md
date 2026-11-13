@@ -435,7 +435,8 @@ A new `astro:content` export returns metadata for every collection the project d
 ```ts
 function getCollectionsMetadata(): Promise<CollectionMetadata[]>;
 
-interface CollectionMetadata {
+/** Exported by `astro`. The `CollectionMetadata` type of `astro:content` has one member of this shape per collection. */
+interface AnyCollectionMetadata {
   name: string;
   type: 'build-time' | 'live';
   loader: { name: string };
@@ -460,7 +461,7 @@ for (const { name } of docs) {
 }
 ```
 
-`CollectionMetadata` is plain, serializable data: the same object is passed to integrations and Markdown plugins (see [Integrations and Markdown plugins](#integrations-and-markdown-plugins)). To read a collection's entries, pass its `name` to `getCollection()` or `getLiveCollection()`, depending on `type`.
+`CollectionMetadata` is plain, serializable data: the same object is passed to integrations and Markdown plugins (see [Integrations and Markdown plugins](#integrations-and-markdown-plugins)). They receive it typed as `AnyCollectionMetadata` from `astro`, because a published package can't see the types `astro sync` generates for a project. The two types have different names, so each use has its own: `CollectionMetadata` in a project's code, `AnyCollectionMetadata` in integrations and plugins. To read a collection's entries, pass its `name` to `getCollection()` or `getLiveCollection()`, depending on `type`.
 
 It deliberately doesn't say which storage a collection uses: reading entries works the same either way.
 
@@ -548,7 +549,7 @@ Some consumers need collection metadata before `astro:content` is available. For
 
   ```ts
   'astro:collections:resolved': (options: {
-    collections: CollectionMetadata[];
+    collections: AnyCollectionMetadata[];
     logger: AstroIntegrationLogger;
   }) => void | Promise<void>;
   ```
@@ -577,7 +578,7 @@ Integrations that validate or post-process content after a build, such as docume
   // ...
   collections: {
     /** The metadata of the build-time collections. */
-    metadata?: CollectionMetadata[];
+    metadata?: AnyCollectionMetadata[];
     /** Returns the entries of a build-time collection, as the build read them. */
     entries?(name: string, options?: { content?: boolean }): Promise<DataEntry[]>;
   };
