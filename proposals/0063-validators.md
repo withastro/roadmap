@@ -35,7 +35,7 @@ Images and references become ordinary functions that you call from a schema tran
 
 ```diff
   import { defineCollection, reference } from 'astro:content';
-+ import { image } from 'astro/content/image';
++ import { image } from 'astro/content/fields';
   import { z } from 'zod';
 
   const blog = defineCollection({
@@ -190,12 +190,12 @@ The phrase "any Standard Schema validator" has one constraint. A validator must 
 
 ### `image()`
 
-The `image` helper used to come from the schema context and return a Zod schema. As a result, it worked only with Zod, and users could not validate its result in later schema steps. Astro now exports an ordinary function from `astro/content/image`. It reads the active entry context during validation, so schemas can be defined once and reused across entries.
+The `image` helper used to come from the schema context and return a Zod schema. As a result, it worked only with Zod, and users could not validate its result in later schema steps. Astro now exports an ordinary function from `astro/content/fields`. It reads the active entry context during validation, so schemas can be defined once and reused across entries.
 
-It becomes an ordinary function, exported from a new `astro/content/image` entrypoint:
+It becomes an ordinary function, exported from a new `astro/content/fields` entrypoint:
 
 ```diff
-+ import { image } from 'astro/content/image';
++ import { image } from 'astro/content/fields';
 
 - schema: ({ image }) =>
 + schema: z.object({
@@ -204,7 +204,7 @@ It becomes an ordinary function, exported from a new `astro/content/image` entry
     });
 ```
 
-Astro exports this function from a separate entry point rather than from `astro:content`, following the pattern used by `astro/loaders`. The function accesses the filesystem, while `astro:content` must remain free of Node built-ins so it can run on Cloudflare and Deno. A continuous integration check enforces that boundary. Content configs run in Node.
+Astro exports `image()` and the validator-agnostic `reference()` from `astro/content/fields`, a separate entry point from `astro:content`. This follows the pattern used by `astro/loaders`. The `image()` function accesses the filesystem, while `astro:content` must remain free of Node built-ins so it can run on Cloudflare and Deno. A continuous integration check enforces that boundary. Content configs run in Node.
 
 `image(src)` returns a marker object with `src`, `width`, `height`, and `format` values read from the file. Astro resolves `src` against the active content entry context:
 
@@ -263,7 +263,7 @@ The `({ image })` form still works, accepts the same sources, and is routed thro
 
 ### `reference()`
 
-`reference()` gains a second argument and returns the reference itself, so it can be called from inside a schema transform:
+Astro exports the validator-agnostic `reference()` from `astro/content/fields`. It takes a collection and lookup value, then returns the normalized reference itself, so it can be called from inside a schema transform:
 
 ```diff
   schema: z.object({
@@ -278,6 +278,8 @@ export function reference<C extends CollectionKey | (string & {})>(
   lookup: string | number | { collection: C; id: string } | { collection: C; slug: string },
 ): ReferenceDataEntry<C>;
 ```
+
+The `reference(collection)` schema factory remains available from `astro:content` for compatibility. It is deprecated and removed in Astro 8. The two-argument `reference(collection, lookup)` form lives in `astro/content/fields`, not `astro:content`.
 
 The lookup accepts the values supported by the schema form: an entry identifier as a string or number, or a reference object produced by an earlier parse. Re-parsing already-transformed data is therefore a no-op. Any other value causes `InvalidContentReferenceError` during sync rather than a validation issue on the field.
 
