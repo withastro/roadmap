@@ -81,7 +81,7 @@ Form actions parse their own `FormData` with the validator of their choice:
 
 ```diff
 + import { parseFormData } from '@standard-community/standard-form';
-  import { ActionError, defineAction } from 'astro:actions';
+  import { ActionInputError, defineAction } from 'astro:actions';
   import { z } from 'zod';
 
   const schema = z.object({ comment: z.string() });
@@ -94,7 +94,7 @@ Form actions parse their own `FormData` with the validator of their choice:
 +     handler: async (formData) => {
 +       const result = await parseFormData(schema, formData);
 +       if (result.issues) {
-+         throw new ActionError({ code: 'BAD_REQUEST', message: result.issues[0].message });
++         throw new ActionInputError(result.issues);
 +       }
 +       const { comment } = result.value;
         return comment;
@@ -384,7 +384,7 @@ Converting `FormData` into the value a schema expects requires knowing the schem
 
 Users have also found this option too opinionated. Astro defines the coercion rules, and users cannot change them when a form needs different behavior.
 
-Astro deprecates `input` on form actions rather than generalizing it. Users parse `FormData` in the handler with [`@standard-community/standard-form`](https://github.com/standard-community/standard-form). The package supports the user's validator and leaves coercion and error reporting under their control. It selects a handler by `~standard.vendor` and imports that handler lazily, so projects install only the validators they use. Zod support is built in, and `loadVendor()` registers or overrides other handlers.
+Astro deprecates `input` on form actions rather than generalizing it. Users parse `FormData` in the handler with [`@standard-community/standard-form`](https://github.com/standard-community/standard-form). The package supports the user's validator and leaves coercion and error reporting under their control. It selects a handler by `~standard.vendor` and imports that handler lazily, so projects install only the validators they use. Zod support is built in, and `loadVendor()` registers or overrides other handlers. Handlers can throw the exported `ActionInputError` with the parser's issues, preserving the structured input-error response clients recognize through `isInputError()`.
 
 During the deprecation window, Astro routes its own form handling through the same package so both paths behave consistently. A form action with a non-Zod `input` throws `ActionsInvalidInputSchemaError`. The error names the vendor and directs users to parse input in the handler. Astro removes form action `input` in Astro 8.
 
@@ -396,6 +396,8 @@ Two additional details affect `defineAction`:
 ### `ActionInputError`
 
 `ActionInputError#fields` is built from Standard Schema issues. It supports both path segment shapes allowed by the spec: a key or a `{ key }` object. The `#issues` property remains typed as `z.$ZodIssue[]` because changing it would break users who read `issue.code`. Astro maps non-Zod issues to that shape with `code: 'custom'`, Zod's code for issues that do not come from a built-in check. In Astro 8, the property changes to `StandardSchemaV1.Issue[]`.
+
+`ActionInputError` is exported from `astro:actions` so form handlers can use it when they parse `FormData` themselves. It accepts Standard Schema issues and keeps the resulting error recognizable as an input error on the client.
 
 ## `astro/zod`
 
