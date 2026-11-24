@@ -10,7 +10,7 @@
 
 Add a `server:cache` directive for caching individual component subtrees ("cached islands") on demand. On a cache miss, Astro renders the component normally while recording its HTML chunks and render instructions, then replays that recording into later responses until it expires or is invalidated. Caller slots still render per request.
 
-This is the inverse of server islands (sometimes called "reverse islands"): server islands put dynamic holes inside a static shell, while cached islands put cached fragments inside a dynamic shell, and the two can nest. Cached islands share route caching's `maxAge`, `swr`, and `tags` options, live collection `cacheHint` flow, `WaitUntilHook`, and `Astro.cache.invalidate()`, so one tag purge clears cached routes and cached islands together. Storage sits behind a small key-value interface with bindings for the Web Cache API, unstorage drivers, and memory, with defaults supplied by adapters.
+This is the inverse of server islands: server islands put dynamic holes inside a static shell, while cached islands put cached fragments inside a dynamic shell, and the two can nest. Cached islands share route caching's `maxAge`, `swr`, and `tags` options, live collection `cacheHint` flow, `WaitUntilHook`, and `Astro.cache.invalidate()`, so one tag purge clears cached routes and cached islands together. Storage sits behind small entry-store and tag-epoch interfaces, with an optional shared origin store behind local or regional tiers and built-in drivers for the Web Cache API, Cloudflare Workers KV, Vercel's Runtime Cache, unstorage drivers, and an in-memory LRU, defaulted by adapters.
 
 # Example
 
@@ -49,7 +49,7 @@ const category = await getCategory(Astro.params.slug);
 </Layout>
 ```
 
-A bare `server:cache` uses the configured defaults and derives a key from the component identity, props, passed slot names, and locale. Option names and units match `RouteRule` (plain seconds).
+A bare `server:cache` uses the configured defaults and derives a key from the component identity, props, passed slot names, and locale. Option names and units match `RouteRule`.
 
 Configuration goes under the existing `cache` block alongside the route-cache provider. Adapters provide default stores automatically; projects only configure defaults or override stores when needed:
 
@@ -110,17 +110,17 @@ Prior art includes Rails fragment caching with nested ("Russian doll") invalidat
 
 - Keep component behavior identical apart from staleness (markup, streaming order, hydration, CSP hashes, and `<head>` contributions), reducing cache hits to a store read.
 - Reuse route caching's options (`maxAge`, `swr`, `tags`), `Astro.cache` / `context.cache` API (with one-way `set(false)` inside islands), live collection `cacheHint` support via `cache.set(entry)`, and shared `invalidate()` over one tag namespace.
-- Support pluggable storage behind small entry-store (`IslandStore`) and epoch-store (`TagEpochStore`) interfaces, with built-in bindings for the Web Cache API, Workers KV, Vercel's Runtime Cache, unstorage drivers, and an in-memory LRU, plus an optional global origin store behind regional ones, using `{ entrypoint, config }` descriptors like `sessionDrivers`.
+- Support pluggable storage behind small entry-store (`IslandStore`) and epoch-store (`TagEpochStore`) interfaces, with built-in bindings for the Web Cache API, Cloudflare Workers KV, Vercel's Runtime Cache, a wrapper for unstorage drivers, and an in-memory LRU, plus an optional global origin store behind regional ones, using `{ entrypoint, config }` descriptors like `sessionDrivers`.
 - Provide bounded freshness (`maxAge` + `swr`), tag invalidation, and automatic invalidation on deploy.
-- Support all existing island types inside cached islands via a renderer contract, support nested cached islands with propagation of tags, deadlines, oldest render timestamps, and opt-outs, and render caller slots per request.
+- Support all existing island types inside cached islands, support nested cached islands with propagation of tags, deadlines, oldest render timestamps, and opt-outs, and render caller slots per request.
 - Persist nothing between requests in development (matching route caching), while still running record-and-replay on every request alongside compile/runtime guards, a dev toolbar app, and an opt-in local filesystem store.
 
 # Non-Goals
 
 - Changing route caching behavior. This proposal adds the fragment layer beneath it and defines how the two compose.
-- Build-time cache seeding (such as `getStaticIslandPaths`).
+- Build-time cache seeding.
 - Portable cross-instance stampede locks in core (an optional store hook is in Unresolved Questions).
-- General data or function caching (`cachedFn`), which could share the storage layer in a separate proposal.
+- General data or function caching, which could share the storage layer in a separate proposal.
 - Caching inside prerendered pages (`server:cache` is a no-op with a dev warning).
 - Keying on arbitrary request state. Cached islands only receive varying inputs through keyed props or per-request slots.
 
@@ -245,7 +245,7 @@ Replaying the same ID-bearing entry twice on one page, or replaying a flattened 
 
 ## Request lifecycle and concurrency
 
-For each cached island, Astro derives the key, fetches the entry, and checks its `buildId` and tag epochs. If reading either the entry store or tag store fails, Astro falls back to a fresh render. A tag-store read error is never treated as a missing epoch, so unvalidated entries are never served.
+For each cached island, Astro derives the key, fetches the entry, and checks its `buildId` and tag epochs. If reading either the entry store or tag store fails, Astro falls back to a fresh render. A tag-store read error is not treated as a missing epoch, so unvalidated entries are never served.
 
 Otherwise:
 
@@ -283,7 +283,7 @@ sha256(encodeTuple([
 - `componentPath` and `componentExport` identify the component the same way server islands do, falling back to `moduleId` for dynamic Astro component references.
 - `normalizedHydration(hydration)` encodes the framework hydration directive and argument (such as `['load', true]`, `['media', '(min-width: 768px)']`, or `null`), because Astro extracts `client:*` directives separately from component `props` in `extractDirectives()`. Without this, `<Card server:cache />`, `<Card client:load server:cache />`, and `<Card client:media="..." server:cache />` would collide on the same entry.
 - `userProps` excludes internal props added by `server:*` and `client:*` directives.
-- Props are hashed, never transported, so any value with a deterministic canonical encoding works: primitives (including `undefined` distinguished from a missing key, `NaN`, `Infinity`, and `BigInt`), plain arrays and objects, `Date`, `URL`, `RegExp`, and `Map` / `Set` (in insertion order). Values are encoded recursively with type tags rather than `JSON.stringify`, so content entries with `Date` fields can be passed whole. Functions, symbols, and class instances throw `CachedIslandPropsError` in dev; in production they log a once-per-boot warning and bypass storage. Canonicalizing object keys assumes components do not rely on prop key insertion order.
+- Props are hashed, not transported, so any value with a deterministic canonical encoding works: primitives (including `undefined` distinguished from a missing key, `NaN`, `Infinity`, and `BigInt`), plain arrays and objects, `Date`, `URL`, `RegExp`, and `Map` / `Set` (in insertion order). Values are encoded recursively with type tags rather than `JSON.stringify`, so content entries with `Date` fields can be passed whole. Functions, symbols, and class instances throw `CachedIslandPropsError` in dev; in production they log a once-per-boot warning and bypass storage. Canonicalizing object keys assumes components do not rely on prop key insertion order.
 - Key space grows with the prop domain. Passing unbounded user input (search queries, page numbers, free-form filters) creates one entry per distinct value; the memory store is bounded by `max`, while KV-class stores are not and charge per write. Normalize such props first or pass `server:cache={false}`.
 - `Astro.currentLocale` is included unconditionally in v1.
 - `slotNames` is the sorted list of passed slot names (not slot content), since `Astro.slots.has()` and slot fallbacks depend on slot presence.
@@ -347,9 +347,9 @@ The two interfaces have different durability and ordering rules: early eviction 
 
 Bindings use `{ entrypoint, config }` descriptors like `sessionDrivers`:
 
-- `cacheStores.web(name)` uses the Web Cache API (`caches`) on Cloudflare Workers and Netlify Functions / Edge Functions. It wraps bytes in a `Response` under a synthetic URL derived from the key with `Cache-Control: max-age=<ttl>`, using only `match`, `put`, and `delete` (Netlify does not implement `keys()`).
+- `cacheStores.web(name)` uses the Web Cache API (`caches`) on Cloudflare Workers, Netlify Functions / Edge Functions or Node.js (with Undici polyfill). It wraps bytes in a `Response` under a synthetic URL derived from the key with `Cache-Control: max-age=<ttl>`, using only `match`, `put`, and `delete` (Netlify does not implement `keys()`).
 - `cacheStores.unstorage(driver)` wraps any unstorage driver (`sessionDrivers.*`: Redis, KV, filesystem, etc.) via raw get, set-with-TTL, and remove.
-- `cacheStores.memory({ max })` is an in-process LRU with expiry, sharing its implementation with `memoryCache()`.
+- `cacheStores.memory({ max })` is an in-process LRU with expiry, sharing its implementation with route-level `memoryCache()`.
 - `cacheStores.cloudflareKV({ binding, cacheTtl })` accesses a Cloudflare Workers KV binding directly (see below).
 - `cacheStores.vercel()` uses Vercel's Runtime Cache (`getCache()` from `@vercel/functions`) and serves as both entry store and tag store (see below).
 
@@ -366,7 +366,7 @@ Building on-demand routes that use `server:cache` without a resolved store (on a
 
 ### Origin store
 
-An entry store that is local to a region or to a process renders every entry once per region or process. Cloudflare has hundreds of colos, so a long-tail entry may never be warm where the next request lands, and every deploy starts cold everywhere. A Node server's in-memory store is private to each instance and empty after every restart. `cache.islands.originStore` is an optional second entry store, shared by every region and instance, that sits behind `store`:
+An entry store that is local to a region or to a process renders every entry once per region or process. Vercel can deploy to multiple regions, and Cloudflare has hundreds of colos, so a long-tail entry may never be warm where the next request lands, and every deploy starts cold everywhere. A Node server's in-memory store is private to each instance and empty after every restart. `cache.islands.originStore` is an optional second entry store, shared by every region and instance, that sits behind `store`:
 
 - **Local hit:** unchanged. The origin store is not read.
 - **Local miss:** Astro reads the origin store before rendering (coalesced across concurrent local misses for the same key on one instance). A valid entry there is replayed and copied into the local store in the background. Only if both miss—or if the origin read fails—does the island render, and the result is written to both.
@@ -389,7 +389,7 @@ cache: {
 },
 ```
 
-Elsewhere it is off by default and rarely worth enabling. On Netlify and Vercel pages render in functions, not at the edge, and functions run in one region by default (up to a handful on Vercel's paid plans), so the regional store already sees nearly every request and an origin store would add a read to each miss for little gain.
+Elsewhere it is off by default and rarely worth enabling. On Netlify and Vercel pages render in functions at the origin, not at the edge, and functions run in one region by default (up to a handful on Vercel's paid plans), so the regional store already sees nearly every request and an origin store would add a read to each miss for little gain.
 
 ### Workers KV
 
@@ -568,8 +568,6 @@ Modeled on the existing server-islands suites:
 # Adoption strategy
 
 Ships behind `experimental.cachedIslands`, gating the `cache.islands` config key and the `server:cache` directive. Route caching is already stable; the flag only extends its config block and invalidation path. The `replaceServerIsland` node-capture fix ships ungated because it preserves existing markup, execution timing, and CSP behavior.
-
-The migration guide will target hand-rolled KV + `set:html` caching: the wrapper and `set:html` become `server:cache`, custom keys become `key`, TTLs become `maxAge`, and custom tag indexes, webhooks, and deploy-flush scripts can be deleted. Sites already using `routeRules` get fragment caching without changing their invalidation code.
 
 Docs can present Astro's caching options along a simple spectrum: prerendering (cached per deploy), route caching (bounded freshness for shared responses), cached islands (bounded freshness for shared fragments inside dynamic shells), server islands (uncached and deferred), and client islands (client-managed freshness).
 
