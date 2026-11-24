@@ -8,19 +8,13 @@
 
 # Summary
 
-A new island primitive: **cached islands**, using a `server:cache` directive. A cached island is rendered on demand once, stored as a stream of render chunks and instructions rather than an HTML string, and replayed into later responses until it expires or is invalidated. The page around it is still rendered on demand; the expensive shared subtrees inside it are not.
+Add a `server:cache` directive for caching individual component subtrees ("cached islands") on demand. On a cache miss, Astro renders the component normally while recording its HTML chunks and render instructions, then replays that recording into later responses until it expires or is invalidated. Caller slots still render per request.
 
-This is the inverse of server islands. Server islands are dynamic holes in a static shell. Cached islands are stored fragments in a dynamic shell, and their slots are rendered per request, so the two patterns nest.
-
-Entries use the same `maxAge`, `swr` and `tags` options as route caching, and invalidation goes through the existing `Astro.cache.invalidate()`, so one tag purge clears cached routes and cached islands together. Storage is a small key-value store interface, with bindings for the web Cache API, unstorage drivers and memory, and defaults supplied by adapters.
-
-Route caching (`cache` + `routeRules`) caches whole responses keyed by URL. Cached islands apply the same model below the response boundary, on pages whose shells are personalized and so cannot be route-cached. The two layers share tags, invalidation, `CacheHint` flow and the `WaitUntilHook`, and can be used in the same request.
-
-The pattern is sometimes called "reverse islands". Several of the largest Astro deployments implement it by hand with KV stores and `set:html`. They all build the same plumbing and hit the same bugs, several of which cannot be fixed outside the framework.
+This is the inverse of server islands (sometimes called "reverse islands"): server islands put dynamic holes inside a static shell, while cached islands put cached fragments inside a dynamic shell, and the two can nest. Cached islands share route caching's `maxAge`, `swr`, and `tags` options, live collection `cacheHint` flow, `WaitUntilHook`, and `Astro.cache.invalidate()`, so one tag purge clears cached routes and cached islands together. Storage sits behind a small key-value interface with bindings for the Web Cache API, unstorage drivers, and memory, with defaults supplied by adapters.
 
 # Example
 
-A commerce category page. The shell depends on the request (session, currency, consent, experiment bucket), so `routeRules` cannot cache it. The product grid is expensive, identical for every visitor in a locale and only changes when the catalog does.
+On a commerce category page, the shell depends on per-request state (session, currency, consent, experiment bucket), so `routeRules` cannot cache the full response. The product grid is expensive to render, shared across visitors in a locale and currency, and only changes when the catalog updates.
 
 ```astro
 ---
@@ -44,20 +38,20 @@ const category = await getCategory(Astro.params.slug);
       tags: [`category:${category.id}`],
     }}
   >
-    <!-- Slots are rendered per request: a dynamic hole inside the cached fragment -->
+    <!-- Slots render per request inside the cached fragment -->
     <CartBadge slot="corner" user={user} />
   </ProductGrid>
 
-  <!-- Server islands work alongside, unchanged -->
+  <!-- Server islands work alongside cached islands -->
   <Recommendations user={user} server:defer>
     <div slot="fallback">Loading…</div>
   </Recommendations>
 </Layout>
 ```
 
-`server:cache` with no options uses the configured defaults and an automatic key derived from the component identity, props and locale. Option names and units match route rules (`RouteRule`): seconds, not duration strings.
+A bare `server:cache` uses the configured defaults and derives a key from the component identity, props, passed slot names, and locale. Option names and units match `RouteRule` (plain seconds).
 
-Configuration goes inside the existing `cache` block, next to the route-level provider:
+Configuration goes under the existing `cache` block alongside the route-cache provider:
 
 ```js
 // astro.config.mjs
@@ -65,24 +59,26 @@ import { defineConfig, memoryCache, cacheStores, sessionDrivers } from 'astro/co
 
 export default defineConfig({
   cache: {
-    provider: memoryCache(),           // route caching, unchanged
+    provider: memoryCache(), // route caching, unchanged
     islands: {
-      // Native CacheStorage where the platform has it; adapters default this
+      // Native CacheStorage where available; adapters provide defaults
       store: cacheStores.web('astro:islands'),
-      // Global store for tag invalidation state; adapters default this too
-      tagStore: cacheStores.unstorage(sessionDrivers.cloudflareKVBinding({ binding: 'ISLAND_TAGS' })),
+      // Global store for tag invalidation state; adapters provide defaults
+      tagStore: cacheStores.unstorage(sessionDrivers.cloudflareKVBinding({ binding: 'ISLAND_CACHE' })),
+      // Optional global second tier behind a regional store; adapters provide defaults
+      originStore: cacheStores.unstorage(sessionDrivers.cloudflareKVBinding({ binding: 'ISLAND_CACHE' })),
       defaults: { maxAge: 300, swr: 3600 },
       // Ceiling on maxAge + swr for any entry; defaults to seven days
       maxLifetime: 86_400,
     },
   },
   routeRules: {
-    '/api/[...path]': { swr: 600 },    // the two layers coexist
+    '/api/[...path]': { swr: 600 },
   },
 });
 ```
 
-Invalidation uses the existing API: `Astro.cache` in routes, `context.cache` in endpoints, actions and middleware. One call clears both layers:
+Invalidation uses the existing `Astro.cache.invalidate()` / `context.cache.invalidate()` API (available in routes, endpoints, actions, and middleware), clearing both routes and islands:
 
 ```ts
 // src/pages/api/purge.ts
@@ -102,161 +98,177 @@ export const POST: APIRoute = async ({ request, cache }) => {
 
 # Background & Motivation
 
-Astro has several ways to avoid rendering work: prerendering and route caching store the whole page, and server islands put dynamic fragments inside a static shell. What is missing is the reverse: stored fragments inside a dynamic shell.
+Astro can cache whole pages (prerendering and route caching) and defer dynamic fragments inside a static shell (server islands), but it cannot cache shared fragments inside a dynamic shell.
 
-Prerendering is all-or-nothing per route. As soon as a page needs any per-request logic (a session, a currency, a consent state, an experiment bucket) the whole route is rendered on demand, and every expensive subtree in it is rendered for every visitor. Server islands address the opposite problem and don't help here.
+Prerendering is per route, so any per-request logic forces the whole page onto on-demand rendering. [Route caching](https://docs.astro.build/en/guides/caching/) caches whole responses by URL, either through CDN headers (`CDN-Cache-Control`, `Cache-Tag`, `Last-Modified`, `ETag`) or `onRequest` interception (as `memoryCache()` does), configured with `routeRules` and `Astro.cache.set()`. That works for shareable responses, not for pages with personalized shells (`memoryCache()` already skips responses that set Astro cookies or vary on `Cookie`). Setting `Cache-Control` on `/_server-islands/` responses does not solve this either, because server islands still load via a deferred client fetch after the dynamic shell.
 
-Route caching ([documentation](https://docs.astro.build/en/guides/caching/)) addresses this at the response level. Providers either set CDN headers (`CDN-Cache-Control`, `Cache-Tag`, `Last-Modified`, `ETag`) or intercept requests via `onRequest`, as the built-in `memoryCache()` provider does; `routeRules` sets policy in config and `Astro.cache.set()` adjusts it per request. This works for responses that can be shared as a unit. It does not work for the pages this proposal targets, because a response cache is keyed by URL: a page whose shell varies per user cannot be response-cached, or only as per-user variants, which defeats the purpose. The built-in `memoryCache()` provider already declines to store responses that set Astro cookies or vary on `Cookie`. Those are the pages whose expensive subtrees are shared.
+Teams running large Astro sites work around this by rendering components manually, saving HTML strings to KV or Redis under custom keys, replaying them with `set:html`, and invalidating them with TTLs or webhooks. That breaks in five ways because Astro's render output is not just HTML:
 
-Caching server islands doesn't help either. Nothing stops you setting `Cache-Control` on `/_server-islands/` responses today, but the island is still a deferred client fetch, so the cached fragment arrives after the dynamic shell rather than with it.
+1. **Render instructions are lost.** Astro interleaves HTML with render instructions that the response deduplicates while streaming (hydration bootstrap, directive scripts, per-framework renderer scripts, the server-island runtime, and `<script>` tags). Replaying a cached string either duplicates those scripts or omits them depending on what else is on the page, and userland cannot access the response's deduplication state.
+2. **Deploys break cached HTML.** Cached markup contains hashed asset URLs inside `<astro-island>` elements, and nested server islands embed props encrypted with a per-build key (rotated every build unless `ASTRO_KEY` is set). Entries that survive a deploy serve 404ing scripts and undecryptable islands.
+3. **Slots are frozen.** String caching cannot render child content per request, so a component with personalized children either cannot be cached or leaks the first visitor's data.
+4. **Head content and CSP break.** Rendered content entries add styles to `<head>`, server island placeholders add preload links for their fetches, and with `security.csp` enabled, server island placeholders and styled SVG components add script and style hashes. Replaying a string skips all of these, causing missing styles and CSP violations.
+5. **Duplicated invalidation plumbing.** Every team builds its own tag indexes, webhook handlers, and TTL jitter, with no dev-mode story and nothing catching accidental request-state reads inside cached components.
 
-Teams running large Astro sites work around this by caching rendered fragments themselves: render a component, store the HTML in KV or Redis under a hand-built key, replay it with `set:html`, invalidate by TTL or webhook. This breaks in several ways, because a rendered Astro fragment is not representable as a string:
-
-1. **Render instructions are lost.** Astro's render output interleaves HTML with render instructions that the response deduplicates as it streams: the hydration bootstrap and each directive's script are emitted once per page, renderer scripts once per framework, the server-island runtime once, and each `<script>` once. Replay a cached string and, depending on what else is on the page, those scripts are either emitted twice or not at all. The deduplication state belongs to the response being rendered, so this cannot be fixed in userland.
-2. **Deploys invalidate entries without anyone noticing.** Cached HTML contains hashed asset URLs inside `<astro-island>` markup, and any nested server island contains props encrypted with the per-build key (rotated every build unless `ASTRO_KEY` is set). An entry that outlives its deploy serves scripts that 404 and islands that cannot be decrypted.
-3. **Slots are frozen.** String caching cannot keep child content per-request, so anything with a personalized child either cannot be cached or caches the first visitor's data for everyone.
-4. **Head content and CSP break.** Some components add to `<head>` while they render: rendered content entries add their styles, server island placeholders add a preload link for their fetch, and with `security.csp` enabled, server island placeholders and styled SVG components add script and style hashes to the page's policy. A replayed string adds nothing, so its styles are missing and its inline scripts violate the policy Astro generated for the page.
-5. **Everyone writes the same invalidation code** (tag indexes, webhook endpoints, TTL jitter), with no dev-mode story and nothing to stop a fragment reading request state.
-
-Prior art: Rails has had fragment caching with nested ("russian doll") invalidation since Rails 4. ESI does fragment caching at the edge but has no development story. Nitro's `cachedEventHandler` and Next's `"use cache"` cache at the function and route-segment level, which is where Astro's route caching sits. None of these are component-tree-native or island-aware. Partial Prerendering is a static shell with dynamic holes, which Astro already has as server islands; this proposal is the inverse, and the two can be used together.
+Prior art includes Rails fragment caching with nested ("Russian doll") invalidation, ESI (edge fragment caching with no dev story), and Nitro's `cachedEventHandler` / Next.js `"use cache"` (function and route-segment caching, closer to Astro's route caching and unaware of islands or slots). Partial Prerendering is a static shell with dynamic holes, which Astro already has as server islands; cached islands cover the inverse and compose with it.
 
 # Goals
 
-- **Semantics-preserving.** `server:cache` changes cost, not behavior. Markup, streaming order, hydration, CSP hashes and head handling are identical apart from staleness. On a hit the island costs a store read instead of a render.
-- **Shared API with route caching.** The same `maxAge`, `swr` and `tags` options, the same `Astro.cache` / `context.cache` object (with the same policy merge semantics; `set(false)` is the one difference, described under Scoped `Astro.cache`), and the same `invalidate()` call. One tag namespace; one purge clears routes and islands.
-- Pluggable storage behind a small store interface (`get` / `set` / `delete` on opaque bytes, plus an optional batched read), with bindings for native `caches` where platforms have it, any unstorage driver, and an in-memory LRU, configured with the same `{ entrypoint, config }` descriptors as `sessionDrivers`.
-- Bounded freshness (`maxAge` + `swr`), tag purge and automatic invalidation on deploy.
-- All existing island types work inside a cached island via an explicit renderer contract. Cached islands nest, and inner tags, freshness deadlines, provenance and opt-outs propagate to outer entries.
-- Slots are rendered per request.
-- Live collection `cacheHint`s flow into island entries through the same `cache.set(entry)` call route caching accepts.
-- Development matches route caching in keeping nothing between requests, but still records and replays each island so the replay path is exercised. Plus build-time guards, a dev toolbar app and an opt-in filesystem store for testing storage locally.
+- Keep component behavior identical apart from staleness (markup, streaming order, hydration, CSP hashes, and `<head>` contributions), reducing cache hits to a store read.
+- Reuse route caching's options (`maxAge`, `swr`, `tags`), `Astro.cache` / `context.cache` API (with one-way `set(false)` inside islands), live collection `cacheHint` support via `cache.set(entry)`, and shared `invalidate()` over one tag namespace.
+- Support pluggable storage behind a small byte-oriented interface (`get`, `set`, `delete`, optional `getMany`), with built-in bindings for the Web Cache API, Vercel's Runtime Cache, unstorage drivers, and an in-memory LRU, and an optional global origin store behind regional ones, using `{ entrypoint, config }` descriptors like `sessionDrivers`.
+- Provide bounded freshness (`maxAge` + `swr`), tag invalidation, and automatic invalidation on deploy.
+- Support all existing island types inside cached islands via a renderer contract, support nested cached islands with propagation of tags, deadlines, oldest render timestamps, and opt-outs, and render caller slots per request.
+- Persist nothing between requests in development (matching route caching), while still running record-and-replay on every request alongside compile/runtime guards, a dev toolbar app, and an opt-in local filesystem store.
 
 # Non-Goals
 
-- **Changing route caching.** This adds the fragment level beneath it and defines how the two compose. No route-level behavior changes.
-- **Build-time seeding.** A `getStaticIslandPaths`-style API for pre-warming known prop combinations could follow later.
-- **Cross-instance stampede locks.** Core cannot guarantee them portably; an optional hook on the store interface is proposed instead (see Unresolved Questions).
-- **Data/function caching** (a `cachedFn`). Could share the storage layer; separate proposal.
-- **Caching inside prerendered pages.** No-op with a dev warning; the page is already cached at deploy scope.
-- **Request-derived variance.** Everything an island depends on arrives through props (keyed) or slots (per-request). This is a deliberate constraint rather than a limitation to remove later.
+- Changing route caching behavior. This proposal adds the fragment layer beneath it and defines how the two compose.
+- Build-time cache seeding (such as `getStaticIslandPaths`).
+- Portable cross-instance stampede locks in core (an optional store hook is in Unresolved Questions).
+- General data or function caching (`cachedFn`), which could share the storage layer in a separate proposal.
+- Caching inside prerendered pages (`server:cache` is a no-op with a dev warning).
+- Keying on arbitrary request state. Cached islands only receive varying inputs through keyed props or per-request slots.
 
 # Detailed Design
 
-## The directive
+## The `server:cache` directive
 
-`server:cache` goes on a component in a template, as `server:defer` does. It is a bare attribute, a boolean, or an options object:
+`server:cache` goes on a component in an Astro template, like `server:defer`. It accepts a bare attribute, a boolean, or an options object:
 
 ```ts
 type CachedIslandOptions = boolean | {
-  key?: string;      // extends the derived key; never replaces it
-  maxAge?: number;   // seconds, as in routeRules
-  swr?: number;      // stale-while-revalidate window after maxAge, in seconds
+  key?: string;    // extends the derived key; never replaces it
+  maxAge?: number; // seconds, matching routeRules
+  swr?: number;    // stale-while-revalidate window after maxAge, in seconds
   tags?: string[];
 };
 ```
 
-- `server:cache={false}` renders the component normally, so caching can be switched per use.
-- Options not given fall back to `cache.islands.defaults`, which itself defaults to `{ maxAge: 300, swr: 0 }`.
-- `server:cache` combined with `server:defer` or `client:only` is a compile error, as is any unknown `server:*` directive. The unknown-directive error is new and applies only with `experimental.cachedIslands` enabled; without the flag, other `server:*` attributes are handled as they are today.
-- `server:cache` on a component containing `<head>` (such as a document layout) is rejected: `<head>` belongs to the response shell, not a cached fragment.
-- Dynamic component references (such as a local variable or `Astro.self`) have no static import-map entry; Astro components can still be keyed by their runtime `moduleId`, while unidentifiable dynamic components fail in dev and bypass caching in production.
-- Without `experimental.cachedIslands`, the directive is a build error naming the flag.
+- `server:cache={false}` renders the component normally, so caching can be toggled per call site.
+- Omitted options fall back to `cache.islands.defaults` (default: `{ maxAge: 300, swr: 0 }`).
+- Using `server:cache` without `experimental.cachedIslands` enabled is a build error naming the flag.
+- Combining `server:cache` with `server:defer` or `client:only` is a compile error. Unknown `server:*` directives also become compile errors when `experimental.cachedIslands` is enabled (behavior without the flag stays unchanged).
+- Putting `server:cache` on a component containing `<head>` (such as a document layout) is rejected.
+- Dynamic component references (local variables or `Astro.self`) have no static import-map entry. Astro components still fall back to their runtime `moduleId`; unidentifiable dynamic components fail in dev and bypass caching in production.
 
 ## Scoped `Astro.cache`
 
-Route caching has a declarative surface (`routeRules`) and an imperative one (`Astro.cache.set()`). Cached islands have both. The directive options are the declarative path. For the imperative path, inside a `server:cache` subtree `Astro.cache` (and any helper passed `Astro` as a context) is scoped to the island entry instead of the response. It has the same `CacheLike` type:
+Inside a `server:cache` subtree, `Astro.cache` (including when `Astro` is passed to helpers) is scoped to the island entry and keeps the `CacheLike` interface:
 
-- `set({ maxAge, swr, tags })` configures the island entry with the merge semantics route-level `set()` has: scalars last-write-wins, `lastModified` newest-wins, tags accumulate
-- `set(liveDataEntry)` applies a live collection entry's `cacheHint`, as at route level
-- `set(false)` sets a one-way `shareable = false` flag on the current recording (including its waiters and any flattened ancestor), separate from policy merging: the island renders fresh and nothing is stored, and a later sibling calling `set()` (for example with a live entry's `cacheHint`) does not re-enable storage. Note that `set(false)` inside a component only runs on a miss or revalidation; a caller that already knows an invocation must bypass an existing hit should pass `server:cache={false}` at the call site
-- `invalidate()` is the shared implementation
-- `tags` and `options` read the island entry's accumulated state, not the response's. `enabled` is `true` when an island store is configured and `false` in development, as at route level
+- `set({ maxAge, swr, tags })` merges into the island policy using route caching's merge rules: scalars are last-write-wins, `lastModified` is newest-wins, and `tags` accumulate.
+- `set(liveDataEntry)` applies a live collection entry's `cacheHint`.
+- `set(false)` sets a one-way `shareable = false` flag on the current recording (including waiters and any enclosing cached island), separate from policy merging. The island renders fresh without storing, and a later `set()` call from another component (such as a sibling passing a live entry's `cacheHint`) cannot re-enable storage. Because `set(false)` only runs on a miss or revalidation, callers that already know they need to bypass an existing cached entry should pass `server:cache={false}`.
+- `invalidate()` calls the shared invalidation implementation.
+- `tags` and `options` return the island entry's accumulated state. `enabled` is `true` when an island store is configured and `false` in development, matching route caching.
 
-The one-way `set(false)` is a deliberate difference from the route level, where a later `set()` re-enables caching after `set(false)`. At route level one author controls the order of calls on a page. In an island the opt-out and a later `set()` usually come from different components, and an opt-out that a sibling can undo by accident is a leak. Code that relies on re-enabling after `set(false)` therefore behaves differently inside an island; whether the route level should become one-way too is an unresolved question.
+One-way `set(false)` differs from route caching, where a later `set()` currently re-enables caching. At the route level one page author usually controls the call order; inside an island, an opt-out and a later `set()` often live in different components, so allowing a sibling to undo an opt-out would leak uncacheable output. Whether route-level `set(false)` should also become one-way is an open question.
 
-Apart from that, a component that calls `cache.set()` doesn't need to know whether it is the whole response or one island of it. Nested tag propagation uses an internal dependency collector rather than calling the public `set()`, so propagating tags never undoes `set(false)` and never activates route caching on its own.
+Nested tag propagation goes through an internal tag collector instead of public `set()`, so propagating tags never undoes `set(false)` and never turns on route caching by itself.
 
-## Entries: recorded output, not strings
+## Recording and replaying entries
 
-An entry is the island's recorded render output. On a miss the subtree renders once: its output streams to the response as usual and is recorded at the same time, as a sequence of three kinds of item:
+On a cache miss, the subtree renders once, streaming to the response while recording three kinds of items:
 
-- **HTML.**
-- **Render instructions**, normalized into serializable data and recreated on replay (for example, `RendererHydrationScriptInstruction` carries a `render` closure, so recording captures its rendered output or looks up the renderer by `rendererName` on replay; `template-enter` / `template-exit` instructions are recorded in order so `templateDepth` stays balanced). A replayed island takes part in the response's deduplication exactly as a fresh render does: the hydration bootstrap is emitted only if no earlier island emitted it, renderer scripts once per framework, and so on. This addresses problem 1.
-- **Slot holes.** Where the subtree emits a slot owned by the current cached-island boundary, the entry records a hole referencing that boundary's slot, and replay renders the slot passed on the current request. Server islands do the opposite: the shell renders slots to strings and sends them to the island endpoint. Here the fragment is stored and the slots are live. This addresses problem 3.
+1. HTML chunks.
+2. Render instructions, serialized as data and recreated on replay. For example, `RendererHydrationScriptInstruction` carries a `render` closure, so recording captures its rendered output or looks up the renderer by `rendererName` on replay; `template-enter` and `template-exit` are recorded in order so `templateDepth` stays balanced. Replayed instructions go through the active response's deduplication state just like a fresh render, so hydration bootstraps, directive scripts, renderer scripts, the server-island runtime, and `<script>` tags are emitted once per page.
+3. Slot holes. Where the subtree emits a caller-provided slot via `<slot />`, the recording stores a reference to that slot name and replay renders the current request's slot in place.
 
-Two rules decide what counts as a hole and where it renders:
+### Slot ownership and evaluation scope
 
-- **Ownership.** Only slots passed by the caller of the cached island are holes. Slots constructed inside the cached subtree (such as a loop-supplied `default` slot passed to an inner component) are materialized into the recording, and forwarded outer holes retain their outer boundary identity.
-- **Evaluation scope.** Caller slots always evaluate against their **immediate owner's** `SSRResult`, restoring that owner's guard, `Astro.cache` collector and head scope: unguarded page scope for a top-level island, or the enclosing island's scope when a cached `Outer` supplies a slot to a cached `Inner`. This holds on both hits and misses. On a hit they are still evaluated eagerly, so slot-level head propagators register before `<head>`.
+Only slots passed by the caller of the cached island become holes. Slots constructed inside the cached subtree (such as a loop passing a `default` slot to a child component) are recorded inline. Forwarded outer slots retain their outer boundary identity.
 
-A hole exists only where the subtree emits a caller slot into its output with `<slot />`. Four cases never do that, so the slot's content would be frozen into the entry:
+Caller slots always evaluate against their immediate owner's `SSRResult`, restoring that owner's request-state guard, `Astro.cache` collector, and head scope (the unguarded page scope for a top-level island, or `Outer`'s scope when a cached `Outer` passes a slot to a cached `Inner`). This applies on both hits and misses. On a hit, caller slots still evaluate eagerly so slot-level head propagators register before `<head>` flushes.
 
-- `Astro.slots.render()` returns a string, which the component can inspect or transform.
-- A slot forwarded to a framework component is rendered to a string and handed to the framework's renderer.
-- A non-fallback slot forwarded to a `server:defer` server island is rendered to a string via `renderSlotToString()` and encrypted into its payload (the `fallback` slot is rendered into the stream and can remain a live hole).
-- `server:cache` on a framework component: every slot it is passed is a string by the time it renders. A framework component passed no slots can be cached normally.
+### Slots that cannot be holes
 
-In each case the render is marked non-shareable and not stored. Dev shows a `CachedIslandSlotError` naming the slot; production logs a once-per-boot warning and renders the island on every request.
+Four cases turn a slot into a string instead of streaming it through `<slot />`, which would freeze per-request content into the entry:
 
-Which slots were passed also changes the output without going through a hole: `Astro.slots.has()` branches on it, and a slot that was not passed renders its fallback content. The set of passed slot names is therefore part of the key (below). Slot content never is.
+- `Astro.slots.render()` returns a string that the component can inspect or transform.
+- Forwarding a caller slot to a framework component renders it to a string for the framework renderer.
+- Forwarding a non-fallback caller slot to a `server:defer` server island renders it with `renderSlotToString()` and encrypts it into the island's payload (the `fallback` slot streams normally and can remain a live hole).
+- Putting `server:cache` directly on a framework component that receives slots, since its slots are already strings when it renders (a framework component with no slots caches normally).
 
-Alongside the output, an entry records the build it came from, its effective `createdAt` (the oldest render start among itself and any nested recordings baked into it), its absolute fresh and serve-until deadlines, and its accumulated tags, plus head content and CSP hashes for head-resolved islands (below).
+In each case the render is marked non-shareable and skipped from storage. Dev raises `CachedIslandSlotError` naming the slot; production logs a once-per-boot warning and renders the island live on every request.
 
-Stores see an entry as bytes under a string key. The value is a versioned serialization of the metadata and the recorded output, opaque to the store. Unknown format versions or corrupt payloads are treated as a miss. Recording enforces a configurable byte cap (defaulting to a safe bound below platform limits): if an island exceeds it mid-render, Astro stops recording while continuing to stream the response and skips storing the entry. Entries are written with a retention time matching their serve-until window, so the store keeps them through `swr` and may drop them afterwards. Retention is only housekeeping: freshness is always computed by Astro from the entry's own metadata.
+Slot content is never part of the cache key, but the set of passed slot names is, because `Astro.slots.has()` and slot fallbacks depend on which slots were supplied.
+
+### Entry format and limits
+
+Alongside the recorded items, each entry stores its `buildId`, effective `createdAt` (oldest render start among itself and any nested recordings baked in), absolute fresh and serve-until deadlines, accumulated tags, and (for head-resolved islands) head content and CSP hashes.
+
+Entries serialize into a versioned opaque byte format under a string key. Unknown versions or corrupt payloads are treated as misses. Recording enforces a configurable byte cap (defaulting safely below platform limits): exceeding it mid-render stops recording while continuing to stream the response and skips storage. Entries are written with a store `ttl` matching their serve-until window (`maxAge + swr`) for eviction housekeeping; Astro always computes freshness from the entry's own metadata.
 
 ## Head content and CSP
 
-Some components add to `<head>` while they render: rendered content collection entries add their styles, styled SVG components add CSP style hashes, and server island placeholders add a preload link for their fetch (when it fits in a GET URL) and CSP script hashes. Astro already handles these through head propagation. At build time such components, and every component above them in the import graph, are marked; on a page containing them, Astro renders the marked components before it sends `<head>`, so their contributions can be collected.
+Rendered content collection entries inject styles into `<head>`, styled SVG components add CSP style hashes, and server island placeholders add a preload link (when their fetch fits in a GET URL) and CSP script hashes. Astro marks these components and their import ancestors at build time so `bufferHeadContent` initializes them before `<head>` streams.
 
-A cached island follows the mode its component already has:
+A cached island inherits its component's mode:
 
-- **Streamed.** If the component is not marked, nothing in its subtree can add to the head. The entry holds body output only, and the lookup happens where the island appears in the stream: a slow lookup or a miss delays the island, not the page head.
-- **Head-resolved.** If the component is marked, resolution splits into two phases matching Astro's existing head-propagation lifecycle: **prepare-head** (during `bufferHeadContent`) and **emit-body** (in-stream at the island's position). This addresses problem 4.
-  - On a hit, prepare-head injects the entry's stored head content and CSP hashes into the page head (while eagerly evaluating caller slots so slot-level propagators also register), and emit-body replays the body in place.
-  - On a miss, prepare-head runs `init()` and collects head contributions without draining slow streaming body work onto the first-byte path; emit-body streams and records the body and finalizes storage once complete.
+### Streamed islands
 
-The invariant for header-mode CSP (`cspDestination === 'header'`) is that **before response headers are finalized, prepare-head must finish all CSP contributions from both the recording and this request's live slots**. Any renderer that cannot promise this needs a buffered path chosen before headers commit, or stays outside the replay contract.
+If the component is unmarked, nothing in its subtree can add to `<head>`. The entry holds body output only, and lookup happens at the island's position in the stream so a slow lookup or miss does not delay `<head>`.
 
-When a head-resolved hit resolves faster than rendering the subtree, it reaches first byte sooner than the uncached render, because the subtree no longer initializes before `<head>`.
+### Head-resolved islands
 
-The build-time mark is coarse. A single deferred-render content entry anywhere in a project (any MDX entry, or Markdown loaded with `deferRender`) marks every component that imports `astro:content`, whether or not it renders an entry. In those projects most content-reading islands are head-resolved. That is no regression, since they already initialize before the head today, but it limits how much streaming the feature can recover until the mark is made more precise, which is separate work.
+If the component is marked, resolution splits into two phases matching Astro's head-propagation lifecycle:
 
-View transition directives need the mark extended. `transition:name` and `transition:animate` push a `<style>` to `extraHead` during render without setting `propagation: 'self'`, so today's mark misses them, and a product grid with `transition:name` on each card would be a streamed island that adds head content. The build already walks the import graph below every cached island for the request-state guard. In the same pass, a component in that graph whose template uses a transition directive is marked as a propagator, which makes the island head-resolved and its transition styles part of the entry's stored head content. The mark is only added for components found below a cached island, but it is a property of the component: pages that render the same component outside a cached island also initialize it before `<head>`.
+- `prepare-head` (during `bufferHeadContent`): on a hit, injects stored head content and CSP hashes into `<head>` and eagerly evaluates caller slots so slot-level propagators register; on a miss, runs `init()` to collect head contributions without waiting on slow streaming body work before first byte.
+- `emit-body` (in-stream at the island's position): on a hit, replays the body; on a miss, streams and records the body, then stores the entry once complete.
 
-If a streamed island's render adds head content or CSP hashes anyway (anything the mark still missed), the entry is not stored, and dev shows a warning naming the island.
+With header-mode CSP (`cspDestination === 'header'`), `prepare-head` must collect all CSP contributions from both the recording and live caller slots before response headers finalize. Any renderer that cannot promise this must buffer before headers commit or stay outside cached-island replay.
+
+When a head-resolved hit resolves faster than rendering the subtree, time to first byte improves over an uncached render because the subtree no longer initializes before `<head>`.
+
+Today's build-time head-propagation mark is coarse: any deferred-render content entry in a project (any MDX entry, or Markdown with `deferRender`) marks every component that imports `astro:content`, even if it never renders an entry. Those islands will be head-resolved, which matches current uncached behavior (no regression) until head-propagation marking becomes finer-grained in separate work.
+
+View transition directives need one extension to that mark. `transition:name` and `transition:animate` push a `<style>` into `extraHead` during render without setting `propagation: 'self'`. During the build's import-graph walk below each cached island (also used by the request-state guard), any component using a transition directive is marked as a propagator, making the island head-resolved and storing its transition styles. Because the mark belongs to the component, pages rendering that component outside a cached island also initialize it before `<head>`.
+
+If a streamed island adds head content or CSP hashes anyway, the entry is not stored and dev logs a warning naming the island.
 
 ## Server islands inside cached islands
 
-A server island renders as a placeholder whose inline `<script type="module" data-astro-rerun>` contains its `hostId` and its encrypted props. Both change on every render, so the script's CSP hash does too. That is fine for a single replay, since the stored hash matches the stored script. Two cases can still collide on `hostId`:
+A server island renders a placeholder with an inline `<script type="module" data-astro-rerun>` containing its per-render `hostId` and encrypted props. Its CSP hash changes per render, which works for a single replay because the stored hash matches the stored script. Reusing the same `hostId` can collide in two cases:
 
-- **Same page:** replaying the same cached entry twice on one page (or a flattened parent alongside a standalone copy) would emit two identical `data-island-id` attributes. This is handled by the transitive ID namespace reservation below: a recording containing a server island reserves its namespace on replay, and any subsequent occurrence on the same page renders live with a fresh `hostId`.
-- **Across `ClientRouter` navigations:** if a user starts a slow server-island fetch on page A and navigates to page B (which replays the same cached fragment with the same `hostId`) before A's fetch finishes, today's `replaceServerIsland(id, response)` queries the current document *after* the fetch and can replace page B's placeholder with page A's response.
+- On the same page (replaying the same entry twice, or a flattened parent alongside a standalone copy), duplicate `data-island-id` attributes would be emitted. Transitive ID namespace reservation (next section) handles this by rendering later occurrences live with fresh `hostId`s.
+- Across `ClientRouter` navigations, if a slow fetch starts on page A and the user navigates to page B (which replays the same cached fragment with the same `hostId`) before A's fetch finishes, today's `replaceServerIsland(id, response)` queries the DOM *after* `await fetch(...)` and can overwrite page B's placeholder with page A's response.
 
-Rather than redesigning the server-island placeholder markup or changing its deferred module execution timing, this proposal makes one small change to `replaceServerIsland`: resolve the `<script>` element by `hostId` **before** `await fetch(...)`, pass that DOM node to `replaceServerIsland`, and bail out if `!element.isConnected` after `await response.text()`. This preserves today's markup, deferred module timing, and CSP model.
+To fix cross-navigation replacement without changing placeholder markup, deferred module timing, or CSP behavior, Astro will look up the `<script>` element by `hostId` *before* calling `fetch(...)`, pass that DOM node to `replaceServerIsland`, and bail out if `!element.isConnected` after `await response.text()`.
 
 ## Generated IDs
 
-Server island host IDs are not the only values numbered per response. Each framework renderer (React, Preact, Solid, Svelte, Vue) keeps a per-response counter that prefixes the IDs its components generate, such as React's `useId`, and `transition:name` / `transition:persist` scopes are numbered per response too. A recorded fragment carries the numbers of the response that recorded it, and those can collide with the numbers of the page it is replayed into: two elements with the same `id`, or two elements with the same view transition name, which makes the browser skip the transition.
+Framework renderers (React, Preact, Solid, Svelte, Vue) keep per-response counters for generated IDs (such as React's `useId`), and `transition:name` / `transition:persist` scopes are numbered per response too. Replaying a recording with another response's sequential numbers can collide with the target page's IDs or view transition names (causing browsers to skip transitions).
 
-Inside a cached subtree these counters are seeded from the entry's key instead of from the response: string-prefixed renderers (React, Vue, Svelte, Solid) and view transitions receive a key-derived prefix, while Preact—whose `useId` derives from a numeric root vnode mask (`islandCount` / `data-preact-island-id`)—receives a numeric seed in a range disjoint from the response's sequential counter. The IDs in an entry are then deterministic and cannot collide with the page's own. A collision between two entries needs two keys to produce the same seed, which is negligible for the string prefixes and a small but real probability for Preact's narrower numeric seed. (Preact's per-result shared `signals` map does not bridge cached and uncached islands.)
+Inside a cached subtree, Astro seeds these counters from the entry's key:
 
-Replaying the same ID-bearing entry twice on one page—or replaying a flattened `Outer` that contains `Child` alongside a standalone `Child` (different lookup keys, same `Child` IDs)—would otherwise repeat IDs and break label/input associations or view transitions. Each recording therefore carries the **transitive set of ID namespaces** it contains; on replay, Astro reserves those namespaces on the response, and any subsequent occurrence whose namespaces overlap an already-reserved one renders live with a fresh occurrence-specific prefix (covering repeated hits, first-miss-plus-sibling, and flattened-child-plus-standalone compositions).
+- String-prefixed renderers (React, Vue, Svelte, Solid) and view transitions get a key-derived string prefix.
+- Preact (`useId` uses a numeric root vnode mask via `islandCount` / `data-preact-island-id`) gets a numeric seed in a range disjoint from the response's sequential counter.
 
-## Lifecycle
+This prevents collisions with the surrounding page. Collisions between two distinct cached entries require two keys to produce the same seed (negligible for string prefixes; a small non-zero probability for Preact's narrower numeric space). Preact's per-result shared `signals` map does not bridge cached and uncached islands.
 
-Each cached island derives its key (below), fetches the entry and checks it against the current build and the tag epochs (below). If reading from the entry store or the tag store fails, Astro fails open to a fresh render—a tag-store read error is never treated as a missing epoch, so an unvalidated entry is never served. Otherwise:
+Replaying the same ID-bearing entry twice on one page, or replaying a flattened `Outer` containing `Child` next to a standalone `Child` (different keys, same `Child` IDs), would still duplicate IDs. Each recording therefore stores the transitive set of ID namespaces it contains. On replay, Astro reserves those namespaces on the active response; any subsequent occurrence whose namespaces overlap an already-reserved one renders live with a fresh occurrence-specific prefix. This covers repeated hits, a miss followed by a sibling hit, and flattened-child-plus-standalone layouts.
 
-- **fresh hit**: replays the entry, rendering caller slot holes live against their immediate owner's `SSRResult`
-- **stale within `swr`**: replays, then revalidates in the background through the adapter's `waitUntil`. Revalidation renders in isolation from the finished response, with its own render state and synthetic hole-emitting slots matching `slotNames` (never invoking the finished request's slot closures). Concurrent background revalidations for the same key on one instance are deduplicated.
-- **miss or expired**: renders, records and stores. Storage failures log an `IslandCacheSaveError` and never fail the request; the island has already rendered.
+## Request lifecycle and concurrency
 
-An entry is stored only when the subtree renders to completion and remains shareable. If the render throws, nothing is stored and the error propagates as it would without the directive. If the client disconnects mid-stream, the recording is detached from the response and finishes under the adapter's `waitUntil`, with any remaining caller slots recorded as holes without being rendered, so the work already done is stored and waiters are still served. Where no `waitUntil` is available, the render is abandoned and nothing is stored. If a render is marked non-shareable (via `set(false)`, a frozen slot, a runtime guard violation, an unsupported renderer path, or exceeding the recording byte cap), nothing is stored, it is never published to waiting requests, and its taint propagates to any enclosing cached island.
+For each cached island, Astro derives the key, fetches the entry, and checks its `buildId` and tag epochs. If reading either the entry store or tag store fails, Astro falls back to a fresh render. A tag-store read error is never treated as a missing epoch, so unvalidated entries are never served.
 
-Concurrent misses for the same key within one server instance share one render: the first request (leader) records while streaming, and waiters replay the completed recording. If the leader's render is abandoned (a disconnect with no `waitUntil`), fails inside its own caller slot, or produces a non-shareable render, waiters are released to render independently rather than hanging or inheriting the leader's failure. Waiters depend only on the recording, never on how fast the leader's client reads its response.
+Otherwise:
 
-On a hit, the island costs one store read and a memoized epoch check instead of rendering the subtree. On a miss, the lookup is added in front of a normal render. Once one expression in a template is waiting on something async, Astro renders the remaining siblings into buffers in parallel, so a streamed island's lookup runs concurrently with the rest of the template rather than blocking it.
+- On a fresh hit, Astro replays the entry and renders caller slot holes live against their immediate owner's `SSRResult`.
+- On a stale hit within `swr`, Astro replays the entry and schedules background revalidation through the adapter's `waitUntil`. Revalidation runs isolated from the finished response with its own render state and synthetic hole-emitting slots matching `slotNames` (never invoking the original request's slot closures). Concurrent background revalidations for the same key on one instance are deduplicated.
+- On a miss or expired entry, Astro renders, records, and stores the entry. Storage write failures log `IslandCacheSaveError` and never fail the request.
 
-## Keys
+An entry is only written when rendering completes and stays shareable:
+
+- If rendering throws, nothing is stored and the error propagates normally.
+- If the client disconnects mid-stream, the recording detaches from the response and finishes under the adapter's `waitUntil`, recording remaining caller slots as holes without executing them so the work is saved and waiting requests still receive it. Without `waitUntil`, the render is abandoned and nothing is stored.
+- If a render becomes non-shareable (`set(false)`, frozen slot, runtime guard violation, unsupported renderer path, or exceeding the recording byte cap), nothing is stored, waiters are not served from it, and any enclosing cached island becomes non-shareable too.
+
+Concurrent misses for the same key on one server instance share a single render: the first request (leader) records while streaming, and waiters replay the completed recording. Waiters depend only on the recording, not on how fast the leader's client reads its response. If the leader is abandoned (disconnect without `waitUntil`), fails inside one of its own caller slots, or turns non-shareable, waiters are released to render independently instead of hanging or inheriting the leader's error.
+
+Once any expression in a template awaits async work, Astro buffers remaining siblings in parallel, so a streamed island's store lookup runs concurrently with the rest of the template.
+
+## Cache keys
 
 ```
 sha256(encodeTuple([
@@ -271,178 +283,261 @@ sha256(encodeTuple([
 ]))
 ```
 
-- `encodeTuple` uses an unambiguous structured encoding (length-prefixed or JSON array), not raw concatenation, so field boundaries cannot collide.
-- `componentPath` and `componentExport` identify the component the same way server islands do (falling back to `moduleId` for dynamic Astro component references).
-- `userProps` excludes the directive's own internal props.
-- Props are only hashed, never transported, so the accepted value domain is anything with a deterministic canonical encoding: primitives (including `undefined`, distinguished from a missing key, `NaN`/`Infinity` and `BigInt`), plain arrays and objects, `Date`, `URL`, `RegExp`, and `Map` and `Set` in insertion order. Each is encoded recursively with a type tag rather than through `JSON.stringify`, which would drop or collapse them. A content entry with `Date` fields can therefore be passed whole. Functions, symbols and class instances have no such encoding: a prop containing one throws `CachedIslandPropsError` in dev; in production it logs a once-per-boot warning and bypasses storage. Note that canonicalizing object keys assumes components do not depend on prop key insertion order.
-- The key space is as large as the prop space. A prop derived from user input (a search query, a page number, a free-form filter) creates one entry per distinct value. The memory store is bounded by `max`, but KV-class stores are not, and every entry costs a write. Such islands should normalize the prop first or opt out with `server:cache={false}`.
+- `encodeTuple` uses an unambiguous structured encoding (length-prefixed or JSON array) so field boundaries cannot collide.
+- `componentPath` and `componentExport` identify the component the same way server islands do, falling back to `moduleId` for dynamic Astro component references.
+- `userProps` excludes internal props added by the directive.
+- Props are hashed, never transported, so any value with a deterministic canonical encoding works: primitives (including `undefined` distinguished from a missing key, `NaN`, `Infinity`, and `BigInt`), plain arrays and objects, `Date`, `URL`, `RegExp`, and `Map` / `Set` (in insertion order). Values are encoded recursively with type tags rather than `JSON.stringify`, so content entries with `Date` fields can be passed whole. Functions, symbols, and class instances throw `CachedIslandPropsError` in dev; in production they log a once-per-boot warning and bypass storage. Canonicalizing object keys assumes components do not rely on prop key insertion order.
+- Key space grows with the prop domain. Passing unbounded user input (search queries, page numbers, free-form filters) creates one entry per distinct value; the memory store is bounded by `max`, while KV-class stores are not and charge per write. Normalize such props first or pass `server:cache={false}`.
 - `Astro.currentLocale` is included unconditionally in v1.
-- `slotNames` is the set of slot names passed at the call site. Slot content is never part of the key, but slot presence is: `Astro.slots.has()` and fallback content depend on it, so a call with a `corner` slot and a call without one are different entries.
-- `normalizedPolicy(options)` applies defaults, clamps to `maxLifetime`, deduplicates `tags`, and sorts them—so omitted vs. explicitly defaulted options, duplicate tags, and tag order do not fragment the cache. Without including normalized declarative policy, two uses of the same component with identical props and slots but different directive policies (say a 1-hour `catalog`-tagged call and a 10-second `sale`-tagged call) would collide on one entry, making the second call's `sale` tag unpurgeable. Purging a shared tag invalidates both variants; purging a tag unique to one invalidates only that variant.
-- `options.key` extends the derived key rather than replacing it, so user keys cannot collide across components, exports, locales, policies or builds.
-- `buildId` is a new random identifier generated at build time and added to the SSR manifest. Nothing suitable exists today; the nearest per-build value is the encryption key, which is secret and shouldn't be reused for this. Each build therefore starts with an empty namespace, which addresses problem 2 (stale asset URLs, undecryptable nested-island props). Note that this is **build scoping**: if two environments (such as staging and production) run the same build artifact against a shared store, they must use separate store namespaces. Keeping a cache across builds could be a future opt-in.
+- `slotNames` is the sorted list of passed slot names (not slot content), since `Astro.slots.has()` and slot fallbacks depend on slot presence.
+- `normalizedPolicy(options)` applies defaults, clamps to `maxLifetime`, deduplicates `tags`, and sorts them, so formatting differences do not fragment the cache while call sites with identical props and slots but different directive policies (such as a 1-hour `catalog` call and a 10-second `sale` call) stay distinct. Without this, the second call's `sale` tag would be unpurgeable. Purging a shared tag invalidates both variants; purging a tag unique to one invalidates only that variant.
+- `options.key` extends the derived key instead of replacing it, preventing collisions across components, exports, locales, policies, or builds.
+- `buildId` is a random build-time ID added to the SSR manifest (the existing encryption key is secret and should not be reused). Every build starts with an empty namespace, avoiding stale asset URLs and undecryptable nested server islands. Because this scopes by build rather than environment, staging and production running the same build artifact against a shared store must use separate store namespaces.
 
 ## Storage
 
-Route caching and island caching store different things. A `CacheProvider` can be header-only (it sets `CDN-Cache-Control` and `Cache-Tag` and the CDN does the storing) or intercept whole responses via `onRequest`. Neither can hold an island: fragments are never standalone HTTP responses, and a header-only provider has nowhere to put them. Islands get their own storage and share everything above it.
+A route `CacheProvider` either sets CDN headers or intercepts whole HTTP responses via `onRequest`. Neither can hold component fragments, so cached islands use their own store interface and share `invalidate()` above it.
 
-- **The store interface is three required methods on opaque bytes, plus an optional batched read:**
+### Store interface
 
-  ```ts
-  interface IslandStore {
-    get(key: string): Promise<Uint8Array | undefined>;
-    /** `ttl` is the retention time in seconds. The store may drop the value after it. */
-    set(key: string, value: Uint8Array, options: { ttl: number }): Promise<void>;
-    delete(key: string): Promise<void>;
-    /** Optional batched read. Without it Astro issues parallel `get()` calls. */
-    getMany?(keys: string[]): Promise<Array<Uint8Array | undefined>>;
-  }
-  ```
+```ts
+interface IslandStore {
+  get(key: string): Promise<Uint8Array | undefined>;
+  /** Retention time in seconds. The store may evict the value after this. */
+  set(key: string, value: Uint8Array, options: { ttl: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+  /** Optional batched read. Without it Astro issues parallel `get()` calls. */
+  getMany?(keys: string[]): Promise<Array<Uint8Array | undefined>>;
+}
+```
 
-  Entries and tag epochs use this interface, with one crucial difference in durability: **early eviction is safe for entries (it only causes a miss), but not for tag epochs**—if a size-bounded LRU evicts `tag:product` while retaining an older entry tagged `product`, the purged entry would pass validation again. Tag stores must therefore retain epochs for at least `maxLifetime + skewMargin` without size-based eviction. Epoch writes should be monotonic (never moving an epoch backward) where the store can do it, with a compare-and-set or max-merge on Redis, say. This is not required: last-write-wins stores such as Workers KV cannot guarantee it, and two racing purges of one tag write timestamps that differ by far less than `skewMargin`, which the validation rule below already absorbs. `cacheStores.memory()` keeps tag epochs in a separate non-evicting map rather than its entry LRU. `delete()` removes an entry that failed validation when the render that would have replaced it was not stored.
-- **Shipped bindings**, with the same factory and entrypoint ergonomics as sessions:
-  - `cacheStores.web(name)` for native `caches` (Cloudflare Workers, Netlify Functions and Edge Functions). The Cache API works on Request/Response pairs, so this binding wraps each value in a `Response` under a synthetic URL derived from the key, and sets `Cache-Control: max-age=<ttl>` because these platforms expire entries by their stored freshness. It uses only `match` / `put` / `delete`; Netlify does not implement `keys()`.
-  - `cacheStores.unstorage(driver)` over any unstorage driver descriptor (`sessionDrivers.*`), so Redis, KV, fs and the rest are usable. This is a direct mapping onto the driver's raw get, set-with-TTL and remove.
-  - `cacheStores.memory({ max })`, an in-process LRU with expiry, sharing its implementation with the `memoryCache()` route provider. This is the Node default.
-- **Native stores are regional.** Cloudflare's Cache API is per-colo; Netlify's is per-region. Entries diverging between regions means a cold start per region, which is acceptable for a cache, in exchange for local reads with no per-read cost. Correctness doesn't depend on this, because validity is decided by tag epochs rather than by whether an entry is present.
-- **Epochs must be readable globally**, so when the entry store is regional they live in a separate `tagStore` (any unstorage KV). When the entry store is global (the Redis adapter, say) `tagStore` defaults to the same backend. Adapters default both: on Cloudflare, Cache API entries with KV epochs; on Netlify, their Cache API with Blobs epochs (Netlify's automatic invalidation on redeploy also matches `buildId` scoping); on Node, the memory store, or the unstorage adapter over fs when entries should survive a restart. The hot path stays local; the only cross-region read is the batched, memoized epoch check.
-- **Vercel has no adapter defaults in v1** (a deliberate scope narrowing from the Stage 2 issue). It has no Cache API; its Runtime Cache is a regional key-value store, and the platform has no built-in global store for epochs. Cached islands work there through `cacheStores.unstorage()` over a global store such as Redis, which then holds both entries and epochs. A native binding is an open question (see Unresolved Questions). Using `server:cache` with no resolved store, on Vercel or with any adapter that supplies no default, is a build error naming `cache.islands.store`.
-- **Platform limits and driver guarantees apply.** Cloudflare's Cache API requires full `http(s)://` URLs and silently no-ops on `*.workers.dev` (including preview deployments); Workers KV limits writes to 1 write/sec per key (which matters if webhooks burst `invalidate()` on popular tags) and the `cloudflare-kv-binding` unstorage driver issues single-key reads underneath, so `getMany` falls back to parallel reads rather than one network round-trip. Netlify's Cache API caps entries at 10 MB, requires a `max-age` of at least one second, allows 100 lookups and 20 writes per invocation (and may decline oversized or over-quota writes without throwing), and ordinary Netlify Blobs stores have no native TTL, so epoch cleanup requires explicit expiration or periodic deletion. Write failures are non-fatal, so they degrade to extra misses.
-- Adapters declare support and defaults through a new `islandCache?: AdapterSupport` entry in their supported features. The resolved store config is serialized into the SSR manifest beside the route-cache config, and stores are resolved per request the same way the route-cache provider is.
-- Providers and stores do not share an interface. The response layer and the fragment layer are different things, and the typical deployment splits them: on Cloudflare, a header-mode CDN provider for routes, the Cache API for island entries and KV for epochs. The CDN is the route storage and cannot hold fragments. Using one backend for both (Redis, say) needs no special support: point the interception provider and the island store at the same instance. The only thing shared between the two layers is `invalidate()`.
-- In development nothing is kept between requests, as with route caching, so cached islands render fresh every time. Unlike route caching, the replay path still runs—each cached island is recorded and its output is produced by replaying that recording within the same request—and the island-scoped `Astro.cache` still records `set()` calls (rather than acting as a silent `NoopAstroCache`) so the toolbar and replay path see accumulated tags and freshness windows. Frozen slots, script deduplication and head handling only go wrong on a hit, and a dev server that never replays would hide all of them until production. The guard and the toolbar run as well. Real storage can be enabled locally with the memory store or the unstorage adapter over the `fs-lite` driver at `.astro/island-cache`.
+`delete()` removes an entry that failed validation when the replacement render could not be stored.
 
-## Invalidation: shared API, tag epochs underneath
+Entries and tag epochs share this interface with one durability difference: early eviction of entries only causes a cache miss, while early eviction of tag epochs breaks invalidation (a purged entry would pass validation again). Tag stores must retain epochs for at least `maxLifetime + skewMargin` without size-based eviction. Monotonic epoch writes (such as compare-and-set or max-merge on Redis) are useful where supported, though not required: last-write-wins stores like Workers KV cannot guarantee them, and two racing purges of one tag differ by far less than `skewMargin`. `cacheStores.memory()` keeps tag epochs in a separate non-evicting map outside its entry LRU.
 
-`Astro.cache.invalidate()` is the only invalidation API; there is no separate island purge. The shared implementation fans out to the route-cache provider's `invalidate()` and to the island store. Today `invalidate()` throws `CacheNotEnabled` when no route-cache provider is configured; with islands, it succeeds if either layer is configured. `{ path }` stays route-only, since islands aren't keyed by URL. With `cache.islands` configured and no `cache.provider`, response-level `set()` keeps today's no-provider behavior (a one-time warning and no effect); only island-scoped `set()` and `invalidate()` are active.
+### Bindings and adapter defaults
 
-The built-in `memoryCache()` provider invalidates tags by iterating its entries and deleting matches. That is fine in memory and doesn't scale on KV-class storage, where enumeration is the expensive operation. The island store uses **tag epochs** instead:
+Bindings use `{ entrypoint, config }` descriptors like `sessionDrivers`:
 
-- `invalidate({ tags: ['product:123'] })` writes one value: `tag:product:123 = now()`. That is one write regardless of how many entries carry the tag.
-- On read, an entry is valid iff `entry.createdAt - skewMargin > max(epoch of each of entry.tags)`. `createdAt` is the time the render started, not the time it was stored: an entry rendered from data read before an invalidation must fail this check even if it was stored after it.
-- `createdAt` and epochs come from different instances' clocks. Without a margin, an instance whose clock runs ahead could stamp an entry rendered from pre-purge data with a time later than the epoch, and that entry would pass the check for its whole lifetime. `skewMargin` is a fixed few seconds, which closes this for any realistic skew. The cost is that entries rendered within the margin after a purge are rejected too, so the affected islands render uncached for those few seconds. To avoid a write storm during that window, Astro skips `store.set()` when `renderStartedAt - skewMargin <= maxEpoch` (the freshly rendered output is still served to the caller).
-- Epochs are fetched via `getMany` (falling back to parallel `get` calls) from the tag store and memoized per server instance for about a second, so hot paths on long-lived servers make very few cross-region reads. An instance that calls `invalidate()` updates its own memo immediately. If a tag-store read fails, Astro treats the entry as unvalidated and renders fresh rather than serving a potentially purged entry. On platforms with many short-lived instances, such as Workers isolates, the memo rarely hits, and a hit costs one entry read per island plus one tag-store read per distinct tag not already read in that request (where the driver has no batched read). A page with many differently tagged islands should be checked against the platform's per-invocation limits, such as Workers subrequests and Netlify's 100 Cache API lookups.
-- Entries are never enumerated. Superseded ones expire through the `ttl` they were stored with or are overwritten on the next miss.
-- Epochs expire too. An epoch only matters while an entry created before it could still be served, so each epoch is written with a TTL of `maxLifetime + skewMargin` (giving margin for clock skew at the boundary). That needs a ceiling on `maxAge + swr`: `cache.islands.maxLifetime`, in seconds, defaulting to seven days, which also caps the retention of every entry. Without it the tag store would grow with every tag ever invalidated. An entry whose `maxAge + swr` exceeds the ceiling is clamped to it, reducing `swr` first, with a dev warning.
-- Purge consistency is the tag store's read consistency: immediate on Redis, eventual on KV-class stores. Partial failures in `invalidate()` (for example, route purge succeeding while an epoch write fails) must reject so callers can safely retry. Note also that an already in-flight route-cache render can still insert its response after a route provider processes a purge, so "one purge clears both" is bounded by what each route provider guarantees.
-- Epochs are the contract for every store. Native tag purge (a platform deleting Cache API entries by tag itself) is not part of v1; see Unresolved Questions.
+- `cacheStores.web(name)` uses the Web Cache API (`caches`) on Cloudflare Workers and Netlify Functions / Edge Functions. It wraps bytes in a `Response` under a synthetic URL derived from the key with `Cache-Control: max-age=<ttl>`, using only `match`, `put`, and `delete` (Netlify does not implement `keys()`).
+- `cacheStores.unstorage(driver)` wraps any unstorage driver (`sessionDrivers.*`: Redis, KV, filesystem, etc.) via raw get, set-with-TTL, and remove.
+- `cacheStores.memory({ max })` is an in-process LRU with expiry, sharing its implementation with `memoryCache()`.
+- `cacheStores.vercel()` uses Vercel's Runtime Cache (`getCache()` from `@vercel/functions`) and serves as both entry store and tag store (see below).
 
-`InvalidateOptions` is unchanged: `{ path?, tags? }`. There is no purge-everything call, because route caching has none and adding one would change the `CacheProvider` contract (see Unresolved Questions). A deploy already empties the island cache. There is no key-based purge either: derived keys are not something users can name, and purging by a user-supplied `key` would need an index from keys to entries. Tags cover the same need. Invalidation is callable wherever `Astro.cache` / `context.cache` is available: routes, endpoints, actions and middleware.
+Native Cache API stores are regional (per-colo on Cloudflare, per-region on Netlify), trading per-region cold starts for local reads with no per-read cost. An origin store (below) removes most of that trade. Validity is determined by tag epochs, which must be globally readable: when the entry store is regional, epochs live in a separate `tagStore` (any global unstorage KV); when the entry store is already global (such as Redis), `tagStore` defaults to the same store.
 
-## Nesting and automatic tags
+Adapters declare support and defaults through a new `islandCache?: AdapterSupport` feature flag:
 
-When an outer cached island records a nested cached island, it stores the child's **flattened output** (not a deferred reference) so a warm outer hit costs one store read. Flattening requires four inheritance rules, carried through an internal dependency collector (never via public `set()`, so propagation cannot undo `set(false)` or activate route caching):
+- Cloudflare defaults to Web Cache API for entries, with one Workers KV namespace as both the origin store and the epoch store.
+- Netlify defaults to Web Cache API for entries and Netlify Blobs for epochs (Netlify's automatic redeploy invalidation also matches `buildId` scoping).
+- Node defaults to `cacheStores.memory()`, or unstorage over the filesystem when entries should survive restarts. Deployments with more than one instance should add a shared origin store (below).
+- Vercel defaults to `cacheStores.vercel()` for both entries and epochs.
 
-- **Tags:** tags passed to `set()` by anything in the subtree, `cacheHint`s from live collection entries passed to `set(entry)`, and the final tags of any nested cached islands all accumulate into the enclosing island.
-- **Provenance (`createdAt`):** an outer entry's effective `createdAt` is `min(outerRenderStart, ...nestedHits.map(h => h.createdAt))` (or per-tag oldest render time). Without this, an outer island built in a region that hasn't yet seen a tag purge could bake in a pre-purge child, stamp itself with a newer `createdAt`, and survive the purge for its entire lifetime even after the tag store converges.
-- **Absolute freshness deadlines:** an outer entry inherits the earliest absolute fresh deadline and serve-until deadline of any nested recording baked into it, so a 60-second child inside a 1-hour parent cannot be extended past its own lifetime. When an outer miss encounters an SWR-stale child, it renders the child fresh (or skips storing the outer entry) rather than baking stale bytes into a fresh parent entry.
-- **Non-shareable taint:** if a nested island opts out via `set(false)` or is marked non-shareable (runtime guard, frozen slot, unsupported renderer path), the enclosing recording is marked non-shareable too.
+Using `server:cache` without a resolved store (on any adapter without defaults) is a build error naming `cache.islands.store`. Resolved store config is serialized into the SSR manifest beside route-cache config, and stores are instantiated per request like route-cache providers. To share one backend (such as Redis) across both route caching and islands, point both the route provider and the island store at the same instance.
 
-With these rules, a live product entry `set()` inside a cached island ties that island's entry to the loader's tags, and `invalidate({ tags: ['product:123'] })` invalidates every enclosing cached island and any tagged route-cache entries in one call. Because validation is by epoch rather than by enumerating dependents, nesting depth doesn't change the cost.
+### Origin store
 
-The outermost island passes its final tags up to the response through the same internal collector, from the stored entry on a hit and from the collector on a miss. Without this, wrapping a component in `server:cache` would silently remove its tags from the route, and a route-cached page would survive a purge that cleared the island inside it. Only tags go up to the route layer: route `maxAge` and `swr` remain governed by the route policy, and a fragment's `lastModified` says nothing reliable about the response.
+An entry store that is local to a region or to a process renders every entry once per region or process. Cloudflare has hundreds of colos, so a long-tail entry may never be warm where the next request lands, and every deploy starts cold everywhere. A Node server's in-memory store is private to each instance and empty after every restart. `cache.islands.originStore` is an optional second entry store, shared by every region and instance, that sits behind `store`:
 
-Route-cache headers are applied when the response is created, before the body streams, so tags found while the body renders would arrive too late. Because `server:cache` does not mark ancestor components for head propagation, `bufferHeadContent` cannot discover streamed cached islands inside non-propagating layouts or async children. Because page frontmatter runs when the root component factory is invoked inside `renderPage`, Astro checks whether a route cache policy is active (from `routeRules`, middleware, or page frontmatter) **after** root factory initialization and **before** choosing the body sink, reusing the initialized template result to render non-streaming so every cached island resolves and contributes its tags before `applyCacheHeaders` runs. The check applies only to routes whose import graph contains a cached island, which the build knows from the compiler's metadata; other route-cached pages stream as they do today. This gives up streaming only for responses that are about to be stored and shared. Requests with no route policy stream as described above.
+- **Local hit:** unchanged. The origin store is not read.
+- **Local miss:** Astro reads the origin store before rendering. A valid entry there is replayed and copied into the local store in the background. Only if both miss does the island render, and the result is written to both.
+- **Stale local entry:** the stale entry is replayed as usual. The background revalidation reads the origin store first and renders only if the origin has nothing newer.
 
-## Framework renderers inside cached islands
+Validity is still decided by the entry's own metadata and the tag epochs, so the two tiers holding different versions of an entry is harmless. An entry is rendered once globally instead of once per region or instance, and a deploy warms the origin once. When an origin store is set, `tagStore` defaults to it, since epochs need the same shared reach.
 
-Client islands inside a cached fragment cannot be treated as opaque HTML without an explicit **renderer contract**, because first-party renderers read request state and deduplicate assets outside `Astro.*`:
+The costs are one origin read on the request path for each local miss, and one origin write for each stored render. Origin writes and backfills run through `waitUntil` and add no latency. Entries whose `maxAge + swr` is shorter than the origin store's minimum retention (60 seconds on Workers KV) are not written to it.
 
-- **React** reads `result.request` and `result.actionResult` directly to emit `data-action-result`, `data-action-key` and `data-action-name` into hydration markup. Cached-island lookups must bypass when the request carries an action result (so a cached GET never suppresses a form submission's action result), and renderers must not read request state inside a cached subtree without marking the render non-shareable.
-- **Solid** unconditionally reads `result.request` and `createAstro().locals` to populate `getRequestEvent()`, and deduplicates `lazy()` boundary CSS against a per-response `ctx.styles` set inside the renderer. Inside a cached subtree, the Solid renderer must gate `getRequestEvent()` lazily (marking non-shareable only if actually read, or omitting it) and isolate or emit lazy CSS symbolically so a fragment warmed after an earlier Solid sibling does not lose its styles on replay.
+On Cloudflare the origin store is on by default, in the KV namespace the adapter already needs for epochs, and `originStore: false` turns it off.
 
-Each official renderer declares cached-island support and participates in key-seeded IDs and isolated deduplication; renderers that do not opt into the contract cause enclosing cached islands to bypass storage (with a dev warning). Server islands inside a cached fragment are covered above; their encrypted payload is valid for the lifetime of the build that produced it, which is the same lifetime as the cache namespace.
+On Node it is the recommended setup for any deployment with more than one instance. The default memory store on its own gives each instance its own copy of every entry and its own tag epochs, so an `invalidate()` call only reaches the instance that handled it. A shared store behind it makes this an ordinary two-level cache: hits are served from process memory with no network read, a miss or a newly started instance reads the shared store before rendering, and invalidation reaches every instance.
+
+```js
+cache: {
+  islands: {
+    store: cacheStores.memory({ max: 1000 }),
+    originStore: cacheStores.unstorage(sessionDrivers.redis({ url: process.env.REDIS_URL })),
+  },
+},
+```
+
+Elsewhere it is off by default and rarely worth enabling. On Netlify and Vercel pages render in functions, not at the edge, and functions run in one region by default (up to a handful on Vercel's paid plans), so the regional store already sees nearly every request and an origin store would add a read to each miss for little gain.
+
+### Vercel Runtime Cache
+
+Vercel has no Web Cache API and no built-in global key-value store, but its Runtime Cache has tags, and `expireTag()` reaches every region within 300 ms. `cacheStores.vercel()` builds epochs from that:
+
+- **Entries** are stored regionally under the island key, with no native tags.
+- **Epochs** are marker entries. Each region keeps one marker per tag, tagged with that tag, whose value is its creation time. Reading a tag's epoch reads the marker, creating it at the current time if it is missing.
+- **`invalidate()`** calls `expireTag()` once with all the tags, which removes their markers in every region. The next read in each region recreates the marker, and every entry whose render started before that fails validation.
+
+A missing marker therefore means "invalidated now" rather than "never invalidated". That is what makes the Runtime Cache's LRU eviction safe here: an evicted marker costs misses and never revives a purged entry. Entries rendered between a purge and the marker's recreation are rejected too.
+
+### Platform limits
+
+- Cloudflare's Cache API requires full `http(s)://` URLs, has no effect in the dashboard editor and Playground previews, and is unavailable to Workers behind Cloudflare Access. Workers KV caps writes at 1 write/sec per key, which matters for webhook bursts on hot tags and for regions racing to store the same origin entry; the losing writes are dropped. The `cloudflare-kv-binding` unstorage driver reads one key at a time, so `getMany` falls back to parallel reads. Origin writes and epoch writes draw on the same account-wide KV write quota: on the Workers free plan (1,000 writes a day) a busy site can exhaust it with origin writes, after which `invalidate()` rejects until the quota resets. Sites on the free plan should set `originStore: false`.
+- Netlify's Cache API limits entries to 10 MB, requires `max-age` of at least 1 second, and allows 100 lookups and 20 writes per invocation (oversized or over-quota writes may be declined without throwing). Standard Netlify Blobs stores have no native TTL, so epoch cleanup requires explicit expiration or periodic deletion.
+- Vercel's Runtime Cache limits items to 2 MB, and `expireTag()` is rate limited per plan and resolves normally when a call is rejected, so a purge made over the limit is lost without an error.
+- Entry write failures are non-fatal everywhere and degrade to misses.
+
+### Development
+
+Nothing persists between requests in dev (matching route caching), so cached islands always render fresh. Unlike route caching, Astro still runs record-and-replay within each request, and island-scoped `Astro.cache` records `set()` calls instead of acting as a `NoopAstroCache`. That exercises frozen slots, script deduplication, head handling, the request-state guard, and the toolbar locally. To test persistent storage locally, configure `cacheStores.memory()` or `cacheStores.unstorage()` with `fs-lite` at `.astro/island-cache`.
+
+## Invalidation and tag epochs
+
+`Astro.cache.invalidate()` is the single invalidation API, fanning out to both the route-cache provider and the island tag store. Today it throws `CacheNotEnabled` without a route provider; with cached islands, it succeeds if either layer is configured.
+
+`InvalidateOptions` stays `{ path?, tags? }`. `{ path }` remains route-only, since islands are not keyed by URL. When `cache.islands` is configured without `cache.provider`, response-level `set()` keeps today's one-time warning and no-op while island-scoped `set()` and `invalidate()` remain active. There is no purge-everything option (route caching has none and deploys already reset the island cache) and no key-based purge (derived keys are opaque, and purging by `options.key` would need a secondary index; tags cover it).
+
+`memoryCache()` invalidates tags by scanning its entries, which does not scale on KV-class storage. Cached islands use tag epochs instead:
+
+1. `invalidate({ tags: ['product:123'] })` writes `tag:product:123 = now()` to the tag store (one write regardless of how many entries carry the tag).
+2. On read, an entry is valid only if `entry.createdAt - skewMargin > max(epoch of each tag in entry.tags)`. Because `createdAt` is when rendering started (not when it finished storing), an entry built from pre-purge data fails validation even if written after the purge.
+3. `skewMargin` (a fixed few seconds) absorbs clock skew across server instances so a fast clock cannot stamp pre-purge data ahead of an epoch. Entries rendered during those few seconds after a purge are rejected too; to avoid write storms in that window, Astro skips `store.set()` whenever `renderStartedAt - skewMargin <= maxEpoch` while still serving the fresh render.
+4. Epochs are fetched via `getMany` (or parallel `get`) and memoized per server instance for about one second; calling `invalidate()` updates the caller's memo immediately. Tag-store read errors treat the entry as unvalidated and trigger a fresh render. On short-lived instances like Workers isolates, the memo rarely hits, so a hit costs one entry read per island plus one tag read per distinct uncached tag in that request (when the driver lacks batched reads). Pages with many differently tagged islands should account for per-invocation limits like Workers subrequests and Netlify's 100 Cache API lookups.
+5. Entries are never enumerated; superseded entries expire via `ttl` or are overwritten on the next miss.
+6. Each epoch is stored with a TTL of `maxLifetime + skewMargin`, bounded by `cache.islands.maxLifetime` (seconds, default seven days). `maxLifetime` also caps `maxAge + swr` on entries (reducing `swr` first, with a dev warning), preventing unbounded tag-store growth.
+7. Purge consistency follows the tag store's read consistency (immediate on Redis, eventual on KV). Partial failures in `invalidate()` (for example, route purge succeeds while an epoch write fails) reject so callers can retry. Because an in-flight route-cache render can still store its response after a route purge, cross-layer purge consistency is bounded by what the route provider guarantees.
+8. Tag epochs are the v1 contract across all stores; native store tag purging is an open question.
+
+## Nesting and route-cache composition
+
+When an outer cached island renders a nested cached island, the outer entry stores the child's flattened output so a warm outer hit takes one store read. Four values propagate up through the internal tag collector:
+
+- Tags from `set()` calls, live collection `cacheHint`s passed to `set(entry)`, and nested cached islands accumulate into the outer entry.
+- `createdAt` becomes `min(outerRenderStart, ...nestedHits.map(h => h.createdAt))` (or per-tag oldest render time), so an outer island rendered in a region that has not yet seen a purge cannot bake in a pre-purge child under a newer timestamp and survive convergence.
+- Absolute fresh and serve-until deadlines tighten to the earliest deadline among nested recordings baked in, so a 60-second child inside a 1-hour parent cannot outlive its own expiry. If an outer miss encounters an SWR-stale child, it renders the child fresh (or skips storing the outer entry) instead of baking stale bytes into a fresh parent.
+- Non-shareable state propagates up: if a nested island opts out with `set(false)` or becomes non-shareable (runtime guard, frozen slot, unsupported renderer), the enclosing recording becomes non-shareable too.
+
+Calling `Astro.cache.set(liveEntry)` inside a nested island therefore ties the island, every enclosing cached island, and any tagged route-cache entries to one `invalidate({ tags })` call, with validation cost independent of nesting depth.
+
+### Propagating tags to route caching
+
+The outermost cached island forwards its final tags up to the response through the internal collector (from the stored entry on a hit, and from the collector on a miss). That keeps wrapping a component in `server:cache` from dropping its tags from a route-cached page. Only tags propagate to the route; route `maxAge`, `swr`, and `lastModified` stay governed by the route policy.
+
+Route-cache headers are written in `applyCacheHeaders` before the body streams, and `server:cache` does not mark ancestor components for head propagation, so `bufferHeadContent` will not see streamed cached islands inside non-propagating layouts or async children. Because page frontmatter executes when the root component factory runs in `renderPage`, Astro checks whether a route-cache policy is active (from `routeRules`, middleware, or page frontmatter) after root factory initialization and before choosing the body sink. If a policy is active and the route's build-time import graph contains a cached island, Astro reuses the initialized template result to render non-streaming so every cached island resolves and contributes its tags before `applyCacheHeaders` runs. Other route-cached pages and uncached routes continue streaming normally.
+
+## Framework renderers
+
+First-party framework renderers read request state and deduplicate assets outside `Astro.*`, so cached islands need an explicit renderer contract:
+
+- React reads `result.request` and `result.actionResult` directly to emit `data-action-result`, `data-action-key`, and `data-action-name` into hydration markup. Cached-island lookups must bypass whenever the request carries an action result (so a cached GET never swallows a form submission's action result), and renderers must not read request state inside a cached subtree without marking the render non-shareable.
+- Solid unconditionally reads `result.request` and `createAstro().locals` to populate `getRequestEvent()`, and deduplicates `lazy()` boundary CSS against a per-response `ctx.styles` set inside the renderer. Inside a cached subtree, Solid must gate `getRequestEvent()` lazily (marking the render non-shareable only if actually read, or omitting it) and isolate or emit lazy CSS symbolically so a fragment warmed after an earlier Solid sibling does not lose its styles on replay.
+
+Each official renderer opts into this contract, participating in key-seeded IDs, isolated deduplication, and tracked request access. Renderers that do not opt in cause enclosing cached islands to bypass storage with a dev warning. Nested server islands work as described earlier, and their encrypted props stay valid for the build's lifetime (matching `buildId` scoping).
 
 ## Request-state guard
 
-The main remaining way to get fragment caching wrong is a fragment that reads request state. The compiler and runtime guard act as a strong diagnostic and safety net for Astro component code (they cannot intercept arbitrary `AsyncLocalStorage` reads, and framework renderers are covered by the renderer contract above).
+To catch cached components reading request state, Astro enforces an allowlist on `Astro` inside cached subtrees. This covers Astro component code (it cannot intercept arbitrary `AsyncLocalStorage` reads; framework renderers are covered by the renderer contract).
 
-The guard is an allowlist. Inside a cached subtree, a component may use `Astro.props`, `Astro.slots`, `Astro.self`, `Astro.currentLocale` (part of the key), `Astro.site`, `Astro.generator`, `Astro.isPrerendered`, `Astro.logger` and the island-scoped `Astro.cache`. Everything else on `Astro` is either request state that is not in the key (`request`, `url`, `params`, `cookies`, `session`, `locals`, `clientAddress`, `preferredLocale`, `preferredLocaleList`, `originPathname`, `routePattern`, `getActionResult`) or a side effect on the response that would not happen on a hit (`response`, `redirect`, `rewrite`, `callAction`, `csp`). `Astro.params` is the easiest to miss: an island inside `/c/[slug]` that reads it would serve the first slug's content for every slug.
+Allowed members on `Astro`: `props`, `slots`, `self`, `currentLocale` (part of the key), `site`, `generator`, `isPrerendered`, `logger`, and island-scoped `cache`.
 
-**Compile time.** The compiler reports, per component, every access to an `Astro` member outside the allowlist, including through destructuring. The build walks the import graph below every cached island and reports each one, naming the component, the property and the fix: pass it as a prop (it becomes part of the key) or move it into a slot (it is rendered per request).
+Disallowed members:
 
-An access in the cached component's own file is a build error, since that component always renders inside the island. An access in a component it imports, directly or transitively, is a build warning. The import graph is wider than the rendered tree: an imported component may never render inside the island, or may read request state only on a branch the island never takes, and failing the build for those would block legitimate code with no way to proceed.
+- Unkeyed request state: `request`, `url`, `params`, `cookies`, `session`, `locals`, `clientAddress`, `preferredLocale`, `preferredLocaleList`, `originPathname`, `routePattern`, `getActionResult`. (`Astro.params` is easy to miss: an island inside `/c/[slug]` reading it would cache the first slug for every slug.)
+- Response side effects that would not run on a hit: `response`, `redirect`, `rewrite`, `callAction`, `csp`.
 
-**Runtime guard.** This is the precise check. It also covers what static analysis can't see: `Astro[key]`, `Astro` passed as an argument, request state re-exported through a helper. Inside a cached subtree, the `Astro` object each component receives enforces the same allowlist. A disallowed access in dev is a `CachedIslandRequestAccess` error. In production it never crashes the request, but the render is not stored: the island renders on every request, with a once-per-boot warning, until the access is fixed. An entry that read request state is never served to another visitor.
+### Compile-time and runtime checks
 
-With this, caching one user's account details into everyone's page is a build error in the common case, a dev overlay in the rest, and in production an island that is not cached rather than one that leaks.
+At compile time, the compiler reports every access to a non-allowlisted `Astro` member per component, including destructuring. The build walks the import graph below each cached island and reports the component, the property, and the fix (pass it as a prop so it enters the key, or move it into a slot so it renders per request). An access in the cached component's own file is a build error; an access in a direct or transitive imported component is a build warning, since the import graph is wider than what actually renders (an imported component might never execute inside the island, or might only read request state on an untaken branch).
 
-## Relationship to route caching
+At runtime, the `Astro` object inside a cached subtree enforces the same allowlist, catching dynamic accesses (`Astro[key]`), passing `Astro` to helpers, and request state re-exported through helpers. In dev, a disallowed access throws `CachedIslandRequestAccess`. In production, the request still succeeds, nothing is stored, and a once-per-boot warning is logged, so request-specific output is never served to another visitor.
 
-| | Route caching (`cache` + `routeRules`) | Cached islands (this proposal) |
+## Comparison with route caching
+
+| | Route caching (`cache` + `routeRules`) | Cached islands (`server:cache`) |
 | --- | --- | --- |
 | Unit | HTTP response | Component subtree |
-| Keyed by | URL (+ provider query config) | Component identity + props + slot names + locale + policy + user key + deploy |
+| Keyed by | URL (+ provider query config) | Component identity, props, slot names, locale, policy, user key, `buildId` |
 | Declarative policy | `routeRules` patterns | `server:cache` options |
-| Imperative policy | `Astro.cache.set()` | The same call, island-scoped |
-| Storage | Provider: CDN headers or response interception | Key-value island store + global tag store |
-| Delivery | HTTP semantics: `ETag`, `Last-Modified`, `CDN-Cache-Control` | In-stream replay |
-| Invalidation | `invalidate({ path, tags })` | The same call, shared tags |
-| Dev | Noop | Nothing stored; record and replay, guard and toolbar still active |
+| Imperative policy | `Astro.cache.set()` | Same call, island-scoped |
+| Storage | Provider (CDN headers or response interception) | Key-value island store + global tag store |
+| Delivery | HTTP (`ETag`, `Last-Modified`, `CDN-Cache-Control`) | In-stream replay |
+| Invalidation | `invalidate({ path, tags })` | Same call, shared tag namespace |
+| Development | No-op | Nothing persisted; record/replay, guard, and toolbar run on every request |
 
-Composition: the route cache sits above. If a response is served from the route cache, or from a CDN honoring its headers, nothing renders and islands never execute. That is correct, since the whole response was declared shareable. Cached islands apply when the response is not shareable: on every render of a dynamic shell. `etag` and `lastModified` are not island options because fragments have no conditional-request semantics; the freshness and tagging options carry over and the HTTP-specific ones don't.
+When a route cache or CDN serves a response, Astro does not render the page and cached islands do not run. Cached islands apply when rendering an uncached dynamic shell. `etag` and `lastModified` are omitted from `server:cache` options because fragments have no HTTP conditional-request semantics.
 
 ## Observability
 
-- A dev toolbar app alongside Audit and Inspect: outlines cached islands on the page, shows each island's mode (streamed or head-resolved) and, since nothing is stored in dev, what would be stored: the derived key, accumulated tags and freshness windows.
-- Optional dev-only HTML comments (disabled by default or omitted in DOM-sensitive contexts like SVG/tables so dev DOM structure stays identical to production): `<!--astro:cache island status=replayed tags=category:boots-->` (including `age=...` when local storage is enabled).
-- An opt-in debug response header summarizing per-island cache status, for staging.
+- A dev toolbar app beside Audit and Inspect outlines cached islands on the page and displays each island's head mode (streamed or head-resolved), derived key, accumulated tags, and freshness windows.
+- Optional dev-only HTML comments (off by default, and omitted in DOM-sensitive contexts like SVG and tables so dev DOM matches production): `<!--astro:cache island status=replayed tags=category:boots-->`, plus `age=...` when local storage is enabled.
+- An opt-in debug response header summarizing per-island cache status for staging.
 
 ## Implementation outline
 
-- **Compiler.** Lower `server:cache` the way `server:defer` is lowered: resolve the component's identity from the import map, pass the options as an internal prop and remove the directive from user props. Report cached components and each component's `Astro` member accesses as build metadata. Unlike `server:defer`, `server:cache` does not mark the containing component for head propagation, or every page with a cached island would become head-resolved. These are the compiler's first codegen-level diagnostics.
-- **Runtime.** A cached-island render path beside the server-island one, chosen by the directive; recording (with byte cap and instruction normalization) and replay; the island-scoped `Astro.cache` and internal dependency collector (tags, provenance, deadlines, taint); non-streaming fallback on route-cached pages; the allowlisted `Astro` object; the renderer contract and key-seeded ID counters across official framework renderers.
-- **Server islands.** Capture the placeholder `<script>` element by `hostId` before `fetch` and check `element.isConnected` before replacing it.
-- **Build.** `buildId` in the manifest; the request-state guard; store config serialization. Unlike server islands, cached islands need no manifest map of island modules: a cached island only renders within the request that reached it, background revalidation included, so its module is already loaded.
-- **Adapters.** `islandCache` support and store defaults for Cloudflare, Netlify and Node. Vercel declares support without defaults.
+- Compiler: lower `server:cache` like `server:defer` (resolve component identity from the import map, pass options as an internal prop, strip the directive from user props) without marking the containing component for head propagation. Emit cached components and `Astro` member accesses as build metadata. These are the compiler's first codegen-level diagnostics.
+- Runtime: add the cached-island render path beside server islands, record/replay with byte cap and instruction normalization, island-scoped `Astro.cache` and internal tag collector, non-streaming route-cache fallback, allowlisted `Astro` wrapper, and the renderer contract plus key-seeded ID counters in official framework renderers.
+- Server islands: resolve the placeholder `<script>` element by `hostId` before `fetch` and check `element.isConnected` before replacing it.
+- Build: add `buildId` to the SSR manifest, run the request-state guard and transition-directive head-propagation pass, and serialize store config. Unlike server islands, cached islands need no manifest map of island modules because they only render inside requests (including background revalidations) that already loaded their module.
+- Adapters: add `islandCache` feature support and store defaults for Cloudflare (including the KV origin store), Netlify, Node, and Vercel (the Runtime Cache binding).
 
 # Testing Strategy
 
-- **Unit**: key derivation stability (structured tuple encoding, slot-name variance, declarative policy variance, prop validation), epoch validation with `skewMargin` and write-storm suppression, record/replay round-trips covering every render instruction type (including `RendererHydrationScriptInstruction` and `template-enter`/`template-exit`), and scoped `cache.set()` merge/opt-out semantics.
-- **Integration** fixtures modeled on the server-islands suites: the full nesting matrix (client-in-cached, server-in-cached, cached-in-cached, internal vs. caller slots at each level), slots that cannot be holes (`Astro.slots.render()`, slots forwarded to framework components or `server:defer`), concurrent miss coalescing with caller-owned slots, leader disconnects and non-shareable renders, React action-result bypass and Solid lazy-CSS replay across different page compositions, nested freshness-deadline and provenance inheritance (a parent must not extend a near-expiry child or resurrect a purged child after delayed epoch convergence), same-component different-policy warm-up order, both head modes (`prepare-head` / `emit-body`) with hits and misses including async live slots, repeated ID-bearing entries and flattened-child-plus-standalone compositions reserving transitive ID namespaces and rendering subsequent occurrences live, `ClientRouter` navigation from page A to page B replaying the same cached server island while A's fetch is still in flight (B must keep its fallback until B's own response arrives), epoch-store retention under entry-LRU pressure, i18n key variance, CSP hash parity, build scoping across two consecutive builds, store/epoch read-failure and mid-render-failure fallback, and route-cache composition (non-streaming tag collection on route-cached pages, island tags reaching `Cache-Tag` on hits and misses, one `invalidate()` clearing both).
-- **Dev server e2e**: toolbar app, record-and-replay with nothing stored, opt-in `fs-lite` store, guard errors and warnings.
-- A **store conformance suite** run against every shipped binding and available to custom store entrypoints: `get` / `set` / `delete` round-trips, epoch validation, batched epoch reads and retention behavior per store.
+### Unit tests
+
+- Key derivation (structured tuple encoding, slot-name variance, normalized declarative policy variance, prop canonicalization and errors).
+- Epoch validation with `skewMargin` and post-purge write-storm suppression.
+- Record and replay round-trips for every render instruction type, including `RendererHydrationScriptInstruction` and balanced `template-enter`/`template-exit`.
+- Scoped `cache.set()` merging and one-way `set(false)`.
+
+### Integration tests
+
+Modeled on the existing server-islands suites:
+
+- Nesting matrix (client-in-cached, server-in-cached, cached-in-cached, internal vs. caller slots at every level) and non-hole slots (`Astro.slots.render()`, slots passed to framework components or `server:defer`).
+- Concurrency and failure handling: concurrent miss coalescing with caller-owned slots, leader disconnects (with and without `waitUntil`), non-shareable renders, store/epoch read failures, and mid-render errors.
+- Framework renderers: React action-result bypass and Solid lazy-CSS replay across page compositions.
+- Freshness and invalidation: nested deadline and `createdAt` inheritance (parents cannot extend near-expiry children or resurrect purged children during delayed epoch convergence), same-component different-policy warm-up ordering, epoch retention under entry-LRU eviction, i18n key variance, and build scoping across two consecutive builds.
+- Head, CSP, and IDs: streamed vs. head-resolved (`prepare-head` / `emit-body`) hits and misses including async live slots, CSP hash parity, transitive ID namespace reservation for repeated entries and flattened-child-plus-standalone layouts, and `ClientRouter` navigation from page A to page B replaying the same cached server island while A's fetch is in flight (B keeps its fallback until B's response arrives).
+- Route-cache composition: non-streaming tag collection on route-cached pages, island tags reaching `Cache-Tag` on hits and misses, and one `invalidate()` clearing both layers.
+
+### Dev server and store conformance
+
+- Dev server e2e tests covering the toolbar app, record-and-replay without persistence, opt-in `fs-lite` local store, and guard errors/warnings.
+- A store conformance suite run against every shipped binding and available to custom store entrypoints (`get` / `set` / `delete` round-trips, epoch validation, batched reads, retention behavior, and for `cacheStores.vercel()` marker recreation after `expireTag()` and after eviction).
+- Origin store: local miss served from origin with backfill, both-miss render written to both, stale local entry revalidated from origin without rendering, and origin write failure degrading to regional-only.
 
 # Drawbacks
 
-- Complexity in the hottest path in the codebase. When the directive is absent the cost is one property check, the same check server islands already add, and the feature is behind a flag.
-- A second cache grain for users to reason about. It uses the same vocabulary and API as the route grain, deploy scoping removes the worst class of debugging, and the toolbar and markers make state visible.
-- Two head modes. Which one an island gets depends on what its subtree imports, which users don't see without the toolbar. A component that uses view transition directives below a cached island becomes head-resolved wherever it renders.
-- Every deploy starts with an empty island cache, because `buildId` is part of the key. On the large, frequently deployed sites this targets, each deploy is followed by a wave of misses, and so a wave of renders and writes, across every region.
-- Storage cost and entry size. Entries are typically small; the recording byte cap bounds the rest, and per-entry compression is an open question (see Unresolved). Islands keyed on user-supplied props can create unbounded numbers of entries.
-- The compile-time guard only warns about imported components, and in production the runtime guard stops an island being cached rather than failing the request, so a guarded island can go unnoticed as a performance problem.
-- An ID-bearing entry used more than once on the same page only replays its first occurrence and renders subsequent occurrences live to avoid duplicate IDs.
-- Route-cached pages whose import graph contains a cached island resolve those islands before the response is returned, so they don't stream.
-- Tag purge on eventually consistent stores is eventually consistent. This should be documented rather than hidden.
+- Adds complexity to Astro's hottest render path, though unused pages pay only a single property check (the same check server islands already make) and the feature ships behind an experimental flag.
+- Adds a second cache layer for developers to learn, mitigated by shared options, build scoping, and the dev toolbar.
+- Head mode depends implicitly on what a subtree imports, which is hard to tell without the dev toolbar; marking transition-directive components under a cached island also makes them head-resolved everywhere else they render.
+- Including `buildId` in the key empties the cache on every deploy, causing a post-deploy wave of misses, renders, and writes on busy sites. Without an origin store that wave repeats in every region.
+- An origin store puts a network read on the request path of every local miss, before the render it may or may not save.
+- Unbounded user-supplied props can explode key cardinality on KV stores, and large entries depend on the byte cap (compression is still an open question).
+- Because the compile-time guard only warns on imported components and production falls back to rendering uncached, a guarded island can silently become a performance regression.
+- Repeated ID-bearing entries on the same page only replay the first occurrence and render later ones live.
+- Route-cached pages whose import graph contains a cached island disable response streaming.
+- Tag invalidation on eventually consistent stores (such as Workers KV) is eventually consistent and must be documented clearly.
 
 # Alternatives
 
-- **Userland: recipes, an integration, or a `<Cacheable>` component.** None can reach render instructions, head propagation or CSP state; none can make deploy scoping automatic; none can check for request access. The largest users have effectively tried this, and each ended up with a partial, buggy version.
-- **Caching the server island endpoint.** Ergonomics aside, the fragment still arrives by a deferred client fetch, so cached content paints after the dynamic shell around it, and it doesn't compose with per-request slots or nesting. The hybrid `server:cache="defer"` mode in Unresolved Questions is this idea with the order corrected: deferred on cold, inline on warm.
-- **Extending route caching downward**, e.g. teaching providers to cache responses with per-user holes. This is ESI on the response layer: it fights HTTP semantics, ties hole-punching to provider capabilities and can't express nesting. Fragments belong in the component tree; responses belong in the response cache.
-- **ESI / edge includes.** Platform-specific, no dev parity, and doesn't compose with islands or slots.
-- **Data-layer caching only** (a `cachedFn`). Caches the fetch, not the render, and carries none of the island metadata. Worth doing later on the same storage layer; not a substitute.
-- **A single head mode.** Resolving every cached island before `<head>` would put every lookup, and every miss, on the path to first byte. Streaming every cached island would leave out islands that render content entries, styled SVGs or server islands.
-- **The web Cache API as the store interface.** An earlier draft used `match` / `put` / `delete` on Request/Response pairs as the contract. Only Cloudflare and Netlify ship it natively, so every other store, Node's included, would have had to emulate HTTP semantics to hold bytes under a key: synthetic request URLs, metadata in headers, `Cache-Control` as a retention hint. undici's `caches` is an unbounded in-process `Map` that would have needed expiry and a size cap added on top. With a key-value contract the Cache API is one binding and that translation lives in one place.
-- **Naming.** A separate `cache:` directive namespace, or `static:island`. Staying in `server:` keeps one compiler path and one namespace for things the server decides, and reads like `server:defer`.
+- Userland recipes, an integration, or a `<Cacheable>` component cannot participate in render-instruction deduplication, head propagation, or CSP hashing, cannot auto-scope by build, and cannot enforce request-state guards.
+- Caching `/_server-islands/` responses still fetches fragments from the client after the dynamic shell paints and does not compose with per-request slots or nesting. (The hybrid `server:cache="defer"` option in Unresolved Questions flips that order so cold hits defer and warm hits inline.)
+- Teaching route-cache providers to punch per-user holes is ESI at the response layer: it fights HTTP caching semantics, ties hole-punching to provider capabilities, and cannot express nesting.
+- ESI / edge includes are platform-specific, lack a dev story, and do not compose with islands or slots.
+- Data-layer caching (`cachedFn`) skips data fetches without skipping rendering or handling island metadata; it is a useful complement on the same storage layer, not a replacement.
+- A single head mode either delays TTFB for every cached island (always buffering before `<head>`) or breaks content entries, styled SVGs, and server islands (always streaming).
+- Using the Web Cache API (`match` / `put` / `delete` on `Request`/`Response`) as the store contract (tried in an earlier draft) forces every non-Cloudflare/Netlify backend, including Node (where undici's `caches` is an unbounded in-process `Map` without expiry or size limits), to fake HTTP semantics with synthetic URLs, metadata headers, and `Cache-Control`. A byte key-value interface keeps that translation inside one binding.
+- Naming the directive `cache:*` or `static:island` adds a new namespace; `server:cache` reuses the `server:` compiler path and pairs with `server:defer`.
 
 # Adoption strategy
 
-Ships behind `experimental.cachedIslands`, which gates the `cache.islands` config key and the directive. Route caching is already stable; the flag only adds to its config block and API. The `replaceServerIsland` node-capture fix is not gated, since it preserves today's markup, execution timing, and CSP model.
+Ships behind `experimental.cachedIslands`, gating the `cache.islands` config key and the `server:cache` directive. Route caching is already stable; the flag only extends its config block and invalidation path. The `replaceServerIsland` node-capture fix ships ungated because it preserves existing markup, execution timing, and CSP behavior.
 
-The migration guide targets the hand-rolled pattern: the KV get/set wrapper and `set:html` become the directive; hand-built keys become `key`; TTLs become `maxAge`; the tag index, webhook plumbing and deploy-flush scripts are deleted. Sites already using `routeRules` get the fragment level with no new invalidation code.
+The migration guide will target hand-rolled KV + `set:html` caching: the wrapper and `set:html` become `server:cache`, custom keys become `key`, TTLs become `maxAge`, and custom tag indexes, webhooks, and deploy-flush scripts can be deleted. Sites already using `routeRules` get fragment caching without changing their invalidation code.
 
-For docs, the islands page can present the options as a freshness continuum: prerendering caches forever at deploy scope; route caching is bounded freshness for a response that can be shared as a unit; a cached island is bounded freshness for a fragment of one that can't; a server island is uncached with deferred delivery; a client island hands freshness to the client. `routeRules` is the root case, and this proposal uses the same options (`maxAge`, `swr`, `tags`, one `invalidate()`) further down the tree.
+Docs can present Astro's caching options along a simple spectrum: prerendering (cached per deploy), route caching (bounded freshness for shared responses), cached islands (bounded freshness for shared fragments inside dynamic shells), server islands (uncached and deferred), and client islands (client-managed freshness).
 
 # Unresolved Questions
 
-1. **`waitUntil` reach.** Adapters pass a `waitUntil` hook into the render, and route-cache providers receive it, optionally, in `onRequest`. Island revalidation, and finishing a recording after a client disconnect, need it at render time on every adapter. Is threading it to the island layer enough, and what is the Node fallback where no platform hook exists: fire-and-forget, or synchronous revalidation on the next stale hit?
-2. **Stampede control** beyond per-instance in-flight dedup. Is an optional `lock()` on the store interface enough, or does the portable layer need best-effort locking?
-3. **`stale-if-error`**: should a failed revalidation serve the stale entry beyond `swr`? Probably yes, with a bound.
-4. **Compression** for large entries: always, never, or above a size threshold per store?
-5. **A hybrid `server:cache="defer"` mode**: on a miss, emit a server-island placeholder and let the `/_server-islands/` endpoint render, respond and populate the store, so cold paths behave like server islands and warm paths are inline HTML. Useful, but it couples the two systems, so it is left out of v1.
-6. **Cross-deploy pinning**: an `ASTRO_KEY`-style opt-in for very large caches that want to survive deploys, with the user taking responsibility for asset-hash stability.
-7. **Options parity.** Scoped `set()` receiving `etag` is meaningless for a fragment: ignore silently or dev-warn? And is duration-string sugar (`'10m'`) worth adding to `routeRules` and island options together, or do plain seconds remain the shared contract? And should route-level `set(false)` become one-way, as the island-scoped one is, so the two layers match?
-8. **Native tag purge for island stores.** If a future store can delete by tag natively, is an optional `purgeTags()` on `IslandStore` worth adding then, with tags passed to `set()` and epoch validation bypassed when it is present, or do epochs remain the permanent portable contract? Either way this belongs on the store side, not on `CacheProvider`: response providers and fragment stores are different things even when one backend could do both.
-9. **Vercel Runtime Cache binding.** The Runtime Cache is regional, but its `expireTag` reaches every region within about 300 ms. That is enough to rebuild epochs without a global store: each region keeps one marker entry per tag, tagged with that tag and stamped with its creation time, and the marker's timestamp is the tag's epoch. `invalidate()` calls `expireTag`, which removes the markers everywhere; the next read in a region recreates the marker at the current time, so every entry whose render started before then fails validation. Entries rendered between the purge and the new marker are rejected too, which costs a miss but is never stale. Entries themselves need no native tags, so the 128-tag limit only applies to markers. Is this worth a `cacheStores.vercel()` binding with adapter defaults, and could the same approach replace KV epochs on other platforms with global tag purge?
-10. **Purge everything.** Should `InvalidateOptions` gain `{ all: true }`? On the island side it is one deploy-scope epoch. On the route side every `CacheProvider` would have to implement it, which is a change to route caching and so outside this proposal as written.
+1. **`waitUntil` availability.** Adapters pass `waitUntil` into renders, and route-cache providers optionally receive it in `onRequest`. Cached islands need it at render time on every adapter for background revalidation and finishing detached recordings after a client disconnect. Is threading it through to the island layer enough, and what should Node do when no platform hook exists: fire-and-forget, or synchronous revalidation on the next stale hit?
+2. **Cross-instance stampede control.** Beyond per-instance in-flight deduplication, is an optional `lock()` on `IslandStore` enough, or should the portable layer include best-effort locking?
+3. **`stale-if-error`.** Should a failed revalidation serve the stale entry past `swr` (with an upper bound)?
+4. **Compression.** Should large entries be compressed always, never, or above a per-store threshold?
+5. **Hybrid `server:cache="defer"` mode.** On a miss, emit a server-island placeholder and let `/_server-islands/` render, respond, and populate the store, so cold paths defer like server islands and warm paths inline HTML. Omitted from v1 to avoid coupling the two systems.
+6. **Cross-deploy pinning.** An `ASTRO_KEY`-style opt-in for very large caches that want entries to survive deploys, with users taking responsibility for asset-hash stability.
+7. **Options parity with route caching.** Should scoped `set()` ignore `etag` silently or warn in dev? Should duration strings (`'10m'`) be added to both `routeRules` and `server:cache`, or should both keep plain seconds? And should route-level `set(false)` become one-way to match islands?
+8. **Native tag purge on `IslandStore`.** If a future store can delete by tag natively, should `IslandStore` gain an optional `purgeTags()` (passing tags to `set()` and bypassing epochs when present), or should tag epochs stay the permanent portable contract? Either way, this belongs on `IslandStore` rather than `CacheProvider`. The Vercel binding shows a third option, epochs rebuilt from a platform's global tag purge: could that replace KV epochs on other platforms?
+9. **Purge everything.** Should `InvalidateOptions` add `{ all: true }`? On the island side that is one deploy-scope epoch, while on the route side every `CacheProvider` would have to implement it, placing it outside this proposal.
