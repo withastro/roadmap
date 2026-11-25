@@ -31,17 +31,18 @@ const blog = defineCollection({
 export const collections = { blog };
 ```
 
-Images and references become ordinary functions that you call from a schema transform. They no longer act as schema factories supplied by Astro:
+`image()` and `reference()` become ordinary functions that you call from a schema transform. `image()` returns a marker that Astro resolves after validation. `reference()` returns a normalized reference value:
 
 ```diff
-  import { defineCollection, reference } from 'astro:content';
-+ import { image } from 'astro/content/fields';
+- import { defineCollection, reference } from 'astro:content';
++ import { defineCollection } from 'astro:content';
++ import { image, reference } from 'astro/content/fields';
+  import { glob } from 'astro/loaders';
   import { z } from 'zod';
 
   const blog = defineCollection({
     loader: glob({ pattern: '**/*.md', base: './src/blog' }),
--   schema: ({ image }) => z.object({
-+   schema: z.object({
+    schema: z.object({
       title: z.string(),
 -     cover: image(),
 +     cover: z.string().transform((src) => image(src)),
@@ -50,16 +51,6 @@ Images and references become ordinary functions that you call from a schema tran
     }),
   });
 ```
-
-Because these functions return plain values, you can validate their results in later schema steps:
-
-```ts
-cover: z
-  .string()
-  .transform((src) => image(src))
-  .refine((cover) => (cover.width ?? 0) >= 1000, 'cover must be at least 1000px wide'),
-```
-
 Actions accept any Standard Schema validator for JSON payloads. For example:
 
 ```ts
@@ -112,7 +103,7 @@ Work on Astro 6 exposed the cost of that coupling. Astro ships a copy of Zod thr
 [Standard Schema](https://standardschema.dev) addresses this problem, and the ecosystem has converged on it. Adopting it is not a drop-in change because Astro's public APIs do more than validate:
 
 - `astro/zod` re-exports Astro's own copy of Zod.
-- Astro provides Zod schema factories to collection schemas: `image()` from the schema context and `reference()` from `astro:content`. Schema factories are deprecated in favor of static schemas.
+- Astro moves `image()` to `astro/content/fields` and keeps the deprecated `reference()` schema helper in `astro:content`.
 - Form actions coerce `FormData` into an object by walking the Zod schema. This requires introspection that the spec does not describe.
 - `astro sync` writes each collection's entry type by resolving the Zod schema it found.
 
@@ -139,19 +130,19 @@ The work is not limited to calling `~standard.validate` instead of `safeParse`. 
 - **Standard JSON Schema**: the [companion spec](https://standardschema.dev/json-schema) for describing a schema as JSON Schema. It is optional, and Astro treats it as a capability rather than a requirement.
 - **Vendor**: the validator behind a schema, read from `schema['~standard'].vendor` (`'zod'`, `'valibot'`, `'arktype'`, and other values).
 
-Astro validates through `schema['~standard'].validate(data)`, which may return a promise. That is what keeps async transforms working.
+Astro validates through `schema['~standard'].validate(data)`. Astro resolves content field markers after validation.
 
 ## Content collections
 
 ### Schemas
 
-`schema` accepts any Standard Schema validator, either directly or returned from the deprecated `(context) => schema` factory form. Static schemas are preferred because `image()` reads the current entry context during validation:
+`schema` accepts any Standard Schema validator directly:
 
 ```ts
 type BaseSchema = StandardSchemaV1;
 
 type CollectionConfig<S extends BaseSchema> = {
-  schema?: S | ((context: SchemaContext) => S);
+  schema?: S;
   // ...
 };
 ```
@@ -162,51 +153,43 @@ The same applies to loaders: `Loader['schema']` and `Loader['createSchema']` are
 
 ### From schema factories to plain functions
 
-`image()` and `reference()` were Zod-specific because they returned Zod schemas. `image()` returned a Zod string with a transform, and `reference()` returned a Zod type that parsed an ID into a reference object. Users could include these schemas in their own schemas only when both schemas used the same library.
+`image()` and `reference()` were Zod-specific because they returned Zod schemas. `image()` returned a Zod string with a transform, and `reference()` returned a Zod schema that parsed an ID into a reference object. Users could include these schemas in their own schemas only when both schemas used the same library.
 
-Standard Schema does not address schema construction. It describes how to validate *with* a schema, but it does not define a portable schema constructor. Astro therefore stops building schemas for these helpers. Both become functions that transform values, and users call them through their validator's transform mechanism:
+Standard Schema does not address schema construction. It describes how to validate *with* a schema, but it does not define a portable schema constructor. Astro therefore stops building schemas for these helpers. `image()` becomes a synchronous function that returns an Astro field marker. `reference()` becomes a synchronous function that returns the normalized reference value. Users call both through their validator's transform mechanism:
 
 ```ts
 cover: z.string().transform((src) => image(src)),
 ```
 
-The Zod example uses `.transform()`. The Valibot equivalent uses `v.pipeAsync()` and `v.transformAsync()`:
+The same pattern works with Valibot and ArkType:
 
 ```ts
-cover: v.pipeAsync(v.string(), v.transformAsync((src) => image(src))),
+cover: v.pipe(v.string(), v.transform((src) => image(src))),
 ```
 
-The ArkType equivalent uses `.pipe()`:
+Astro resolves the image marker after validation. The validators do not need asynchronous transforms, so `image()` works with validators that provide a synchronous transform mechanism, including Zod, Valibot, and ArkType. `reference()` returns a normalized reference value without checking whether the referenced entry exists. Astro checks references against the content store after all loaders finish.
 
-```ts
-author: type('string').pipe((id) => reference('authors', id)),
-```
-
-Astro supplies the behavior, and each validator supplies its own transform mechanism. Users write the validator-specific call in the same style as the rest of the schema.
-
-This also makes the results available for further validation. The old helpers ended the field's schema. The new functions return a value to the user's schema chain, so later steps such as `.refine()`, `v.check()`, or another `.pipe()` can validate it.
-
-The phrase "any Standard Schema validator" has one constraint. A validator must provide a transform mechanism, and `image()` requires an *async* transform because it reads the file. Zod and Valibot support both. ArkType has synchronous morphs but [does not support asynchronous morphs](https://arktype.io/docs/faq), so users cannot call `image()` inside an ArkType schema. The synchronous `reference()` function works with ArkType. Users who use ArkType for a collection with images must resolve those images outside the schema or choose another validator for that collection.
+Image metadata is not available to the validator because Astro resolves image markers after validation.
 
 ### `image()`
 
-The `image` helper used to come from the schema context and return a Zod schema. As a result, it worked only with Zod, and users could not validate its result in later schema steps. Astro now exports an ordinary function from `astro/content/fields`. It reads the active entry context during validation, so schemas can be defined once and reused across entries.
+The `image` helper used to be a Zod schema factory. As a result, it worked only with Zod. Astro now exports an ordinary function from `astro/content/fields`.
 
 It becomes an ordinary function, exported from a new `astro/content/fields` entrypoint:
 
 ```diff
 + import { image } from 'astro/content/fields';
 
-- schema: ({ image }) =>
+- schema: ({ image }) => z.object({
 + schema: z.object({
--     cover: image(),
-+     cover: z.string().transform((src) => image(src)),
-    });
+-   cover: image(),
++   cover: z.string().transform((src) => image(src)),
+  });
 ```
 
 Astro exports `image()` and the validator-agnostic `reference()` from `astro/content/fields`, a separate entry point from `astro:content`. This follows the pattern used by `astro/loaders`. The `image()` function accesses the filesystem, while `astro:content` must remain free of Node built-ins so it can run on Cloudflare and Deno. A continuous integration check enforces that boundary. Content configs run in Node.
 
-`image(src)` returns a marker object with `src`, `width`, `height`, and `format` values read from the file. Astro resolves `src` against the active content entry context:
+`image(src)` synchronously returns a marker object. Astro resolves `src` after validation and populates the image metadata:
 
 ```ts
 type ContentImageField = {
@@ -214,7 +197,7 @@ type ContentImageField = {
 } & Partial<Omit<ImageMetadata, 'src' | 'fsPath'>>;
 ```
 
-For example, during sync, the helper can return this value for a 1200 × 800 PNG:
+For example, after resolution, Astro can produce this value for a 1200 × 800 PNG:
 
 ```ts
 {
@@ -225,41 +208,24 @@ For example, during sync, the helper can return this value for a 1200 × 800 PNG
 }
 ```
 
-The exact `src` depends on Vite and the build mode. Users can adapt the helper's value in another transform to produce a different validated shape. This example adds a nested `dimensions` field and validates it. The top-level `src` marker remains for Astro to resolve at read time:
+The exact `src` depends on Vite and the build mode. Astro keeps the top-level `src` marker until read time, when it replaces the marker with resolved image metadata:
 
 ```ts
-cover: z.string()
-  .transform((src) => image(src))
-  .transform((cover) => ({
-    ...cover,
-    dimensions: { width: cover.width, height: cover.height },
-  }))
-  .pipe(z.object({
-    src: z.string(),
-    width: z.number().optional(),
-    height: z.number().optional(),
-    format: z.string().optional(),
-    dimensions: z.object({
-      width: z.number().optional(),
-      height: z.number().optional(),
-    }),
-  })),
+cover: z.string().transform((src) => image(src)),
 ```
 
 Astro resolves the image while syncing content:
 
 1. A remote URL passes through unchanged. So does an entry whose loader does not provide an absolute path.
 2. Astro looks for a sibling file directly on disk. It normalizes a bare filename found this way to `./name`, matching Markdown frontmatter resolution. If a `./` or `../` source does not resolve, Astro reports an error immediately.
-3. Astro passes other sources, such as a Vite alias, a root-absolute path, or a bare specifier with no sibling file, to Vite's plugin container. This matches how Vite resolves the source at read time. The resolver is available for the duration of a sync, and `image()` reads it from the current context. If no resolver is available, as when a loader runs outside a sync, Astro defers resolution to read time.
+3. Astro passes other sources, such as a Vite alias, a root-absolute path, or a bare specifier with no sibling file, to Vite's plugin container. This matches how Vite resolves the source at read time. The resolver is available for the duration of a sync. If no resolver is available, as when a loader runs outside a sync, Astro defers resolution to read time.
 
-Resolving images during sync has two effects:
+Resolving images after validation has two effects:
 
 - Astro reports a missing image, broken alias, or invalid root-absolute path during sync and identifies the entry. The error does not wait until read time.
-- The schema and later transforms can access and validate the image dimensions.
+- Astro populates the image dimensions in the resolved content data.
 
-At this point, `src` is not final. It is a `/@fs/...` URL in development and a hashed emitted asset in a build. Only Vite knows the final value. Astro keeps `src` as a marker until read time, then merges the real `ImageMetadata` over the stored object so fields added by later transforms survive. SVGs resolve to a component factory rather than metadata, so Astro replaces the value instead of merging into it.
-
-The `({ image })` form still works, accepts the same sources, and is routed through the same resolver so legacy schemas gain the up-front validation too. It is deprecated and removed in Astro 8. Schema factory functions are also deprecated in favor of static schemas.
+At this point, `src` is not final. It is a `/@fs/...` URL in development and a hashed emitted asset in a build. Only Vite knows the final value. Astro keeps `src` as a marker until read time, then replaces it with the real `ImageMetadata`. SVGs resolve to a component factory rather than metadata, so Astro replaces the marker with that factory.
 
 ### `reference()`
 
@@ -281,9 +247,9 @@ export function reference<C extends CollectionKey | (string & {})>(
 
 The `reference(collection)` schema factory remains available from `astro:content` for compatibility. It is deprecated and removed in Astro 8. The two-argument `reference(collection, lookup)` form lives in `astro/content/fields`, not `astro:content`.
 
-The lookup accepts the values supported by the schema form: an entry identifier as a string or number, or a reference object produced by an earlier parse. Re-parsing already-transformed data is therefore a no-op. Any other value causes `InvalidContentReferenceError` during sync rather than a validation issue on the field.
+The lookup accepts an entry identifier as a string or number, or a reference object with an `id` or `slug`. The helper normalizes these values into a reference object. It does not check whether the target exists.
 
-Astro does not check whether the entry exists at this point. A reference can point to a collection whose loader has not run yet. Astro verifies that each referenced entry exists after all loaders finish by walking the store.
+After all loaders finish, Astro checks that each referenced entry exists in the content store.
 
 The single-argument form still returns a Zod schema, is routed through the same resolution (reporting failures as validation issues, so they are collected alongside the schema's others), and is removed in Astro 8.
 
@@ -422,10 +388,11 @@ The implementation pull request covers these tests:
 
 # Drawbacks
 
-- **More deprecated APIs.** Astro deprecates `astro:schema`, `image()` as a context helper, `reference(collection)`, form `input`, and five content types at the same time. Users who prefer Zod receive multiple deprecation warnings and must manage them until Astro 8.
-- **More verbose `image()` and `reference()` calls.** `z.string().transform((src) => image(src))` is longer than `image()`, and the wrapper adds code that the old API hid. The new form supports composition, so users can validate the result in later schema steps.
+- **More deprecated APIs.** Astro deprecates the content schema context callback, `reference(collection)`, form `input`, `astro:schema`, and five content types at the same time. Users who prefer Zod receive multiple deprecation warnings and must manage them until Astro 8.
+- **More verbose `image()` and `reference()` calls.** `z.string().transform((src) => image(src))` is longer than `image()`, and the wrapper adds code that the old API hid.
 - **Form parsing moves to a community package.** Users who prefer the existing `input` option must parse `FormData` in the handler with a package Astro does not own. This reduces convenience but gives users control over coercion and error reporting.
-- **Transform support varies by validator.** `image()` requires an async transform, which ArkType does not support. Therefore, users cannot call `image()` inside an ArkType schema. Standard Schema does not define transforms, so it cannot address this limitation.
+- **Image metadata is not available during validation.** Astro resolves image markers after schema validation. This matches the existing behavior.
+- **Validator support remains bounded by ecosystem capabilities.** Astro supports validators that implement Standard Schema and provide the capabilities needed by a feature. Standard JSON Schema remains optional. Astro generates collection schema files only when a validator implements that capability.
 - **Some errors have less detail.** Astro's collection errors previously used Zod issue codes. Standard Schema guarantees only `message` and `path`, so errors from non-Zod validators contain less structure.
 - **More choices for users to learn.** Documentation and examples must still choose a validator, and users face this choice when creating their first collection. The docs and official examples continue to use Zod, while explaining other validators as an option for users who need them.
 
@@ -447,13 +414,14 @@ The implementation pull request covers these tests:
 
 This ships in an Astro 7.x minor release. Existing behavior remains compatible.
 
-- Existing Zod schemas continue to work, including the deprecated `schema: (context) => ...` function form.
-- The deprecated `({ image })`, `reference(collection)`, form `input`, `astro:schema`, and content types continue to work. Astro routes them through the new implementations to maintain one behavior path.
+- Existing Zod schemas continue to work during the deprecation window.
+- The deprecated content schema context callback, `reference(collection)`, form `input`, `astro:schema`, and content types continue to work. Astro routes them through the new implementations to maintain one behavior path.
 - Users can adopt the new APIs at any time before Astro 8.
 
 Astro removes the deprecated APIs in **Astro 8**, providing a full major release for migration. Most changes are mechanical and can be automated with a codemod:
 
-- Replace `image()` with `z.string().transform((src) => image(src))`. Replace `reference('x')` with `z.string().transform((id) => reference('x', id))`. Replace schema factories with static schemas and remove the `({ image })` helper parameter.
+- Replace `image()` with `z.string().transform((src) => image(src))`. Replace `reference('x')` with `z.string().transform((id) => reference('x', id))`.
+- Replace `schema: ({ image }) => schema` with a static schema and import `image()` from `astro/content/fields`.
 - Replace `InferEntrySchema<C>` with `CollectionEntry<C>['data']`, and replace `DataEntryMap` with `DataMap`.
 
 Form action `input` requires a manual migration. The handler must parse the form and decide how to handle validation issues. This change has the longest deprecation period and the most detailed documentation.
